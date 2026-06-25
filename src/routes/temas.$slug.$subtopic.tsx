@@ -1,0 +1,77 @@
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getTopicBySlug, listExercises } from "@/lib/exercises.functions";
+import { ExerciseCard } from "@/components/exercise-card";
+
+const topicQO = (slug: string) =>
+  queryOptions({ queryKey: ["topic", slug], queryFn: () => getTopicBySlug({ data: { slug } }) });
+
+const exercisesQO = (slug: string, sub: string) =>
+  queryOptions({
+    queryKey: ["exercises", "topic", slug, "sub", sub],
+    queryFn: () =>
+      listExercises({ data: { topicSlug: slug, subtopicSlug: sub, limit: 100 } }),
+  });
+
+export const Route = createFileRoute("/temas/$slug/$subtopic")({
+  loader: async ({ context, params }) => {
+    const topic = await context.queryClient.ensureQueryData(topicQO(params.slug));
+    if (!topic) throw notFound();
+    if (!topic.subtopics.find((s) => s.slug === params.subtopic)) throw notFound();
+    await context.queryClient.ensureQueryData(exercisesQO(params.slug, params.subtopic));
+  },
+  head: ({ params }) => ({
+    meta: [{ title: `${params.subtopic} · ${params.slug} · MatePre` }],
+  }),
+  component: SubtopicPage,
+  errorComponent: ({ error }) => (
+    <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
+      {error.message}
+    </div>
+  ),
+  notFoundComponent: () => (
+    <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+      <h2 className="font-display text-2xl font-bold">Subtema no encontrado</h2>
+      <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
+        Volver a temas
+      </Link>
+    </div>
+  ),
+});
+
+function SubtopicPage() {
+  const { slug, subtopic } = Route.useParams();
+  const { data: topic } = useSuspenseQuery(topicQO(slug));
+  const { data: exercises } = useSuspenseQuery(exercisesQO(slug, subtopic));
+  if (!topic) return null;
+  const sub = topic.subtopics.find((s) => s.slug === subtopic)!;
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <nav className="text-xs text-muted-foreground" aria-label="Migas">
+        <Link to="/temas" className="hover:underline">
+          Temas
+        </Link>{" "}
+        /{" "}
+        <Link to="/temas/$slug" params={{ slug: topic.slug }} className="hover:underline">
+          {topic.name}
+        </Link>{" "}
+        / <span className="text-foreground">{sub.name}</span>
+      </nav>
+      <h1 className="mt-3 font-display text-3xl font-bold sm:text-4xl">{sub.name}</h1>
+      <p className="mt-1 text-muted-foreground">
+        {exercises.length} ejercicio{exercises.length === 1 ? "" : "s"}
+      </p>
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        {exercises.map((ex: any) => (
+          <ExerciseCard key={ex.id} ex={ex} />
+        ))}
+        {exercises.length === 0 && (
+          <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            Aún no hay ejercicios en este subtema.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

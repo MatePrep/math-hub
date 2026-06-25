@@ -9,38 +9,212 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as BuscarRouteImport } from './routes/buscar'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TemasIndexRouteImport } from './routes/temas.index'
+import { Route as ExamenesIndexRouteImport } from './routes/examenes.index'
+import { Route as EjercicioIdRouteImport } from './routes/ejercicio.$id'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
+import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
+import { Route as TemasSlugIndexRouteImport } from './routes/temas.$slug.index'
+import { Route as ExamenesSlugIndexRouteImport } from './routes/examenes.$slug.index'
+import { Route as TemasSlugSubtopicRouteImport } from './routes/temas.$slug.$subtopic'
+import { Route as ExamenesSlugSimulacroRouteImport } from './routes/examenes.$slug.simulacro'
 
+const BuscarRoute = BuscarRouteImport.update({
+  id: '/buscar',
+  path: '/buscar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TemasIndexRoute = TemasIndexRouteImport.update({
+  id: '/temas/',
+  path: '/temas/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamenesIndexRoute = ExamenesIndexRouteImport.update({
+  id: '/examenes/',
+  path: '/examenes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EjercicioIdRoute = EjercicioIdRouteImport.update({
+  id: '/ejercicio/$id',
+  path: '/ejercicio/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPanelRoute = AuthenticatedPanelRouteImport.update({
+  id: '/panel',
+  path: '/panel',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const TemasSlugIndexRoute = TemasSlugIndexRouteImport.update({
+  id: '/temas/$slug/',
+  path: '/temas/$slug/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamenesSlugIndexRoute = ExamenesSlugIndexRouteImport.update({
+  id: '/examenes/$slug/',
+  path: '/examenes/$slug/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemasSlugSubtopicRoute = TemasSlugSubtopicRouteImport.update({
+  id: '/temas/$slug/$subtopic',
+  path: '/temas/$slug/$subtopic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamenesSlugSimulacroRoute = ExamenesSlugSimulacroRouteImport.update({
+  id: '/examenes/$slug/simulacro',
+  path: '/examenes/$slug/simulacro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/buscar': typeof BuscarRoute
+  '/panel': typeof AuthenticatedPanelRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/ejercicio/$id': typeof EjercicioIdRoute
+  '/examenes/': typeof ExamenesIndexRoute
+  '/temas/': typeof TemasIndexRoute
+  '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
+  '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
+  '/examenes/$slug/': typeof ExamenesSlugIndexRoute
+  '/temas/$slug/': typeof TemasSlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/buscar': typeof BuscarRoute
+  '/panel': typeof AuthenticatedPanelRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/ejercicio/$id': typeof EjercicioIdRoute
+  '/examenes': typeof ExamenesIndexRoute
+  '/temas': typeof TemasIndexRoute
+  '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
+  '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
+  '/examenes/$slug': typeof ExamenesSlugIndexRoute
+  '/temas/$slug': typeof TemasSlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/buscar': typeof BuscarRoute
+  '/_authenticated/panel': typeof AuthenticatedPanelRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/ejercicio/$id': typeof EjercicioIdRoute
+  '/examenes/': typeof ExamenesIndexRoute
+  '/temas/': typeof TemasIndexRoute
+  '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
+  '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
+  '/examenes/$slug/': typeof ExamenesSlugIndexRoute
+  '/temas/$slug/': typeof TemasSlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/buscar'
+    | '/panel'
+    | '/perfil'
+    | '/ejercicio/$id'
+    | '/examenes/'
+    | '/temas/'
+    | '/examenes/$slug/simulacro'
+    | '/temas/$slug/$subtopic'
+    | '/examenes/$slug/'
+    | '/temas/$slug/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/buscar'
+    | '/panel'
+    | '/perfil'
+    | '/ejercicio/$id'
+    | '/examenes'
+    | '/temas'
+    | '/examenes/$slug/simulacro'
+    | '/temas/$slug/$subtopic'
+    | '/examenes/$slug'
+    | '/temas/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/buscar'
+    | '/_authenticated/panel'
+    | '/_authenticated/perfil'
+    | '/ejercicio/$id'
+    | '/examenes/'
+    | '/temas/'
+    | '/examenes/$slug/simulacro'
+    | '/temas/$slug/$subtopic'
+    | '/examenes/$slug/'
+    | '/temas/$slug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  BuscarRoute: typeof BuscarRoute
+  EjercicioIdRoute: typeof EjercicioIdRoute
+  ExamenesIndexRoute: typeof ExamenesIndexRoute
+  TemasIndexRoute: typeof TemasIndexRoute
+  ExamenesSlugSimulacroRoute: typeof ExamenesSlugSimulacroRoute
+  TemasSlugSubtopicRoute: typeof TemasSlugSubtopicRoute
+  ExamenesSlugIndexRoute: typeof ExamenesSlugIndexRoute
+  TemasSlugIndexRoute: typeof TemasSlugIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/buscar': {
+      id: '/buscar'
+      path: '/buscar'
+      fullPath: '/buscar'
+      preLoaderRoute: typeof BuscarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +222,98 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/temas/': {
+      id: '/temas/'
+      path: '/temas'
+      fullPath: '/temas/'
+      preLoaderRoute: typeof TemasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/examenes/': {
+      id: '/examenes/'
+      path: '/examenes'
+      fullPath: '/examenes/'
+      preLoaderRoute: typeof ExamenesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ejercicio/$id': {
+      id: '/ejercicio/$id'
+      path: '/ejercicio/$id'
+      fullPath: '/ejercicio/$id'
+      preLoaderRoute: typeof EjercicioIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/panel': {
+      id: '/_authenticated/panel'
+      path: '/panel'
+      fullPath: '/panel'
+      preLoaderRoute: typeof AuthenticatedPanelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/temas/$slug/': {
+      id: '/temas/$slug/'
+      path: '/temas/$slug'
+      fullPath: '/temas/$slug/'
+      preLoaderRoute: typeof TemasSlugIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/examenes/$slug/': {
+      id: '/examenes/$slug/'
+      path: '/examenes/$slug'
+      fullPath: '/examenes/$slug/'
+      preLoaderRoute: typeof ExamenesSlugIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/temas/$slug/$subtopic': {
+      id: '/temas/$slug/$subtopic'
+      path: '/temas/$slug/$subtopic'
+      fullPath: '/temas/$slug/$subtopic'
+      preLoaderRoute: typeof TemasSlugSubtopicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/examenes/$slug/simulacro': {
+      id: '/examenes/$slug/simulacro'
+      path: '/examenes/$slug/simulacro'
+      fullPath: '/examenes/$slug/simulacro'
+      preLoaderRoute: typeof ExamenesSlugSimulacroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedPanelRoute: AuthenticatedPanelRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  BuscarRoute: BuscarRoute,
+  EjercicioIdRoute: EjercicioIdRoute,
+  ExamenesIndexRoute: ExamenesIndexRoute,
+  TemasIndexRoute: TemasIndexRoute,
+  ExamenesSlugSimulacroRoute: ExamenesSlugSimulacroRoute,
+  TemasSlugSubtopicRoute: TemasSlugSubtopicRoute,
+  ExamenesSlugIndexRoute: ExamenesSlugIndexRoute,
+  TemasSlugIndexRoute: TemasSlugIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
