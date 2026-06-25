@@ -115,7 +115,7 @@ function TopicPage() {
                 key={d.v}
                 from={Route.fullPath}
                 to="."
-                search={(prev) => ({ ...prev, difficulty: d.v })}
+                search={(prev: { difficulty: "all" | "facil" | "medio" | "dificil" }) => ({ ...prev, difficulty: d.v })}
                 className="rounded-full"
               >
                 <Badge
