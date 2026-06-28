@@ -1,32 +1,32 @@
-# MatePre — Ajuste al plan
+# Arreglar registro de estudiantes
 
-## Cambio solicitado
+## Diagnóstico
 
-Eliminar cualquier panel/rol de administrador. Conservar el panel del estudiante para seguir su progreso y ejercicios resueltos.
+Los logs de auth muestran que `POST /signup` devuelve **422** y los intentos posteriores de login fallan con "Invalid credentials" — la cuenta nunca se crea. En la UI no aparece mensaje porque el error se silencia parcialmente y la pestaña sigue mostrando el formulario.
 
-## Qué se quita
+Causas más probables del 422 (en orden):
 
-- Rol `admin` del enum `app_role` y cualquier referencia en código.
-- Función/uso de `has_role(..., 'admin')` en políticas RLS.
-- Políticas de escritura "sólo admin" sobre `topics`, `subtopics`, `universities`, `exercises`.
-- Cualquier ruta o UI futura tipo `/admin` (no se construirá).
-- Mención de "panel admin" en la sección "Fuera de alcance" (ya no aplica como posible extensión inmediata).
+1. **Leaked-password protection (HIBP)** activa — contraseñas comunes como `123456`, `password`, etc. son rechazadas.
+2. **Contraseña por debajo del mínimo** que exige el servidor (aunque el formulario sólo pide 6, el proyecto puede exigir más).
+3. **Email mal formado o ya registrado** sin confirmar.
 
-El contenido (temas, ejercicios, universidades) se mantiene gestionado vía migraciones/seed SQL, no vía UI.
+## Cambios
 
-## Qué se conserva (panel del estudiante)
+1. **Mejor manejo de errores en `src/routes/auth.tsx**`
+  - Mostrar el `error.message` exacto del servidor en el toast y también inline debajo del formulario, en español, para que el estudiante vea qué falló.
+  - Traducir los códigos comunes de Supabase a mensajes claros: `weak_password`, `email_address_invalid`, `user_already_exists`, `over_email_send_rate_limit`, `signup_disabled`.
+  - Loguear `error` a consola en desarrollo para diagnóstico futuro.
+  - Subir el `minLength` del campo de contraseña a 8 y añadir hint visible: "Mínimo 8 caracteres. Evita contraseñas comunes."
+  - Si `signUp` responde con `data.user` pero sin `session` (caso confirmación por email), mostrar mensaje "Revisa tu correo para confirmar" en lugar de navegar al panel y fallar.
+  - agregar un boton para mostrar la contrasena que se esta usando
+2. **Confirmar configuración de auth**
+  - Mantener email/password habilitado.
+  - **No** activar auto-confirm (el usuario no lo pidió).
+  - Dejar HIBP activado (es buena práctica de seguridad) — el mensaje claro al usuario es suficiente.
+3. **No tocar**: políticas RLS, trigger `handle_new_user`, ni el panel del estudiante.
 
-Sin cambios en `/_authenticated/panel`:
-- Tarjetas: ejercicios resueltos, % aciertos global, correctos, racha de días.
-- Gráfico de barras de aciertos por tema (Recharts).
-- Lista de intentos recientes con enlace a "Repasar".
-- Recomendación del tema más débil.
-- Acceso a `/perfil` para editar nombre y universidad objetivo.
+## Verificación
 
-Tablas que sustentan el panel siguen igual: `attempts`, `exam_sessions`, `profiles`, `user_roles` (sólo con rol `student`).
-
-## Detalles técnicos
-
-- Migración de ajuste: reemplazar políticas que usan `has_role(auth.uid(),'admin')` por políticas de sólo lectura pública donde corresponde; dejar las tablas de contenido sin políticas de INSERT/UPDATE/DELETE para roles `anon`/`authenticated` (writes sólo vía `service_role` en migraciones).
-- Enum `app_role`: dejar únicamente `student` (se mantiene el patrón `user_roles` + `has_role` por seguridad y futura extensibilidad).
-- Actualizar `.lovable/plan.md` para reflejar estos cambios.
+- Intentar registro con contraseña débil → debe mostrar "Contraseña insegura, elige otra más fuerte".
+- Intentar registro con email duplicado → debe mostrar "Ya existe una cuenta con ese correo".
+- Registro válido (≥8 caracteres, no filtrada) → crea cuenta y entra al panel.
