@@ -42,7 +42,7 @@ export function ExerciseCard({ ex }: { ex: ExerciseRow }) {
         <MathText text={ex.statement_md} />
       </div>
       <p className="mt-3 text-xs font-medium text-primary group-hover:underline">
-        Resolver ejercicio →
+        Resolver ejercicio ahora →
       </p>
     </Link>
   );
