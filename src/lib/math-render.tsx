@@ -1,5 +1,10 @@
-import { InlineMath, BlockMath } from "react-katex";
+import reactKatex from "react-katex";
 import "katex/dist/katex.min.css";
+
+const { InlineMath, BlockMath } = reactKatex as unknown as {
+  InlineMath: React.ComponentType<{ math: string }>;
+  BlockMath: React.ComponentType<{ math: string }>;
+};
 
 // Render text with $...$ inline math and $$...$$ block math.
 // Also supports **bold** and paragraph breaks on blank lines.
