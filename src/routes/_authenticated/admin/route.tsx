@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, redirect } from "@tanstack/react-router";
 import { checkIsAdmin } from "@/lib/admin.functions";
 
-export const Route = createFileRoute("/_authenticated/_admin")({
+export const Route = createFileRoute("/_authenticated/admin")({
   ssr: false,
   beforeLoad: async () => {
     try {
