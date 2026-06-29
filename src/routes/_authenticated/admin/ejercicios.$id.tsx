@@ -29,7 +29,7 @@ function EditExercise() {
           exam_year: ex.exam_year,
           difficulty: ex.difficulty,
           statement_md: ex.statement_md,
-          choices: ex.choices,
+          choices: Array.isArray(ex.choices) ? (ex.choices as string[]) : [],
           correct_choice: ex.correct_choice,
           solution_md: ex.solution_md,
           tags: ex.tags ?? [],

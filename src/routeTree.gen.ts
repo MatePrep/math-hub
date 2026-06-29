@@ -25,6 +25,7 @@ import { Route as TemasSlugSubtopicRouteImport } from './routes/temas.$slug.$sub
 import { Route as ExamenesSlugSimulacroRouteImport } from './routes/examenes.$slug.simulacro'
 import { Route as AuthenticatedAdminEjerciciosIndexRouteImport } from './routes/_authenticated/admin/ejercicios.index'
 import { Route as AuthenticatedAdminEjerciciosNuevoRouteImport } from './routes/_authenticated/admin/ejercicios.nuevo'
+import { Route as AuthenticatedAdminEjerciciosIdRouteImport } from './routes/_authenticated/admin/ejercicios.$id'
 
 const BuscarRoute = BuscarRouteImport.update({
   id: '/buscar',
@@ -107,6 +108,12 @@ const AuthenticatedAdminEjerciciosNuevoRoute =
     path: '/ejercicios/nuevo',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminEjerciciosIdRoute =
+  AuthenticatedAdminEjerciciosIdRouteImport.update({
+    id: '/ejercicios/$id',
+    path: '/ejercicios/$id',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/examenes/$slug/': typeof ExamenesSlugIndexRoute
   '/temas/$slug/': typeof TemasSlugIndexRoute
+  '/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
   '/admin/ejercicios/nuevo': typeof AuthenticatedAdminEjerciciosNuevoRoute
   '/admin/ejercicios/': typeof AuthenticatedAdminEjerciciosIndexRoute
 }
@@ -139,6 +147,7 @@ export interface FileRoutesByTo {
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/examenes/$slug': typeof ExamenesSlugIndexRoute
   '/temas/$slug': typeof TemasSlugIndexRoute
+  '/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
   '/admin/ejercicios/nuevo': typeof AuthenticatedAdminEjerciciosNuevoRoute
   '/admin/ejercicios': typeof AuthenticatedAdminEjerciciosIndexRoute
 }
@@ -158,6 +167,7 @@ export interface FileRoutesById {
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/examenes/$slug/': typeof ExamenesSlugIndexRoute
   '/temas/$slug/': typeof TemasSlugIndexRoute
+  '/_authenticated/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
   '/_authenticated/admin/ejercicios/nuevo': typeof AuthenticatedAdminEjerciciosNuevoRoute
   '/_authenticated/admin/ejercicios/': typeof AuthenticatedAdminEjerciciosIndexRoute
 }
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/temas/$slug/$subtopic'
     | '/examenes/$slug/'
     | '/temas/$slug/'
+    | '/admin/ejercicios/$id'
     | '/admin/ejercicios/nuevo'
     | '/admin/ejercicios/'
   fileRoutesByTo: FileRoutesByTo
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/temas/$slug/$subtopic'
     | '/examenes/$slug'
     | '/temas/$slug'
+    | '/admin/ejercicios/$id'
     | '/admin/ejercicios/nuevo'
     | '/admin/ejercicios'
   id:
@@ -212,6 +224,7 @@ export interface FileRouteTypes {
     | '/temas/$slug/$subtopic'
     | '/examenes/$slug/'
     | '/temas/$slug/'
+    | '/_authenticated/admin/ejercicios/$id'
     | '/_authenticated/admin/ejercicios/nuevo'
     | '/_authenticated/admin/ejercicios/'
   fileRoutesById: FileRoutesById
@@ -344,16 +357,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEjerciciosNuevoRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/ejercicios/$id': {
+      id: '/_authenticated/admin/ejercicios/$id'
+      path: '/ejercicios/$id'
+      fullPath: '/admin/ejercicios/$id'
+      preLoaderRoute: typeof AuthenticatedAdminEjerciciosIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminEjerciciosIdRoute: typeof AuthenticatedAdminEjerciciosIdRoute
   AuthenticatedAdminEjerciciosNuevoRoute: typeof AuthenticatedAdminEjerciciosNuevoRoute
   AuthenticatedAdminEjerciciosIndexRoute: typeof AuthenticatedAdminEjerciciosIndexRoute
 }
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminEjerciciosIdRoute: AuthenticatedAdminEjerciciosIdRoute,
     AuthenticatedAdminEjerciciosNuevoRoute:
       AuthenticatedAdminEjerciciosNuevoRoute,
     AuthenticatedAdminEjerciciosIndexRoute:
