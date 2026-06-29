@@ -165,6 +165,15 @@ export function SiteHeader() {
                   {n.label}
                 </Link>
               ))}
+              {isAdmin && (
+                <Link
+                  to="/admin/ejercicios"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium text-primary hover:bg-secondary"
+                >
+                  <Shield className="h-4 w-4" /> Admin
+                </Link>
+              )}
               {signedIn ? (
                 <Button
                   variant="outline"
