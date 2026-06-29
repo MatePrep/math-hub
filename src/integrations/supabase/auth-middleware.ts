@@ -93,7 +93,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
-      throw new Error(`DEBUG claims: ${JSON.stringify(data?.claims)}`);
+      throw new Error(`DEBUG claixms: ${JSON.stringify(data)}`);
     }
 
     if (!data.claims.sub) {
