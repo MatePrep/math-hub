@@ -63,12 +63,14 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     }
 
     const token = authHeader.replace('Bearer ', '');
+    console.log(token);
     if (!token) {
       throw new Error('Unauthorized: No token provided');
     }
 
+    
     if (token.split('.').length !== 3) {
-      throw new Error('Unauthorized: Invalid token');
+      throw new Error('Unauthorized: xxxxInvalid token');
     }
 
     const supabase = createClient<Database>(
