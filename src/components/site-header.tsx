@@ -100,6 +100,15 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              to="/admin/ejercicios"
+              activeProps={{ className: "bg-secondary text-foreground" }}
+              className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-secondary"
+            >
+              <Shield className="h-4 w-4" /> Admin
+            </Link>
+          )}
           {signedIn ? (
             <Button
               variant="ghost"
