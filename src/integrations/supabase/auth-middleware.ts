@@ -63,7 +63,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     }
 
     const token = authHeader.replace('Bearer ', '');
-    console.log(token);
+    
     if (!token) {
       throw new Error('Unauthorized: No token provided');
     }
@@ -93,7 +93,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
-      throw new Error(`DEBUG claixms: ${JSON.stringify(data)}`);
+      throw new Error(`DEBUG claixms: token: ${token}, error: ${error?.message}, data: ${JSON.stringify(data)}`);
     }
 
     if (!data.claims.sub) {
