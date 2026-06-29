@@ -18,10 +18,14 @@ import { Route as ExamenesIndexRouteImport } from './routes/examenes.index'
 import { Route as EjercicioIdRouteImport } from './routes/ejercicio.$id'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as TemasSlugIndexRouteImport } from './routes/temas.$slug.index'
 import { Route as ExamenesSlugIndexRouteImport } from './routes/examenes.$slug.index'
 import { Route as TemasSlugSubtopicRouteImport } from './routes/temas.$slug.$subtopic'
 import { Route as ExamenesSlugSimulacroRouteImport } from './routes/examenes.$slug.simulacro'
+import { Route as AuthenticatedAdminEjerciciosIndexRouteImport } from './routes/_authenticated/admin/ejercicios.index'
+import { Route as AuthenticatedAdminEjerciciosNuevoRouteImport } from './routes/_authenticated/admin/ejercicios.nuevo'
+import { Route as AuthenticatedAdminEjerciciosIdRouteImport } from './routes/_authenticated/admin/ejercicios.$id'
 
 const BuscarRoute = BuscarRouteImport.update({
   id: '/buscar',
@@ -67,6 +71,11 @@ const AuthenticatedPanelRoute = AuthenticatedPanelRouteImport.update({
   path: '/panel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const TemasSlugIndexRoute = TemasSlugIndexRouteImport.update({
   id: '/temas/$slug/',
   path: '/temas/$slug/',
@@ -87,11 +96,30 @@ const ExamenesSlugSimulacroRoute = ExamenesSlugSimulacroRouteImport.update({
   path: '/examenes/$slug/simulacro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminEjerciciosIndexRoute =
+  AuthenticatedAdminEjerciciosIndexRouteImport.update({
+    id: '/ejercicios/',
+    path: '/ejercicios/',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminEjerciciosNuevoRoute =
+  AuthenticatedAdminEjerciciosNuevoRouteImport.update({
+    id: '/ejercicios/nuevo',
+    path: '/ejercicios/nuevo',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminEjerciciosIdRoute =
+  AuthenticatedAdminEjerciciosIdRouteImport.update({
+    id: '/ejercicios/$id',
+    path: '/ejercicios/$id',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
+  '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
@@ -101,11 +129,15 @@ export interface FileRoutesByFullPath {
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/examenes/$slug/': typeof ExamenesSlugIndexRoute
   '/temas/$slug/': typeof TemasSlugIndexRoute
+  '/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
+  '/admin/ejercicios/nuevo': typeof AuthenticatedAdminEjerciciosNuevoRoute
+  '/admin/ejercicios/': typeof AuthenticatedAdminEjerciciosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
+  '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
@@ -115,6 +147,9 @@ export interface FileRoutesByTo {
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/examenes/$slug': typeof ExamenesSlugIndexRoute
   '/temas/$slug': typeof TemasSlugIndexRoute
+  '/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
+  '/admin/ejercicios/nuevo': typeof AuthenticatedAdminEjerciciosNuevoRoute
+  '/admin/ejercicios': typeof AuthenticatedAdminEjerciciosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +157,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/panel': typeof AuthenticatedPanelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
@@ -131,6 +167,9 @@ export interface FileRoutesById {
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/examenes/$slug/': typeof ExamenesSlugIndexRoute
   '/temas/$slug/': typeof TemasSlugIndexRoute
+  '/_authenticated/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
+  '/_authenticated/admin/ejercicios/nuevo': typeof AuthenticatedAdminEjerciciosNuevoRoute
+  '/_authenticated/admin/ejercicios/': typeof AuthenticatedAdminEjerciciosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,6 +177,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/buscar'
+    | '/admin'
     | '/panel'
     | '/perfil'
     | '/ejercicio/$id'
@@ -147,11 +187,15 @@ export interface FileRouteTypes {
     | '/temas/$slug/$subtopic'
     | '/examenes/$slug/'
     | '/temas/$slug/'
+    | '/admin/ejercicios/$id'
+    | '/admin/ejercicios/nuevo'
+    | '/admin/ejercicios/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/buscar'
+    | '/admin'
     | '/panel'
     | '/perfil'
     | '/ejercicio/$id'
@@ -161,12 +205,16 @@ export interface FileRouteTypes {
     | '/temas/$slug/$subtopic'
     | '/examenes/$slug'
     | '/temas/$slug'
+    | '/admin/ejercicios/$id'
+    | '/admin/ejercicios/nuevo'
+    | '/admin/ejercicios'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/buscar'
+    | '/_authenticated/admin'
     | '/_authenticated/panel'
     | '/_authenticated/perfil'
     | '/ejercicio/$id'
@@ -176,6 +224,9 @@ export interface FileRouteTypes {
     | '/temas/$slug/$subtopic'
     | '/examenes/$slug/'
     | '/temas/$slug/'
+    | '/_authenticated/admin/ejercicios/$id'
+    | '/_authenticated/admin/ejercicios/nuevo'
+    | '/_authenticated/admin/ejercicios/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -257,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPanelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/temas/$slug/': {
       id: '/temas/$slug/'
       path: '/temas/$slug'
@@ -285,15 +343,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamenesSlugSimulacroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/ejercicios/': {
+      id: '/_authenticated/admin/ejercicios/'
+      path: '/ejercicios'
+      fullPath: '/admin/ejercicios/'
+      preLoaderRoute: typeof AuthenticatedAdminEjerciciosIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/ejercicios/nuevo': {
+      id: '/_authenticated/admin/ejercicios/nuevo'
+      path: '/ejercicios/nuevo'
+      fullPath: '/admin/ejercicios/nuevo'
+      preLoaderRoute: typeof AuthenticatedAdminEjerciciosNuevoRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/ejercicios/$id': {
+      id: '/_authenticated/admin/ejercicios/$id'
+      path: '/ejercicios/$id'
+      fullPath: '/admin/ejercicios/$id'
+      preLoaderRoute: typeof AuthenticatedAdminEjerciciosIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminEjerciciosIdRoute: typeof AuthenticatedAdminEjerciciosIdRoute
+  AuthenticatedAdminEjerciciosNuevoRoute: typeof AuthenticatedAdminEjerciciosNuevoRoute
+  AuthenticatedAdminEjerciciosIndexRoute: typeof AuthenticatedAdminEjerciciosIndexRoute
+}
+
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
+  {
+    AuthenticatedAdminEjerciciosIdRoute: AuthenticatedAdminEjerciciosIdRoute,
+    AuthenticatedAdminEjerciciosNuevoRoute:
+      AuthenticatedAdminEjerciciosNuevoRoute,
+    AuthenticatedAdminEjerciciosIndexRoute:
+      AuthenticatedAdminEjerciciosIndexRoute,
+  }
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(
+    AuthenticatedAdminRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedPanelRoute: AuthenticatedPanelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
 }
@@ -317,13 +418,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

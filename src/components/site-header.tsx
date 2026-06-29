@@ -1,9 +1,10 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Search, Menu, X, LogOut } from "lucide-react";
+import { Search, Menu, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import {
   Sheet,
   SheetContent,
@@ -23,6 +24,7 @@ export function SiteHeader() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const { isAdmin } = useIsAdmin();
 
   useEffect(() => {
     let mounted = true;
@@ -98,6 +100,15 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              to="/admin/ejercicios"
+              activeProps={{ className: "bg-secondary text-foreground" }}
+              className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-secondary"
+            >
+              <Shield className="h-4 w-4" /> Admin
+            </Link>
+          )}
           {signedIn ? (
             <Button
               variant="ghost"
@@ -154,6 +165,15 @@ export function SiteHeader() {
                   {n.label}
                 </Link>
               ))}
+              {isAdmin && (
+                <Link
+                  to="/admin/ejercicios"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium text-primary hover:bg-secondary"
+                >
+                  <Shield className="h-4 w-4" /> Admin
+                </Link>
+              )}
               {signedIn ? (
                 <Button
                   variant="outline"
