@@ -24,6 +24,7 @@ export function SiteHeader() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const { isAdmin } = useIsAdmin();
 
   useEffect(() => {
     let mounted = true;
