@@ -29,6 +29,8 @@ function EditExercise() {
           exam_year: ex.exam_year,
           difficulty: ex.difficulty,
           statement_md: ex.statement_md,
+          statement_image_path: ex.statement_image_path ?? null,
+          solution_image_path: ex.solution_image_path ?? null,
           choices: Array.isArray(ex.choices) ? (ex.choices as string[]) : [],
           correct_choice: ex.correct_choice,
           solution_md: ex.solution_md,
