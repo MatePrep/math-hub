@@ -67,6 +67,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
   const [v, setV] = useState<ExerciseFormValues>(initial ?? empty);
   const [tagsInput, setTagsInput] = useState((initial?.tags ?? []).join(", "));
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState({ stmt: false, sol: false });
 
   useEffect(() => {
     if (initial) {
@@ -221,6 +222,14 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
             rows={5}
             required
           />
+          <div className="mt-3">
+            <ImageUpload
+              label="Imagen del enunciado (opcional)"
+              value={v.statement_image_path}
+              onChange={(p) => setV((s) => ({ ...s, statement_image_path: p }))}
+              onUploadingChange={(u) => setUploading((s) => ({ ...s, stmt: u }))}
+            />
+          </div>
         </div>
 
         <div>
