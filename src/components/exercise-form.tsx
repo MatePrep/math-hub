@@ -270,11 +270,19 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
             rows={6}
             required
           />
+          <div className="mt-3">
+            <ImageUpload
+              label="Imagen de la solución (opcional)"
+              value={v.solution_image_path}
+              onChange={(p) => setV((s) => ({ ...s, solution_image_path: p }))}
+              onUploadingChange={(u) => setUploading((s) => ({ ...s, sol: u }))}
+            />
+          </div>
         </div>
 
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving}>
-            {saving ? "Guardando…" : initial?.id ? "Actualizar" : "Crear ejercicio"}
+          <Button type="submit" disabled={saving || uploading.stmt || uploading.sol}>
+            {saving ? "Guardando…" : uploading.stmt || uploading.sol ? "Subiendo imagen…" : initial?.id ? "Actualizar" : "Crear ejercicio"}
           </Button>
           <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/ejercicios" })}>
             Cancelar
