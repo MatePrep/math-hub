@@ -41,7 +41,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
         ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
         ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
       ];
-      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}.`;
       console.error(`[Supabase] ${message}`);
       throw new Error(message);
     }
@@ -70,7 +70,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     
     if (token.split('.').length !== 3) {
-      throw new Error('Unauthorized: xxxxInvalid token');
+      throw new Error('Unauthorized: Invalid token');
     }
 
     const supabase = createClient<Database>(
@@ -93,7 +93,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
-      throw new Error(`DEBUG claixms: token: ${token}, error: ${error?.message}, data: ${JSON.stringify(data)}`);
+      throw new Error('Unauthorized: Invalid token');
     }
 
     if (!data.claims.sub) {
