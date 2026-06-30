@@ -1,53 +1,102 @@
-# Rol admin para gestionar ejercicios
+# Plan — Imágenes en ejercicios, gestión de materias y módulo de Exámenes
 
-## Objetivo
+Trabajo dividido en 3 entregas, en orden. Cada una se puede verificar de forma independiente.
 
-Reintroducir un rol `admin` que permita crear, editar y eliminar ejercicios desde una sección protegida del panel, con metadatos completos (tema, subtema, universidad, año, dificultad, enunciado, alternativas, respuesta correcta, solución y etiquetas).
+---
 
-## Cambios en la base de datos
+## 1) Admin: subir imágenes en ejercicios
 
-1. **Reañadir `'admin'` al enum `app_role**` (`ALTER TYPE app_role ADD VALUE 'admin'`).
-2. **Políticas de escritura admin** sobre `exercises`, `topics`, `subtopics`, `universities` usando `has_role(auth.uid(), 'admin')`:
-  - INSERT/UPDATE/DELETE para `authenticated` cuando el usuario tiene rol admin.
-  - Mantener las políticas públicas de SELECT.
-3. **Sin auto-asignación de admin**: el primer admin se asigna manualmente con una sentencia SQL (insert tool) cuando el usuario indique qué correo debe ser admin. Nunca se otorga admin desde el cliente.
-4. Restaurar permiso de ejecución de `has_role` para `authenticated`.
+### Backend (storage + esquema)
+- Crear bucket público `exercise-images` en Lovable Cloud Storage.
+- Políticas en `storage.objects`:
+  - `SELECT` público (anon + authenticated) sobre el bucket.
+  - `INSERT/UPDATE/DELETE` sólo si `has_role(auth.uid(), 'admin')`.
+- Migración en `exercises`:
+  - `statement_image_url text null`
+  - `solution_image_url text null`
+- Server function nueva en `src/lib/admin.functions.ts`:
+  - `deleteExerciseImage({ path })` — borra del bucket cuando el admin reemplaza/quita.
 
-## Server functions nuevas (`src/lib/admin-exercises.functions.ts`)
+### UI (form de ejercicios)
+- Nuevo componente `src/components/image-upload.tsx`:
+  - Drag-and-drop + click-to-browse.
+  - Valida tipo (jpg, png, webp, svg) y tamaño ≤ 5MB; error inline.
+  - Sube directo a `exercise-images` con `supabase.storage` (admin autenticado, RLS lo permite).
+  - Muestra barra de progreso y miniatura del archivo final.
+  - Permite eliminar/reemplazar; al reemplazar en edición, llama a `deleteExerciseImage` para limpiar el archivo previo.
+- `ExerciseForm` integra dos campos opcionales: imagen del enunciado y imagen de la solución.
+- Botón **Guardar** deshabilitado mientras alguna subida está en curso; los demás campos no se pierden si la subida falla (estado local del formulario intacto).
+- `MathText` ya renderiza el enunciado; añadimos render de la imagen debajo cuando existe.
 
-Todas con `.middleware([requireSupabaseAuth])` y verificación explícita `has_role(userId, 'admin')` — si falla, lanzan `Error('Forbidden')`:
+---
 
-- `createExercise({ topic_id, subtopic_id?, university_id?, exam_year?, difficulty, statement_md, choices[], correct_choice, solution_md, tags[] })`
-- `updateExercise({ id, ...campos })`
-- `deleteExercise({ id })`
-- `listAllExercisesAdmin()` — listado paginable con joins de tema/universidad para la tabla del admin.
-- `listTopicsAdmin()`, `listSubtopicsByTopic(topicId)`, `listUniversitiesAdmin()` para los selectores del formulario.
+## 2) Materias dinámicas + gestión básica
 
-Validación con Zod (longitudes, mínimo 2 alternativas, `correct_choice` dentro del rango).
+### Datos
+- Migración sobre `topics`:
+  - `description text null`, `color text null` (hex corto), `active boolean not null default true`.
+- Server functions en `admin.functions.ts`:
+  - `createTopic({ name, description?, color? })` — normaliza el slug, valida duplicado case-insensitive (`lower(name)`), devuelve el topic existente si ya existe.
+  - `renameTopic`, `setTopicActive`, `deleteTopic` (bloquea borrado si tiene ejercicios; mensaje claro).
 
-## UI nueva (solo admins)
+### UI
+- En el selector de "Tema" del `ExerciseForm`:
+  - Opción final **"+ Agregar nueva materia"** abre un `Dialog` con nombre (obligatorio), descripción y color.
+  - Al guardar: si existe, mensaje "Ya existe, ¿usarla?" + botón para seleccionarla; si no, se crea, se invalida la query de meta y se selecciona automáticamente.
+- Nueva ruta `/_authenticated/admin/materias`:
+  - Tabla con nombre, # ejercicios, estado activo, acciones (renombrar, activar/desactivar, eliminar con confirmación).
+- Filtros públicos (`/temas`, `/buscar`) usan `active = true`; el resto del app ya consume `topics` así que las nuevas aparecen en todos lados automáticamente.
 
-1. **Gate de rol**: nuevo layout `src/routes/_authenticated/_admin/route.tsx` que consulta `has_role` vía server fn y redirige a `/panel` si no es admin.
-2. `**/_authenticated/_admin/ejercicios/index.tsx**`: tabla con todos los ejercicios (tema, universidad, dificultad, año, acciones editar/eliminar) + botón "Nuevo ejercicio".
-3. `**/_authenticated/_admin/ejercicios/nuevo.tsx**` y `**/_authenticated/_admin/ejercicios/$id.tsx**`: formulario con:
-  - Select Tema → Select Subtema dependiente.
-  - Select Universidad (opcional) + input Año.
-  - Select Dificultad (facil/medio/dificil).
-  - Textarea Enunciado (Markdown + KaTeX, con vista previa).
-  - Editor de alternativas (añadir/quitar, marcar la correcta con radio).
-  - Textarea Solución paso a paso (con vista previa).
-  - Input Tags (chips separados por coma).
-4. **Enlace "Administración"** en `SiteHeader` visible solo si el usuario es admin (hook `useIsAdmin` que consulta una server fn ligera y cachea con TanStack Query).
+---
 
-## Sin tocar
+## 3) Módulo de Exámenes (prioridad alta)
 
-- Panel del estudiante, autenticación, semilla existente, políticas de SELECT públicas.
+### Esquema (migración única)
+- `exams`: `title`, `description`, `time_limit_min`, `passing_score`, `max_attempts` (null = ilimitado), `status` ('draft'|'published'|'archived'), `question_order` ('fixed'|'random'), `created_by`.
+- `exam_topics(exam_id, topic_id)` — materias cubiertas.
+- `exam_questions`: `exam_id`, `exercise_id`, `position`, `points` (default 1). Permite selección manual.
+- `exam_rules`: `exam_id`, `topic_id`, `difficulty`, `count` — para generación aleatoria opcional (se materializan en `exam_questions` al publicar, o se resuelven al iniciar el intento).
+- Reutilizamos `exam_sessions` ya existente y le añadimos: `exam_id`, `status` ('in_progress'|'submitted'|'graded'), `answers jsonb` (autosave), `score`, `started_at`, `submitted_at`, `question_ids uuid[]` (snapshot del orden por estudiante).
+- GRANTs + RLS:
+  - Lectura pública sólo de exámenes `published` (anon/authenticated).
+  - Escritura sólo admin.
+  - `exam_sessions`: el estudiante sólo ve/edita las suyas; admin las ve todas.
 
-## Verificación
+### Admin
+- Rutas bajo `/_authenticated/admin/examenes`:
+  - `index` — tabla con estado, # preguntas, # intentos.
+  - `nuevo` y `$id` — form con: título, descripción, materias, tiempo, nota mínima, intentos, orden, estado.
+  - Selección de preguntas: pestaña **Manual** (buscador con filtros por materia/dificultad, multi-select) y pestaña **Reglas** (lista de "N preguntas de materia X dificultad Y").
+  - Aviso amarillo si ya hay intentos cuando se edita.
 
-- Usuario normal: no ve enlace "Administración" y al entrar manualmente a `/_authenticated/_admin/...` es redirigido.
-- Usuario admin: crea un ejercicio nuevo y aparece de inmediato en `/temas/...` y `/buscar`.
-- Editar y eliminar funcionan y reflejan en el listado del estudiante.
-- El linter de la base de datos no reporta nuevos warnings.
+### Estudiante
+- `/examenes` (lista pública de publicados) + `/examenes/$id` (pantalla previa con título, # preguntas, tiempo, botón "Comenzar").
+- `/examenes/$id/intento/$sessionId` — interfaz de examen:
+  - Una pregunta por pantalla, indicador "Pregunta N de M", botones anterior/siguiente, botón "Marcar para revisar".
+  - Render con `MathText` + imagen si existe.
+  - Timer persistente calculado desde `started_at` (sobrevive a recargas).
+  - Autosave de `answers` cada cambio (debounce ~500ms) vía server fn `saveExamAnswers`.
+  - Auto-submit al llegar a 0; submit manual con confirmación que indica preguntas sin responder.
+- Resultados `/examenes/$id/resultado/$sessionId`:
+  - Score, pass/fail, desglose por pregunta con respuesta correcta + explicación (auto-graded).
+  - Si hay preguntas que requieran revisión manual (futuro), marca "Pendiente de revisión" y oculta el score final.
+- Historial de intentos visible en `/panel` y en la pantalla previa del examen.
 
-## El usuario admin sera [admin@mathpre.edu](mailto:admin@mathpre.edu). Este sera algo temporal, es necesario que pueda actualizarlo màs adelante cuando tenga mi propio dominio.
+### Servidor (funciones)
+- `listPublishedExams`, `getExamForStudent`, `startExamSession` (valida intentos restantes, materializa `question_ids` según orden/reglas), `saveExamAnswers`, `submitExamSession` (autograde objetivas), `getExamResult`.
+- Admin: `listAdminExams`, `getAdminExam`, `createExam`, `updateExam`, `setExamStatus`, `listExamAttempts`.
+
+### Edge cases cubiertos
+- **Reload mid-exam**: la sesión `in_progress` se reanuda con tiempo restante calculado server-side.
+- **Sin intentos restantes**: `startExamSession` lanza error → UI muestra mensaje y enlace al historial.
+- **Examen despublicado/eliminado durante intento**: la sesión existente puede finalizarse y verse el resultado; nuevos inicios bloqueados con mensaje.
+- **Auto-submit por tiempo**: cron del cliente + verificación server-side al `submitExamSession` (si `now > started_at + time_limit`, se acepta sin penalizar).
+
+---
+
+## Orden de ejecución
+1. Bucket + migración de imágenes + `ImageUpload` + integración en `ExerciseForm`.
+2. Migración `topics` + `createTopic` + UI inline + pantalla de gestión de materias.
+3. Migración de exámenes + funciones server + admin CRUD + flujo estudiante end-to-end + resultados + edge cases.
+
+Cada paso queda funcional antes de pasar al siguiente.
