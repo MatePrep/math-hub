@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Trash2, Plus } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
+import { ImageUpload } from "@/components/image-upload";
+import { NewTopicDialog } from "@/components/new-topic-dialog";
 import {
   listAdminMeta,
   createExercise,
@@ -32,6 +34,8 @@ export interface ExerciseFormValues {
   exam_year: number | null;
   difficulty: Difficulty;
   statement_md: string;
+  statement_image_path: string | null;
+  solution_image_path: string | null;
   choices: string[];
   correct_choice: number;
   solution_md: string;
@@ -45,6 +49,8 @@ const empty: ExerciseFormValues = {
   exam_year: null,
   difficulty: "medio",
   statement_md: "",
+  statement_image_path: null,
+  solution_image_path: null,
   choices: ["", ""],
   correct_choice: 0,
   solution_md: "",
@@ -61,6 +67,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
   const [v, setV] = useState<ExerciseFormValues>(initial ?? empty);
   const [tagsInput, setTagsInput] = useState((initial?.tags ?? []).join(", "));
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState({ stmt: false, sol: false });
 
   useEffect(() => {
     if (initial) {
@@ -127,7 +134,10 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>Tema *</Label>
+            <div className="flex items-center justify-between">
+              <Label>Tema *</Label>
+              <NewTopicDialog onCreated={(id) => setV((s) => ({ ...s, topic_id: id, subtopic_id: null }))} />
+            </div>
             <Select
               value={v.topic_id}
               onValueChange={(val) => setV((s) => ({ ...s, topic_id: val, subtopic_id: null }))}
@@ -212,6 +222,14 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
             rows={5}
             required
           />
+          <div className="mt-3">
+            <ImageUpload
+              label="Imagen del enunciado (opcional)"
+              value={v.statement_image_path}
+              onChange={(p) => setV((s) => ({ ...s, statement_image_path: p }))}
+              onUploadingChange={(u) => setUploading((s) => ({ ...s, stmt: u }))}
+            />
+          </div>
         </div>
 
         <div>
@@ -252,11 +270,19 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
             rows={6}
             required
           />
+          <div className="mt-3">
+            <ImageUpload
+              label="Imagen de la solución (opcional)"
+              value={v.solution_image_path}
+              onChange={(p) => setV((s) => ({ ...s, solution_image_path: p }))}
+              onUploadingChange={(u) => setUploading((s) => ({ ...s, sol: u }))}
+            />
+          </div>
         </div>
 
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving}>
-            {saving ? "Guardando…" : initial?.id ? "Actualizar" : "Crear ejercicio"}
+          <Button type="submit" disabled={saving || uploading.stmt || uploading.sol}>
+            {saving ? "Guardando…" : uploading.stmt || uploading.sol ? "Subiendo imagen…" : initial?.id ? "Actualizar" : "Crear ejercicio"}
           </Button>
           <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/ejercicios" })}>
             Cancelar

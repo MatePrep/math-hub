@@ -15,10 +15,10 @@ export const listTopics = createServerFn({ method: "GET" }).handler(async () => 
   const sb = publicClient();
   const { data, error } = await sb
     .from("topics")
-    .select("id, slug, name, description, icon, order")
+    .select("id, slug, name, description, icon, order, color")
+    .eq("active", true)
     .order("order");
   if (error) throw new Error(error.message);
-  // also count exercises per topic
   const { data: counts } = await sb.from("exercises").select("topic_id");
   const map = new Map<string, number>();
   (counts ?? []).forEach((r) => map.set(r.topic_id, (map.get(r.topic_id) ?? 0) + 1));

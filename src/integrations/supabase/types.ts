@@ -55,35 +55,99 @@ export type Database = {
           },
         ]
       }
+      exam_questions: {
+        Row: {
+          exam_id: string
+          exercise_id: string
+          id: string
+          points: number
+          position: number
+        }
+        Insert: {
+          exam_id: string
+          exercise_id: string
+          id?: string
+          points?: number
+          position?: number
+        }
+        Update: {
+          exam_id?: string
+          exercise_id?: string
+          id?: string
+          points?: number
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_questions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_questions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_sessions: {
         Row: {
+          answers: Json
+          exam_id: string | null
           finished_at: string | null
+          flagged: Json
           id: string
+          question_ids: string[]
           score: number | null
           started_at: string
+          status: string
+          time_limit_min: number | null
           total: number | null
-          university_id: string
+          university_id: string | null
           user_id: string
         }
         Insert: {
+          answers?: Json
+          exam_id?: string | null
           finished_at?: string | null
+          flagged?: Json
           id?: string
+          question_ids?: string[]
           score?: number | null
           started_at?: string
+          status?: string
+          time_limit_min?: number | null
           total?: number | null
-          university_id: string
+          university_id?: string | null
           user_id: string
         }
         Update: {
+          answers?: Json
+          exam_id?: string | null
           finished_at?: string | null
+          flagged?: Json
           id?: string
+          question_ids?: string[]
           score?: number | null
           started_at?: string
+          status?: string
+          time_limit_min?: number | null
           total?: number | null
-          university_id?: string
+          university_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "exam_sessions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exam_sessions_university_id_fkey"
             columns: ["university_id"]
@@ -93,6 +157,48 @@ export type Database = {
           },
         ]
       }
+      exams: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          max_attempts: number | null
+          passing_score: number
+          question_order: string
+          status: string
+          time_limit_min: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          max_attempts?: number | null
+          passing_score?: number
+          question_order?: string
+          status?: string
+          time_limit_min?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          max_attempts?: number | null
+          passing_score?: number
+          question_order?: string
+          status?: string
+          time_limit_min?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           choices: Json
@@ -101,7 +207,9 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["difficulty"]
           exam_year: number | null
           id: string
+          solution_image_path: string | null
           solution_md: string
+          statement_image_path: string | null
           statement_md: string
           subtopic_id: string | null
           tags: string[]
@@ -115,7 +223,9 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["difficulty"]
           exam_year?: number | null
           id?: string
+          solution_image_path?: string | null
           solution_md: string
+          statement_image_path?: string | null
           statement_md: string
           subtopic_id?: string | null
           tags?: string[]
@@ -129,7 +239,9 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["difficulty"]
           exam_year?: number | null
           id?: string
+          solution_image_path?: string | null
           solution_md?: string
+          statement_image_path?: string | null
           statement_md?: string
           subtopic_id?: string | null
           tags?: string[]
@@ -215,6 +327,8 @@ export type Database = {
       }
       topics: {
         Row: {
+          active: boolean
+          color: string | null
           description: string | null
           icon: string | null
           id: string
@@ -223,6 +337,8 @@ export type Database = {
           slug: string
         }
         Insert: {
+          active?: boolean
+          color?: string | null
           description?: string | null
           icon?: string | null
           id?: string
@@ -231,6 +347,8 @@ export type Database = {
           slug: string
         }
         Update: {
+          active?: boolean
+          color?: string | null
           description?: string | null
           icon?: string | null
           id?: string
