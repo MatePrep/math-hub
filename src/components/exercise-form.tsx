@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Trash2, Plus } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
+import { ImageUpload } from "@/components/image-upload";
+import { NewTopicDialog } from "@/components/new-topic-dialog";
 import {
   listAdminMeta,
   createExercise,
