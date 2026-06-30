@@ -34,6 +34,8 @@ export interface ExerciseFormValues {
   exam_year: number | null;
   difficulty: Difficulty;
   statement_md: string;
+  statement_image_path: string | null;
+  solution_image_path: string | null;
   choices: string[];
   correct_choice: number;
   solution_md: string;
@@ -47,6 +49,8 @@ const empty: ExerciseFormValues = {
   exam_year: null,
   difficulty: "medio",
   statement_md: "",
+  statement_image_path: null,
+  solution_image_path: null,
   choices: ["", ""],
   correct_choice: 0,
   solution_md: "",
@@ -129,7 +133,10 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>Tema *</Label>
+            <div className="flex items-center justify-between">
+              <Label>Tema *</Label>
+              <NewTopicDialog onCreated={(id) => setV((s) => ({ ...s, topic_id: id, subtopic_id: null }))} />
+            </div>
             <Select
               value={v.topic_id}
               onValueChange={(val) => setV((s) => ({ ...s, topic_id: val, subtopic_id: null }))}
