@@ -1,73 +1,39 @@
-import reactKatex from "react-katex";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
-const { InlineMath, BlockMath } = reactKatex as unknown as {
-  InlineMath: React.ComponentType<{ math: string }>;
-  BlockMath: React.ComponentType<{ math: string }>;
-};
-
-// Render text with $...$ inline math and $$...$$ block math.
-// Also supports **bold** and paragraph breaks on blank lines.
-function renderInline(text: string, keyPrefix: string) {
-  const parts = text.split(/(\$[^$]+\$)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("$") && part.endsWith("$") && part.length > 2) {
-      try {
-        return <InlineMath key={`${keyPrefix}-${i}`} math={part.slice(1, -1)} />;
-      } catch {
-        return <span key={`${keyPrefix}-${i}`}>{part}</span>;
-      }
-    }
-    // bold
-    const bold = part.split(/(\*\*[^*]+\*\*)/g);
-    return (
-      <span key={`${keyPrefix}-${i}`}>
-        {bold.map((b, j) =>
-          b.startsWith("**") && b.endsWith("**") ? (
-            <strong key={j}>{b.slice(2, -2)}</strong>
-          ) : (
-            <span key={j}>{b}</span>
-          ),
-        )}
-      </span>
-    );
-  });
+interface MarkdownMathProps {
+  text: string;
+  className?: string;
+  inline?: boolean;
 }
 
-export function MathText({ text, className }: { text: string; className?: string }) {
-  // Split block math first
-  const blocks = text.split(/(\$\$[^$]+\$\$)/g);
+function MarkdownMath({ text, className, inline = false }: MarkdownMathProps) {
+  const Wrapper = inline ? "span" : "div";
   return (
-    <div className={className}>
-      {blocks.map((block, bi) => {
-        if (block.startsWith("$$") && block.endsWith("$$")) {
-          const inner = block.slice(2, -2).trim();
-          try {
-            return <BlockMath key={bi} math={inner} />;
-          } catch {
-            return <pre key={bi}>{block}</pre>;
-          }
-        }
-        const paragraphs = block.split(/\n\n+/);
-        return paragraphs.map((p, pi) => (
-          <p key={`${bi}-${pi}`} className="leading-relaxed [&:not(:first-child)]:mt-3">
-            {renderInline(p, `${bi}-${pi}`)}
-          </p>
-        ));
-      })}
-    </div>
+    <Wrapper className={className}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={{
+          p: ({ node, ...props }) =>
+            inline ? <span {...props} /> : <p className="leading-relaxed [&:not(:first-child)]:mt-3" {...props} />,
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </Wrapper>
   );
 }
 
-// For short content like answer choices: render entirely as inline math if it looks like math.
+export function MathText({ text, className }: { text: string; className?: string }) {
+  return <MarkdownMath text={text} className={className} />;
+}
+
 export function ChoiceText({ text }: { text: string }) {
   const looksLikeMath = /[\\^_{}]|\\[a-zA-Z]+/.test(text);
-  if (looksLikeMath) {
-    try {
-      return <InlineMath math={text} />;
-    } catch {
-      return <span>{text}</span>;
-    }
-  }
-  return <MathText text={text} className="inline" />;
+  const normalizedText = looksLikeMath && !/^\$.*\$$/.test(text.trim()) ? `$${text.trim()}$` : text;
+  return <MarkdownMath text={normalizedText} className="inline" inline />;
 }
