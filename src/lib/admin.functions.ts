@@ -24,7 +24,7 @@ export const checkIsAdmin = createServerFn({ method: "GET" })
 
 const choiceSchema = z.string().trim().min(1).max(500);
 
-const exerciseSchema = z.object({
+const exerciseBase = z.object({
   topic_id: z.string().uuid(),
   subtopic_id: z.string().uuid().nullable().optional(),
   university_id: z.string().uuid().nullable().optional(),
@@ -37,10 +37,18 @@ const exerciseSchema = z.object({
   correct_choice: z.number().int().min(0),
   solution_md: z.string().trim().min(1).max(8000),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
-}).refine((d) => d.correct_choice < d.choices.length, {
+});
+
+const exerciseSchema = exerciseBase.refine((d) => d.correct_choice < d.choices.length, {
   message: "correct_choice fuera de rango",
   path: ["correct_choice"],
 });
+
+const exerciseUpdateSchema = exerciseBase.extend({ id: z.string().uuid() }).refine(
+  (d) => d.correct_choice < d.choices.length,
+  { message: "correct_choice fuera de rango", path: ["correct_choice"] },
+);
+
 
 export const listAdminExercises = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -120,9 +128,8 @@ export const createExercise = createServerFn({ method: "POST" })
 
 export const updateExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ id: z.string().uuid() }).and(exerciseSchema).parse(d),
-  )
+  .inputValidator((d) => exerciseUpdateSchema.parse(d))
+
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { id, ...rest } = data;
@@ -300,6 +307,9 @@ const examSchema = z.object({
   exercise_ids: z.array(z.string().uuid()).min(1).max(200),
 });
 
+const examUpdateSchema = examSchema.extend({ id: z.string().uuid() });
+
+
 export const listAdminExams = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -384,9 +394,8 @@ export const createExam = createServerFn({ method: "POST" })
 
 export const updateExam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ id: z.string().uuid() }).and(examSchema).parse(d),
-  )
+  .inputValidator((d) => examUpdateSchema.parse(d))
+
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { id, exercise_ids, ...rest } = data;
