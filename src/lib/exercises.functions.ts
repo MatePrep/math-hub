@@ -77,7 +77,7 @@ export const listExercises = createServerFn({ method: "GET" })
     let q = sb
       .from("exercises")
       .select(
-        "id, statement_md, difficulty, exam_year, tags, topic:topics!inner(slug,name), subtopic:subtopics(slug,name), university:universities(slug,short_name)",
+        "id, statement_md, difficulty, exam_year, tags, choices, correct_choice, topic:topics!inner(slug,name), subtopic:subtopics(slug,name), university:universities(slug,short_name)",
       )
       .order("created_at", { ascending: false })
       .limit(data.limit);

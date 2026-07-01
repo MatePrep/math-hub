@@ -48,7 +48,7 @@ function Simulacro() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [finished, setFinished] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(
-    exercises.length * PER_QUESTION_SECONDS,
+    (exercises?.length ?? 0) * PER_QUESTION_SECONDS,
   );
 
   useEffect(() => {
@@ -182,7 +182,7 @@ function Simulacro() {
       <div className="mt-6 rounded-xl border border-border bg-card p-6">
         <MathText text={ex.statement_md} />
         <ul className="mt-5 space-y-2">
-          {(ex.choices as string[]).map((c, i) => {
+          {(Array.isArray(ex.choices) ? ex.choices : []).map((c, i) => {
             const picked = answers[ex.id] === i;
             return (
               <li key={i}>
