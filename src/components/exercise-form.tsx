@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -68,6 +68,14 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
   const [tagsInput, setTagsInput] = useState((initial?.tags ?? []).join(", "));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState({ stmt: false, sol: false });
+
+  const handleStatementUploadingChange = useCallback((stmt: boolean) => {
+    setUploading((s) => (s.stmt !== stmt ? { ...s, stmt } : s));
+  }, []);
+
+  const handleSolutionUploadingChange = useCallback((sol: boolean) => {
+    setUploading((s) => (s.sol !== sol ? { ...s, sol } : s));
+  }, []);
 
   useEffect(() => {
     if (initial) {
@@ -230,7 +238,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
               label="Imagen del enunciado (opcional)"
               value={v.statement_image_path}
               onChange={(p) => setV((s) => ({ ...s, statement_image_path: p }))}
-              onUploadingChange={(u) => setUploading((s) => ({ ...s, stmt: u }))}
+              onUploadingChange={handleStatementUploadingChange}
             />
           </div>
         </div>
@@ -278,7 +286,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
               label="Imagen de la solución (opcional)"
               value={v.solution_image_path}
               onChange={(p) => setV((s) => ({ ...s, solution_image_path: p }))}
-              onUploadingChange={(u) => setUploading((s) => ({ ...s, sol: u }))}
+              onUploadingChange={handleSolutionUploadingChange}
             />
           </div>
         </div>
