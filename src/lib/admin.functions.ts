@@ -307,6 +307,9 @@ const examSchema = z.object({
   exercise_ids: z.array(z.string().uuid()).min(1).max(200),
 });
 
+const examUpdateSchema = examSchema.extend({ id: z.string().uuid() });
+
+
 export const listAdminExams = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
