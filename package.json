@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "lint:ci": "eslint --max-warnings=0 . --ext .js,.ts,.tsx",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -82,8 +83,11 @@
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
