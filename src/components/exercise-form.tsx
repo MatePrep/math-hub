@@ -74,7 +74,10 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
       setV(initial);
       setTagsInput(initial.tags.join(", "));
     }
-  }, [initial]);
+    // Only reset when the record id changes (avoid wiping edits when parent re-renders).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial?.id]);
+
 
   const subtopicsForTopic = useMemo(
     () => (meta.data?.subtopics ?? []).filter((s: any) => s.topic_id === v.topic_id),
