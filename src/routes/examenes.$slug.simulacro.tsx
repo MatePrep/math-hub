@@ -1,11 +1,13 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getUniversityBySlug, listExercises } from "@/lib/exercises.functions";
-import { MathText, ChoiceText } from "@/lib/math-render";
-import { Timer, CheckCircle2 } from "lucide-react";
+import { listPublishedExams, startRandomExamSession } from "@/lib/exams.functions";
+import { Timer, ListChecks } from "lucide-react";
 
 const uniQO = (slug: string) =>
   queryOptions({
@@ -17,12 +19,19 @@ const exQO = (slug: string) =>
     queryKey: ["sim-exercises", slug],
     queryFn: () => listExercises({ data: { universitySlug: slug, limit: 100 } }),
   });
+const examsQO = (slug: string) =>
+  queryOptions({
+    queryKey: ["published-exams", slug],
+    queryFn: () => listPublishedExams({ data: { universitySlug: slug } }),
+    staleTime: 1000 * 60 * 5,
+  });
 
 export const Route = createFileRoute("/examenes/$slug/simulacro")({
   loader: async ({ context, params }) => {
     const u = await context.queryClient.ensureQueryData(uniQO(params.slug));
     if (!u) throw notFound();
     await context.queryClient.ensureQueryData(exQO(params.slug));
+    await context.queryClient.ensureQueryData(examsQO(params.slug));
   },
   head: ({ params }) => ({ meta: [{ title: `Simulacro ${params.slug} · MatePre` }] }),
   component: Simulacro,
@@ -36,194 +45,117 @@ export const Route = createFileRoute("/examenes/$slug/simulacro")({
   ),
 });
 
-const PER_QUESTION_SECONDS = 90;
-
 function Simulacro() {
   const { slug } = Route.useParams();
+  const navigate = useNavigate();
   const { data: u } = useSuspenseQuery(uniQO(slug));
   const { data: exercises } = useSuspenseQuery(exQO(slug));
+  const publishedExams = useSuspenseQuery(examsQO(slug)).data ?? [];
+  const startRandomFn = useServerFn(startRandomExamSession);
+  const [starting, setStarting] = useState(false);
 
-  const [started, setStarted] = useState(false);
-  const [idx, setIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [finished, setFinished] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(
-    (exercises?.length ?? 0) * PER_QUESTION_SECONDS,
-  );
+  const exerciseCount = exercises.length;
+  const estimatedMinutes = Math.max(1, Math.round((exerciseCount * 90) / 60));
 
-  useEffect(() => {
-    if (!started || finished) return;
-    if (secondsLeft <= 0) {
-      setFinished(true);
-      return;
+  async function onStartRandom() {
+    setStarting(true);
+    try {
+      const { sessionId } = await startRandomFn({ data: { universitySlug: slug } });
+      navigate({ to: "/examen-sesion/$sessionId", params: { sessionId } });
+    } catch (error: any) {
+      toast.error(error?.message ?? "No se pudo iniciar el simulacro aleatorio.");
+    } finally {
+      setStarting(false);
     }
-    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [started, finished, secondsLeft]);
-
-  const score = useMemo(() => {
-    if (!finished) return 0;
-    return exercises.reduce(
-      (acc: number, ex: any) => acc + ((answers[ex.id] ?? -1) === ex.correct_choice ? 1 : 0),
-      0,
-    );
-  }, [finished, exercises, answers]);
+  }
 
   if (!u) return null;
-  if (exercises.length === 0) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <p className="text-muted-foreground">No hay ejercicios disponibles para este simulacro.</p>
-        <Link to="/examenes" className="mt-4 inline-block text-primary hover:underline">
-          Volver
-        </Link>
-      </div>
-    );
-  }
-
-  if (!started) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-16">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Simulacro {u.short_name}</h1>
-        <p className="mt-2 text-muted-foreground">
-          {exercises.length} preguntas · {Math.round((exercises.length * PER_QUESTION_SECONDS) / 60)}{" "}
-          minutos. Sin retroalimentación hasta finalizar.
-        </p>
-        <div className="mt-6 rounded-xl border border-border bg-card p-5">
-          <h2 className="font-display text-lg font-bold">Recomendaciones</h2>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
-            <li>Trabaja en un lugar sin distracciones.</li>
-            <li>Ten papel y lápiz a la mano.</li>
-            <li>El tiempo corre apenas pulses "Iniciar".</li>
-          </ul>
-        </div>
-        <Button size="lg" className="mt-6 min-h-11" onClick={() => setStarted(true)}>
-          <Timer className="mr-2 h-4 w-4" /> Iniciar simulacro
-        </Button>
-      </div>
-    );
-  }
-
-  if (finished) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="font-display text-3xl font-bold">Resultado del simulacro</h1>
-        <div className="mt-4 rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">{u.short_name}</p>
-          <p className="mt-1 font-display text-5xl font-bold text-primary">
-            {score} / {exercises.length}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {Math.round((score / exercises.length) * 100)}% de aciertos
-          </p>
-        </div>
-        <div className="mt-8 space-y-4">
-          {exercises.map((ex: any, i: number) => {
-            const selected = answers[ex.id];
-            const correct = selected === ex.correct_choice;
-            return (
-              <div key={ex.id} className="rounded-xl border border-border bg-card p-5">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge variant="outline">#{i + 1}</Badge>
-                  <Badge
-                    variant="outline"
-                    className={
-                      correct
-                        ? "border-success/40 bg-success/10 text-success"
-                        : "border-destructive/40 bg-destructive/10 text-destructive"
-                    }
-                  >
-                    {correct ? "Correcto" : selected === undefined ? "Sin responder" : "Incorrecto"}
-                  </Badge>
-                </div>
-                <div className="mt-3 text-sm">
-                  <MathText text={ex.statement_md} />
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Respuesta correcta: <strong>{String.fromCharCode(65 + ex.correct_choice)}</strong>
-                </p>
-                <Link
-                  to="/ejercicio/$id"
-                  params={{ id: ex.id }}
-                  className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-                >
-                  Ver solución →
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const ex: any = exercises[idx];
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = secondsLeft % 60;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <p className="text-sm text-muted-foreground">
-          Pregunta <strong>{idx + 1}</strong> de {exercises.length}
-        </p>
-        <div className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-          <Timer className="h-4 w-4" />
-          {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <nav className="text-xs text-muted-foreground">
+        <Link to="/examenes" className="hover:underline">Exámenes</Link> / <span className="text-foreground">{u.short_name}</span>
+      </nav>
+      <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">Simulacro {u.short_name}</h1>
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            Elige un examen oficial preparado por el equipo o genera un simulacro aleatorio con las preguntas disponibles para esta universidad.
+          </p>
+
+          <div className="mt-8 space-y-6">
+            <section className="rounded-xl border border-border bg-card p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-display text-xl font-bold">Simulacro aleatorio</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Genera un examen con preguntas seleccionadas al azar. Estimado {estimatedMinutes} minutos.
+                  </p>
+                </div>
+                <Button size="lg" onClick={onStartRandom} loading={starting}>
+                  {starting ? "Iniciando…" : "Generar simulacro"}
+                </Button>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-xl font-bold">Exámenes oficiales</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Elige un examen definido por el equipo para rendir la versión oficial.
+                  </p>
+                </div>
+                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
+                  {publishedExams.length} exámenes
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {publishedExams.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border bg-background p-6 text-sm text-muted-foreground">
+                    Aún no hay exámenes oficiales publicados para esta universidad.
+                  </div>
+                ) : (
+                  publishedExams.map((exam: any) => (
+                    <div key={exam.id} className="rounded-xl border border-border bg-card p-5">
+                      <h3 className="font-medium">{exam.title}</h3>
+                      {exam.description && <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{exam.description}</p>}
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                        <Badge variant="outline">{exam.time_limit_min} min</Badge>
+                        <Badge variant="outline"><ListChecks className="mr-1 inline h-3 w-3" />{exam.questionCount} preguntas</Badge>
+                        <Badge variant="outline" className="capitalize">{exam.question_order === "random" ? "Aleatorio" : "Fijo"}</Badge>
+                      </div>
+                      <Button asChild size="sm" className="mt-4">
+                        <Link to="/examen/$id" params={{ id: exam.id }}>Ver examen</Link>
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
         </div>
-      </div>
-      <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className="h-full bg-primary transition-all"
-          style={{ width: `${((idx + 1) / exercises.length) * 100}%` }}
-        />
-      </div>
 
-      <div className="mt-6 rounded-xl border border-border bg-card p-6">
-        <MathText text={ex.statement_md} />
-        <ul className="mt-5 space-y-2">
-          {(Array.isArray(ex.choices) ? ex.choices : []).map((c, i) => {
-            const picked = answers[ex.id] === i;
-            return (
-              <li key={i}>
-                <button
-                  type="button"
-                  onClick={() => setAnswers((a) => ({ ...a, [ex.id]: i }))}
-                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
-                    picked
-                      ? "border-primary bg-primary/10 font-medium"
-                      : "border-border bg-background hover:border-primary/40"
-                  }`}
-                >
-                  <span className="mr-2 font-semibold text-primary">
-                    {String.fromCharCode(65 + i)}.
-                  </span>
-                  <ChoiceText text={c} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+        <aside className="space-y-4">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Información</p>
+            <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+              <p>{exerciseCount} ejercicios disponibles en esta universidad.</p>
+              <p>Los exámenes oficiales respetan la selección y el orden definidos por el equipo.</p>
+              <p>El simulacro aleatorio genera una nueva sesión con preguntas disponibles cada vez.</p>
+            </div>
+          </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <Button
-          variant="outline"
-          disabled={idx === 0}
-          onClick={() => setIdx((i) => i - 1)}
-          className="min-h-11"
-        >
-          Anterior
-        </Button>
-        {idx < exercises.length - 1 ? (
-          <Button onClick={() => setIdx((i) => i + 1)} className="min-h-11">
-            Siguiente
-          </Button>
-        ) : (
-          <Button onClick={() => setFinished(true)} className="min-h-11">
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Finalizar
-          </Button>
-        )}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="font-display text-lg font-bold">Consejos</h2>
+            <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-muted-foreground">
+              <li>Lee cada pregunta con cuidado antes de responder.</li>
+              <li>En un examen oficial, el orden puede ser fijo o aleatorio según su configuración.</li>
+              <li>Si no estás autenticado, inicia sesión para poder guardar y enviar tu simulacro.</li>
+            </ul>
+          </div>
+        </aside>
       </div>
     </div>
   );

@@ -12,19 +12,51 @@ function publicClient() {
   );
 }
 
-export const listPublishedExams = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = publicClient();
-  const { data, error } = await sb
-    .from("exams")
-    .select("id, title, description, time_limit_min, passing_score, max_attempts, status, exam_questions(count)")
-    .eq("status", "published")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((e: any) => ({
-    ...e,
-    questionCount: e.exam_questions?.[0]?.count ?? 0,
-  }));
-});
+const publishedExamsInput = z.object({ universitySlug: z.string().optional() });
+
+export const listPublishedExams = createServerFn({ method: "GET" })
+  .inputValidator((d) => publishedExamsInput.parse(d ?? {}))
+  .handler(async ({ data }) => {
+    const sb = publicClient();
+    const baseQuery = sb
+      .from("exams")
+      .select("id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, exam_questions(count)")
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
+
+    if (!data?.universitySlug) {
+      const { data: exams, error } = await baseQuery;
+      if (error) throw new Error(error.message);
+      return (exams ?? []).map((e: any) => ({
+        ...e,
+        questionCount: e.exam_questions?.[0]?.count ?? 0,
+      }));
+    }
+
+    const { data: university, error: uniError } = await sb
+      .from("universities")
+      .select("id")
+      .eq("slug", data.universitySlug)
+      .maybeSingle();
+    if (uniError) throw new Error(uniError.message);
+    if (!university) return [];
+
+    const { data: examQuestionRows, error: eqError } = await sb
+      .from("exam_questions")
+      .select("exam_id, exercise:exercises!inner(university_id)")
+      .eq("exercise.university_id", university.id);
+    if (eqError) throw new Error(eqError.message);
+
+    const examIds = Array.from(new Set((examQuestionRows ?? []).map((row: any) => row.exam_id)));
+    if (examIds.length === 0) return [];
+
+    const { data: exams, error: examError } = await baseQuery.in("id", examIds);
+    if (examError) throw new Error(examError.message);
+    return (exams ?? []).map((e: any) => ({
+      ...e,
+      questionCount: e.exam_questions?.[0]?.count ?? 0,
+    }));
+  });
 
 export const getExamPreview = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
@@ -122,6 +154,51 @@ export const startExamSession = createServerFn({ method: "POST" })
         flagged: [],
         question_ids: questionIds,
         time_limit_min: exam.time_limit_min,
+        total: questionIds.length,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { sessionId: row.id as string };
+  });
+
+const startRandomExamInput = z.object({ universitySlug: z.string().trim() });
+
+export const startRandomExamSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => startRandomExamInput.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: university, error: uniError } = await supabase
+      .from("universities")
+      .select("id")
+      .eq("slug", data.universitySlug)
+      .maybeSingle();
+    if (uniError) throw new Error(uniError.message);
+    if (!university) throw new Error("Universidad no encontrada");
+
+    const { data: exercises, error: exError } = await supabase
+      .from("exercises")
+      .select("id")
+      .eq("university_id", university.id);
+    if (exError) throw new Error(exError.message);
+    const ids = (exercises ?? []).map((ex: any) => ex.id as string);
+    if (ids.length === 0) throw new Error("No hay ejercicios disponibles para generar el simulacro.");
+
+    const questionIds = [...ids].sort(() => Math.random() - 0.5);
+    const timeLimitMin = Math.max(1, Math.ceil((questionIds.length * 90) / 60));
+
+    const { data: row, error } = await supabase
+      .from("exam_sessions")
+      .insert({
+        user_id: userId,
+        exam_id: null,
+        university_id: university.id,
+        status: "in_progress",
+        answers: {},
+        flagged: [],
+        question_ids: questionIds,
+        time_limit_min: timeLimitMin,
         total: questionIds.length,
       })
       .select("id")
