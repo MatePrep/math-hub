@@ -238,6 +238,56 @@ export const createTopic = createServerFn({ method: "POST" })
     return { id: row.id as string, duplicated: false };
   });
 
+export const createSubtopic = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      topic_id: z.string().uuid(),
+      name: z.string().trim().min(2).max(60),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: existing } = await context.supabase
+      .from("subtopics")
+      .select("id")
+      .eq("topic_id", data.topic_id)
+      .ilike("name", data.name)
+      .maybeSingle();
+    if (existing) {
+      return { id: existing.id as string, duplicated: true };
+    }
+    let slug = slugify(data.name);
+    if (!slug) slug = `subtema-${Date.now()}`;
+    const { data: bySlug } = await context.supabase
+      .from("subtopics")
+      .select("id")
+      .eq("topic_id", data.topic_id)
+      .eq("slug", slug)
+      .maybeSingle();
+    if (bySlug) slug = `${slug}-${Date.now().toString(36)}`;
+    const { data: maxOrderRow } = await context.supabase
+      .from("subtopics")
+      .select("order")
+      .eq("topic_id", data.topic_id)
+      .order("order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextOrder = (maxOrderRow?.order ?? 0) + 1;
+    const { data: row, error } = await context.supabase
+      .from("subtopics")
+      .insert({
+        topic_id: data.topic_id,
+        name: data.name,
+        slug,
+        order: nextOrder,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id as string, duplicated: false };
+  });
+
 export const renameTopic = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>

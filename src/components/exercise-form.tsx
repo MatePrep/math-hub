@@ -11,6 +11,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -87,6 +88,9 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
   }, [initial?.id]);
 
 
+  const [topicDialogOpen, setTopicDialogOpen] = useState(false);
+  const [subtopicDialogOpen, setSubtopicDialogOpen] = useState(false);
+
   const subtopicsForTopic = useMemo(
     () => (meta.data?.subtopics ?? []).filter((s: any) => s.topic_id === v.topic_id),
     [meta.data, v.topic_id],
@@ -145,37 +149,67 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <div className="flex items-center justify-between">
-              <Label>Tema *</Label>
-              <NewTopicDialog onCreated={(id) => setV((s) => ({ ...s, topic_id: id, subtopic_id: null }))} />
-            </div>
+            <Label>Tema *</Label>
             <Select
               value={v.topic_id}
-              onValueChange={(val) => setV((s) => ({ ...s, topic_id: val, subtopic_id: null }))}
+              onValueChange={(val) => {
+                if (val === "__new_topic__") {
+                  setTopicDialogOpen(true);
+                  return;
+                }
+                setV((s) => ({ ...s, topic_id: val, subtopic_id: null }));
+              }}
             >
               <SelectTrigger><SelectValue placeholder="Selecciona…" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="__new_topic__">+ Agregar nuevo tema</SelectItem>
+                <SelectSeparator />
                 {meta.data?.topics.map((t: any) => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <NewTopicDialog
+              type="topic"
+              open={topicDialogOpen}
+              onOpenChange={(open) => setTopicDialogOpen(open)}
+              showTrigger={false}
+              onCreated={(id) => setV((s) => ({ ...s, topic_id: id, subtopic_id: null }))}
+            />
           </div>
           <div>
             <Label>Subtema</Label>
             <Select
               value={v.subtopic_id ?? "__none"}
-              onValueChange={(val) => setV((s) => ({ ...s, subtopic_id: val === "__none" ? null : val }))}
+              onValueChange={(val) => {
+                if (val === "__new_subtopic__") {
+                  setSubtopicDialogOpen(true);
+                  return;
+                }
+                setV((s) => ({ ...s, subtopic_id: val === "__none" ? null : val }));
+              }}
               disabled={!v.topic_id}
             >
               <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">— ninguno —</SelectItem>
+                <SelectItem value="__new_subtopic__" disabled={!v.topic_id}>
+                  + Agregar nuevo subtema
+                </SelectItem>
+                <SelectSeparator />
                 {subtopicsForTopic.map((s: any) => (
                   <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <NewTopicDialog
+              type="subtopic"
+              topicId={v.topic_id}
+              open={subtopicDialogOpen}
+              onOpenChange={(open) => setSubtopicDialogOpen(open)}
+              showTrigger={false}
+              onCreated={(id) => setV((s) => ({ ...s, subtopic_id: id }))}
+            />
           </div>
           <div>
             <Label>Universidad</Label>
