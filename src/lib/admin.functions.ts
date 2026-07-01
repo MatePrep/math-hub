@@ -394,9 +394,8 @@ export const createExam = createServerFn({ method: "POST" })
 
 export const updateExam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ id: z.string().uuid() }).and(examSchema).parse(d),
-  )
+  .inputValidator((d) => examUpdateSchema.parse(d))
+
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { id, exercise_ids, ...rest } = data;
