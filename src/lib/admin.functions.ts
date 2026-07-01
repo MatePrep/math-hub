@@ -128,9 +128,8 @@ export const createExercise = createServerFn({ method: "POST" })
 
 export const updateExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ id: z.string().uuid() }).and(exerciseSchema).parse(d),
-  )
+  .inputValidator((d) => exerciseUpdateSchema.parse(d))
+
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { id, ...rest } = data;
