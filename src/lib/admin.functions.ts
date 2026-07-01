@@ -24,7 +24,7 @@ export const checkIsAdmin = createServerFn({ method: "GET" })
 
 const choiceSchema = z.string().trim().min(1).max(500);
 
-const exerciseSchema = z.object({
+const exerciseBase = z.object({
   topic_id: z.string().uuid(),
   subtopic_id: z.string().uuid().nullable().optional(),
   university_id: z.string().uuid().nullable().optional(),
@@ -37,10 +37,18 @@ const exerciseSchema = z.object({
   correct_choice: z.number().int().min(0),
   solution_md: z.string().trim().min(1).max(8000),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
-}).refine((d) => d.correct_choice < d.choices.length, {
+});
+
+const exerciseSchema = exerciseBase.refine((d) => d.correct_choice < d.choices.length, {
   message: "correct_choice fuera de rango",
   path: ["correct_choice"],
 });
+
+const exerciseUpdateSchema = exerciseBase.extend({ id: z.string().uuid() }).refine(
+  (d) => d.correct_choice < d.choices.length,
+  { message: "correct_choice fuera de rango", path: ["correct_choice"] },
+);
+
 
 export const listAdminExercises = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
