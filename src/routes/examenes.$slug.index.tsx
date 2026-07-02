@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Timer } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getUniversityBySlug, listMyUniversityExamSessions } from "@/lib/exams.functions";
+import { getUniversityBySlug } from "@/lib/exercises.functions";
+import { listMyUniversityExamSessions } from "@/lib/exams.functions";
 
 const uniQO = (slug: string) =>
   queryOptions({
