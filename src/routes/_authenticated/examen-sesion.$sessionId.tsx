@@ -177,11 +177,16 @@ function TakeExam() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <Button variant="outline" disabled={idx === 0} onClick={() => setIdx((i) => i - 1)} className="min-h-11">Anterior</Button>
+          <Button type="button" variant="outline" disabled={idx === 0} onClick={() => setIdx((i) => i - 1)} className="min-h-11">Anterior</Button>
           {idx < questions.length - 1 ? (
-            <Button onClick={() => setIdx((i) => i + 1)} className="min-h-11">Siguiente</Button>
+            <Button type="button" onClick={() => setIdx((i) => i + 1)} className="min-h-11">Siguiente</Button>
           ) : (
-            <Button onClick={doSubmit} disabled={submitting} className="min-h-11">
+            <Button
+              type="button"
+              onClick={doSubmit}
+              disabled={submitting || answers[ex.id] === undefined}
+              className="min-h-11"
+            >
               <CheckCircle2 className="mr-2 h-4 w-4" /> {submitting ? "Enviando…" : "Finalizar examen"}
             </Button>
           )}

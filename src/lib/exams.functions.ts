@@ -88,6 +88,30 @@ export const getMyExamAttempts = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+export const listMyUniversityExamSessions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ universitySlug: z.string().trim() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: university, error: uniError } = await supabase
+      .from("universities")
+      .select("id")
+      .eq("slug", data.universitySlug)
+      .maybeSingle();
+    if (uniError) throw new Error(uniError.message);
+    if (!university) return [];
+
+    const { data: rows, error } = await supabase
+      .from("exam_sessions")
+      .select("id, status, started_at, finished_at, score, total")
+      .eq("user_id", userId)
+      .eq("university_id", university.id)
+      .order("started_at", { ascending: false })
+      .limit(10);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 export const startExamSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ examId: z.string().uuid() }).parse(d))
