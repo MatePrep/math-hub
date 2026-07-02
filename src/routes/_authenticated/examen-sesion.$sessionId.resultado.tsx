@@ -75,18 +75,21 @@ function ResultPage() {
                     }`}>
                       <span className="mr-2 font-semibold">{String.fromCharCode(65 + ci)}.</span>
                       <ChoiceText text={c} />
-                      {isCor && <span className="ml-2 text-xs text-success">✓ correcta</span>}
-                      {isSel && !isCor && <span className="ml-2 text-xs text-destructive">tu respuesta</span>}
                     </li>
                   );
                 })}
               </ul>
-              {ex.solution_md && (
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-sm font-medium text-primary">Ver solución paso a paso</summary>
-                  <div className="mt-2 rounded-md bg-muted p-3 text-sm"><MathText text={ex.solution_md} /></div>
-                </details>
-              )}
+
+              <details className="mt-3" open>
+                <summary className="cursor-pointer text-sm font-medium text-primary">Solución paso a paso</summary>
+                <div className="mt-2 rounded-md bg-muted p-3 text-sm">
+                  {ex.solution_md ? (
+                    <MathText text={ex.solution_md} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No hay solución disponible para este ejercicio.</p>
+                  )}
+                </div>
+              </details>
             </div>
           );
         })}

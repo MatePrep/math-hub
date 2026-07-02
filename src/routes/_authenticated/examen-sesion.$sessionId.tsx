@@ -155,15 +155,6 @@ function TakeExam() {
             {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
           </div>
         </div>
-        {secondsLeft !== null ? (
-          secondsLeft > 0 ? (
-            <p className={`mt-1 text-sm font-medium ${lowTime ? "text-destructive" : "text-foreground"}`}>
-              Tiempo restante: {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-            </p>
-          ) : (
-            <p className="mt-1 text-sm font-medium text-destructive">Tiempo agotado</p>
-          )
-        ) : null}
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
           <div className="h-full bg-primary transition-all" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
         </div>
