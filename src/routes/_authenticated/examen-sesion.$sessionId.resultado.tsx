@@ -26,6 +26,19 @@ function ResultPage() {
   const score = s.score ?? 0;
   const passed = score >= passing;
   const correctCount = questions.filter((ex) => answers[ex.id] === ex.correct_choice).length;
+  const totalQuestions = questions.length;
+  const incorrectCount = totalQuestions - correctCount;
+  const timeLimitMin = s.time_limit_min ?? s.exam?.time_limit_min ?? null;
+  const timeTakenSeconds = s.finished_at && s.started_at ? (new Date(s.finished_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null;
+  function formatDuration(sec: number | null) {
+    if (sec === null || sec === undefined) return "-";
+    const s = Math.max(0, Math.round(sec));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+    return `${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -39,12 +52,37 @@ function ResultPage() {
         <p className="text-sm text-muted-foreground">Puntaje</p>
         <p className={`mt-1 font-display text-5xl font-bold ${passed ? "text-success" : "text-destructive"}`}>{score}%</p>
         <p className="mt-1 text-sm">
-          {correctCount} de {questions.length} correctas · {passed ? "Aprobado" : `Aprobación: ${passing}%`}
+          {correctCount} de {totalQuestions} correctas · {passed ? "Aprobado" : `Aprobación: ${passing}%`}
         </p>
+        <div className="mt-2 text-sm text-muted-foreground grid grid-cols-2 gap-4">
+          <div>
+            <div>Correctas: <strong className="text-success">{correctCount}</strong></div>
+            <div>Incorrectas: <strong className="text-destructive">{incorrectCount}</strong></div>
+          </div>
+          <div>
+            <div>Tiempo límite: <strong>{timeLimitMin ? `${timeLimitMin} min` : "-"}</strong></div>
+            <div>Tiempo tomado: <strong>{formatDuration(timeTakenSeconds)}</strong></div>
+          </div>
+        </div>
       </div>
 
       <div className="mt-8 space-y-4">
         <h2 className="font-display text-xl font-bold">Revisión</h2>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {questions.map((ex: any, i: number) => {
+            const selected = answers[ex.id];
+            const correct = ex.correct_choice;
+            const isCorrect = selected === correct;
+            const isSelIncorrect = selected !== undefined && selected !== correct;
+            return (
+              <div key={ex.id} className={`px-2 py-1 rounded text-sm font-semibold ${
+                isCorrect ? "underline decoration-success/60 text-success" :
+                isSelIncorrect ? "underline decoration-destructive/60 text-destructive" :
+                "text-muted-foreground"
+              }`}>#{i + 1}</div>
+            );
+          })}
+        </div>
         {questions.map((ex: any, i: number) => {
           const selected = answers[ex.id];
           const correct = ex.correct_choice;
@@ -74,7 +112,9 @@ function ResultPage() {
                       "border-border"
                     }`}>
                       <span className="mr-2 font-semibold">{String.fromCharCode(65 + ci)}.</span>
-                      <ChoiceText text={c} />
+                      <span className={`${isCor ? "underline decoration-success/60" : isSel && !isCor ? "underline decoration-destructive/60" : ""}`}>
+                        <ChoiceText text={c} />
+                      </span>
                     </li>
                   );
                 })}
