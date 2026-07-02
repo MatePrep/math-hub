@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -20,10 +21,19 @@ import {
   createExam,
   updateExam,
   listExerciseBank,
+  listAdminMeta,
 } from "@/lib/admin.functions";
 
 type Status = "draft" | "published" | "archived";
 type Order = "fixed" | "random";
+type ExamType = "standard" | "template";
+type Difficulty = "facil" | "medio" | "dificil";
+
+export interface TemplateRule {
+  topic_id: string;
+  difficulty_filter: Difficulty | null;
+  question_count: number;
+}
 
 export interface ExamFormValues {
   id?: string;
@@ -34,7 +44,10 @@ export interface ExamFormValues {
   max_attempts: number | null;
   status: Status;
   question_order: Order;
+  exam_type: ExamType;
+  allow_multiple_attempts: boolean;
   exercise_ids: string[];
+  template_rules: TemplateRule[];
 }
 
 const empty: ExamFormValues = {
@@ -45,7 +58,10 @@ const empty: ExamFormValues = {
   max_attempts: null,
   status: "draft",
   question_order: "fixed",
+  exam_type: "standard",
+  allow_multiple_attempts: false,
   exercise_ids: [],
+  template_rules: [],
 };
 
 export function ExamForm({ initial }: { initial?: ExamFormValues }) {
@@ -53,7 +69,9 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const create = useServerFn(createExam);
   const update = useServerFn(updateExam);
   const bankFn = useServerFn(listExerciseBank);
+  const metaFn = useServerFn(listAdminMeta);
   const bank = useQuery({ queryKey: ["exercise-bank"], queryFn: () => bankFn() });
+  const meta = useQuery({ queryKey: ["admin-meta"], queryFn: () => metaFn() });
 
   const [v, setV] = useState<ExamFormValues>(initial ?? empty);
   const [saving, setSaving] = useState(false);
@@ -61,17 +79,19 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const [topicFilter, setTopicFilter] = useState<string>("all");
 
   useEffect(() => {
-    if (initial) setV(initial);
+    if (initial) setV({ ...empty, ...initial });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial?.id]);
 
-  const topics = useMemo(() => {
+  const bankTopics = useMemo(() => {
     const map = new Map<string, string>();
     (bank.data ?? []).forEach((e: any) => {
       if (e.topic?.id) map.set(e.topic.id, e.topic.name);
     });
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [bank.data]);
+
+  const allTopics: Array<{ id: string; name: string }> = (meta.data?.topics ?? []) as any;
 
   const selectedSet = new Set(v.exercise_ids);
   const available = (bank.data ?? []).filter((e: any) => {
@@ -102,10 +122,37 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     });
   }
 
+  function addRule() {
+    setV((s) => ({
+      ...s,
+      template_rules: [
+        ...s.template_rules,
+        { topic_id: allTopics[0]?.id ?? "", difficulty_filter: null, question_count: 5 },
+      ],
+    }));
+  }
+  function updateRule(i: number, patch: Partial<TemplateRule>) {
+    setV((s) => ({
+      ...s,
+      template_rules: s.template_rules.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
+    }));
+  }
+  function removeRule(i: number) {
+    setV((s) => ({ ...s, template_rules: s.template_rules.filter((_, idx) => idx !== i) }));
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (v.exercise_ids.length === 0) {
+    if (v.exam_type === "standard" && v.exercise_ids.length === 0) {
       toast.error("Añade al menos una pregunta");
+      return;
+    }
+    if (v.exam_type === "template" && v.template_rules.length === 0) {
+      toast.error("Añade al menos una regla");
+      return;
+    }
+    if (v.exam_type === "template" && v.template_rules.some((r) => !r.topic_id || r.question_count < 1)) {
+      toast.error("Cada regla necesita materia y cantidad ≥ 1");
       return;
     }
     setSaving(true);
@@ -118,7 +165,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         max_attempts: v.max_attempts ? Number(v.max_attempts) : null,
         status: v.status,
         question_order: v.question_order,
-        exercise_ids: v.exercise_ids,
+        exam_type: v.exam_type,
+        allow_multiple_attempts: v.allow_multiple_attempts,
+        exercise_ids: v.exam_type === "standard" ? v.exercise_ids : [],
+        template_rules: v.exam_type === "template" ? v.template_rules : [],
       };
       if (initial?.id) {
         await update({ data: { id: initial.id, ...payload } });
@@ -145,6 +195,16 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         <div className="sm:col-span-2">
           <Label>Descripción</Label>
           <Textarea value={v.description ?? ""} onChange={(e) => setV((s) => ({ ...s, description: e.target.value }))} rows={2} maxLength={1000} />
+        </div>
+        <div>
+          <Label>Tipo de examen *</Label>
+          <Select value={v.exam_type} onValueChange={(x) => setV((s) => ({ ...s, exam_type: x as ExamType }))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="standard">Estándar (preguntas fijas)</SelectItem>
+              <SelectItem value="template">Plantilla (aleatorio por materia)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label>Tiempo (min) *</Label>
@@ -179,76 +239,138 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      <div>
-        <h3 className="font-display text-lg font-bold">Preguntas seleccionadas ({selectedItems.length})</h3>
-        <div className="mt-2 space-y-2">
-          {selectedItems.length === 0 && (
-            <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-              Aún no has añadido preguntas.
-            </p>
-          )}
-          {selectedItems.map((e, i) => (
-            <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
-              <span className="w-6 text-sm font-semibold text-muted-foreground">{i + 1}.</span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{e.statement_md.slice(0, 100)}</p>
-                <div className="mt-1 flex gap-1 text-xs">
-                  {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
-                  <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
-                  {e.university?.short_name && <Badge variant="outline">{e.university.short_name}</Badge>}
-                </div>
-              </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => move(e.id, -1)} disabled={i === 0} aria-label="Subir">
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-              <Button type="button" variant="ghost" size="icon" onClick={() => move(e.id, 1)} disabled={i === selectedItems.length - 1} aria-label="Bajar">
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-              <Button type="button" variant="ghost" size="icon" onClick={() => remove(e.id)} aria-label="Quitar">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+        <div className="sm:col-span-2 flex items-center gap-3 rounded-md border border-border bg-card p-3">
+          <Switch checked={v.allow_multiple_attempts} onCheckedChange={(c) => setV((s) => ({ ...s, allow_multiple_attempts: c }))} id="allow-multi" />
+          <Label htmlFor="allow-multi" className="cursor-pointer">Permitir múltiples intentos (respeta "Máx. intentos" si lo defines)</Label>
         </div>
       </div>
 
-      <div>
-        <h3 className="font-display text-lg font-bold">Banco de ejercicios</h3>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Input placeholder="Buscar…" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />
-          <Select value={topicFilter} onValueChange={setTopicFilter}>
-            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los temas</SelectItem>
-              {topics.map((t) => (
-                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+      {v.exam_type === "template" ? (
+        <div>
+          <div className="flex items-center justify-between">
+            <h3 className="font-display text-lg font-bold">Reglas de plantilla ({v.template_rules.length})</h3>
+            <Button type="button" size="sm" variant="outline" onClick={addRule} disabled={allTopics.length === 0}>
+              <Plus className="mr-1 h-3 w-3" /> Añadir regla
+            </Button>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Cada regla escoge N ejercicios aleatorios de una materia y (opcionalmente) una dificultad. Al iniciar, todas las preguntas se mezclan.
+          </p>
+          <div className="mt-3 space-y-2">
+            {v.template_rules.length === 0 && (
+              <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                Aún no hay reglas.
+              </p>
+            )}
+            {v.template_rules.map((r, i) => (
+              <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-border bg-card p-3 sm:grid-cols-[1fr_1fr_120px_40px]">
+                <Select value={r.topic_id} onValueChange={(x) => updateRule(i, { topic_id: x })}>
+                  <SelectTrigger><SelectValue placeholder="Materia" /></SelectTrigger>
+                  <SelectContent>
+                    {allTopics.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={r.difficulty_filter ?? "any"}
+                  onValueChange={(x) => updateRule(i, { difficulty_filter: x === "any" ? null : (x as Difficulty) })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Cualquier dificultad</SelectItem>
+                    <SelectItem value="facil">Fácil</SelectItem>
+                    <SelectItem value="medio">Medio</SelectItem>
+                    <SelectItem value="dificil">Difícil</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={r.question_count}
+                  onChange={(e) => updateRule(i, { question_count: Number(e.target.value) })}
+                  aria-label="Cantidad"
+                />
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeRule(i)} aria-label="Quitar regla">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div>
+            <h3 className="font-display text-lg font-bold">Preguntas seleccionadas ({selectedItems.length})</h3>
+            <div className="mt-2 space-y-2">
+              {selectedItems.length === 0 && (
+                <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                  Aún no has añadido preguntas.
+                </p>
+              )}
+              {selectedItems.map((e, i) => (
+                <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
+                  <span className="w-6 text-sm font-semibold text-muted-foreground">{i + 1}.</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">{e.statement_md.slice(0, 100)}</p>
+                    <div className="mt-1 flex gap-1 text-xs">
+                      {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
+                      <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
+                      {e.university?.short_name && <Badge variant="outline">{e.university.short_name}</Badge>}
+                    </div>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => move(e.id, -1)} disabled={i === 0} aria-label="Subir">
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => move(e.id, 1)} disabled={i === selectedItems.length - 1} aria-label="Bajar">
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(e.id)} aria-label="Quitar">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="mt-3 max-h-96 space-y-2 overflow-auto rounded-md border border-border p-2">
-          {bank.isLoading && <p className="p-3 text-sm text-muted-foreground">Cargando…</p>}
-          {available.map((e: any) => (
-            <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{e.statement_md.slice(0, 100)}</p>
-                <div className="mt-1 flex gap-1 text-xs">
-                  {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
-                  <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
-                </div>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => add(e.id)}>
-                <Plus className="mr-1 h-3 w-3" /> Añadir
-              </Button>
             </div>
-          ))}
-          {available.length === 0 && !bank.isLoading && (
-            <p className="p-3 text-center text-sm text-muted-foreground">Sin resultados.</p>
-          )}
-        </div>
-      </div>
+          </div>
+
+          <div>
+            <h3 className="font-display text-lg font-bold">Banco de ejercicios</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Input placeholder="Buscar…" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />
+              <Select value={topicFilter} onValueChange={setTopicFilter}>
+                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los temas</SelectItem>
+                  {bankTopics.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="mt-3 max-h-96 space-y-2 overflow-auto rounded-md border border-border p-2">
+              {bank.isLoading && <p className="p-3 text-sm text-muted-foreground">Cargando…</p>}
+              {available.map((e: any) => (
+                <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">{e.statement_md.slice(0, 100)}</p>
+                    <div className="mt-1 flex gap-1 text-xs">
+                      {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
+                      <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
+                    </div>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => add(e.id)}>
+                    <Plus className="mr-1 h-3 w-3" /> Añadir
+                  </Button>
+                </div>
+              ))}
+              {available.length === 0 && !bank.isLoading && (
+                <p className="p-3 text-center text-sm text-muted-foreground">Sin resultados.</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>{saving ? "Guardando…" : initial?.id ? "Actualizar" : "Crear examen"}</Button>
