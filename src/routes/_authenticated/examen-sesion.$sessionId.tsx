@@ -112,6 +112,9 @@ function TakeExam() {
   if (questions.length === 0) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">Examen sin preguntas.</div>;
 
   const ex = questions[idx];
+  const isLastQuestion = idx === questions.length - 1;
+  const currentAnswered = answers[ex.id] !== undefined;
+  const canSubmit = isLastQuestion && currentAnswered;
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const timeUp = secondsLeft <= 0;
@@ -184,7 +187,7 @@ function TakeExam() {
             <Button
               type="button"
               onClick={doSubmit}
-              disabled={submitting || answers[ex.id] === undefined}
+              disabled={submitting || !canSubmit}
               className="min-h-11"
             >
               <CheckCircle2 className="mr-2 h-4 w-4" /> {submitting ? "Enviando…" : "Finalizar examen"}
@@ -222,8 +225,20 @@ function TakeExam() {
           <p><span className="inline-block h-3 w-3 rounded-sm border border-success/50 bg-success/10 align-middle" /> Respondida</p>
           <p><Flag className="inline h-3 w-3 text-warning" /> Marcada</p>
         </div>
-        <Button className="mt-4 w-full" onClick={doSubmit} disabled={submitting} size="sm">
-          Finalizar
+        <Button
+          type="button"
+          className="mt-4 w-full"
+          onClick={() => {
+            if (!isLastQuestion) {
+              setIdx(questions.length - 1);
+              return;
+            }
+            doSubmit();
+          }}
+          disabled={submitting || (isLastQuestion && !canSubmit)}
+          size="sm"
+        >
+          {isLastQuestion ? "Finalizar" : "Ir a la última pregunta"}
         </Button>
       </aside>
     </div>

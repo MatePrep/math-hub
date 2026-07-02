@@ -85,17 +85,12 @@ function UniPage() {
           <h1 className="font-display text-3xl font-bold sm:text-4xl">{u.name}</h1>
           {u.description && <p className="mt-2 max-w-2xl text-muted-foreground">{u.description}</p>}
         </div>
-        <Button asChild size="lg" className="min-h-11">
-          <Link to="/examenes/$slug/simulacro" params={{ slug: u.slug }}>
-            <Timer className="mr-2 h-4 w-4" /> Iniciar simulacro
-          </Link>
-        </Button>
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="space-y-6">
           <section className="rounded-xl border border-border bg-card p-6">
-            <h2 className="font-display text-xl font-bold">Simulacro aleatorio</h2>
+            <h2 className="font-display text-xl font-bold">Simulacro</h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Genera un examen con preguntas seleccionadas al azar de esta universidad. Tus respuestas se guardan automáticamente y podrás retomar el examen si no lo envías.
             </p>

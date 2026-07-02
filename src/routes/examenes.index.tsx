@@ -53,9 +53,6 @@ function ExamHub() {
             {u.description && (
               <p className="mt-3 text-sm text-muted-foreground">{u.description}</p>
             )}
-            <p className="mt-3 text-xs font-medium text-primary group-hover:underline">
-              {u.exerciseCount} ejercicios · Ver →
-            </p>
           </Link>
         ))}
       </div>
