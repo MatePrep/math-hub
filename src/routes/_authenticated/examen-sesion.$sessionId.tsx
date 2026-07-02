@@ -30,7 +30,7 @@ function TakeExam() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
   const [idx, setIdx] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState<number>(0);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [imgUrls, setImgUrls] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const savedRef = useRef({ answers: "", flagged: "" });
@@ -81,14 +81,29 @@ function TakeExam() {
     }
   }, [answers, sessionId, submitFn, navigate, submitting]);
 
+  const totalSeconds = session ? (session.time_limit_min ?? 60) * 60 : 0;
+  const timePhase = useMemo(() => {
+    if (secondsLeft === null) return null;
+    if (secondsLeft <= 300) return "Últimos 5 minutos";
+    if (secondsLeft <= totalSeconds / 4) return "Queda 1/4 del tiempo";
+    if (secondsLeft <= totalSeconds / 2) return "Queda 2/4 del tiempo";
+    if (secondsLeft <= (totalSeconds * 3) / 4) return "Queda 3/4 del tiempo";
+    return null;
+  }, [secondsLeft, totalSeconds]);
+
+  const lowTime = secondsLeft !== null && secondsLeft > 0 && secondsLeft <= 300;
+  const timeUp = secondsLeft !== null && secondsLeft <= 0;
+  const minutes = secondsLeft === null ? 0 : Math.floor(secondsLeft / 60);
+  const seconds = secondsLeft === null ? 0 : secondsLeft % 60;
+
   // Timer
   useEffect(() => {
-    if (!session || session.status !== "in_progress") return;
+    if (!session || session.status !== "in_progress" || secondsLeft === null) return;
     if (secondsLeft <= 0) {
       doSubmit();
       return;
     }
-    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    const t = setTimeout(() => setSecondsLeft((s) => (s === null ? null : s - 1)), 1000);
     return () => clearTimeout(t);
   }, [secondsLeft, session, doSubmit]);
 
@@ -115,10 +130,6 @@ function TakeExam() {
   const isLastQuestion = idx === questions.length - 1;
   const currentAnswered = answers[ex.id] !== undefined;
   const canSubmit = isLastQuestion && currentAnswered;
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = secondsLeft % 60;
-  const timeUp = secondsLeft <= 0;
-  const lowTime = secondsLeft > 0 && secondsLeft < 60;
 
   function pick(i: number) {
     setAnswers((a) => ({ ...a, [ex.id]: i }));
@@ -144,6 +155,15 @@ function TakeExam() {
             {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
           </div>
         </div>
+        {secondsLeft !== null ? (
+          secondsLeft > 0 ? (
+            <p className={`mt-1 text-sm font-medium ${lowTime ? "text-destructive" : "text-foreground"}`}>
+              Tiempo restante: {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm font-medium text-destructive">Tiempo agotado</p>
+          )
+        ) : null}
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
           <div className="h-full bg-primary transition-all" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
         </div>
