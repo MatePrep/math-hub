@@ -81,16 +81,6 @@ function TakeExam() {
     }
   }, [answers, sessionId, submitFn, navigate, submitting]);
 
-  const totalSeconds = session ? (session.time_limit_min ?? 60) * 60 : 0;
-  const timePhase = useMemo(() => {
-    if (secondsLeft === null) return null;
-    if (secondsLeft <= 300) return "Últimos 5 minutos";
-    if (secondsLeft <= totalSeconds / 4) return "Queda 1/4 del tiempo";
-    if (secondsLeft <= totalSeconds / 2) return "Queda 2/4 del tiempo";
-    if (secondsLeft <= (totalSeconds * 3) / 4) return "Queda 3/4 del tiempo";
-    return null;
-  }, [secondsLeft, totalSeconds]);
-
   const lowTime = secondsLeft !== null && secondsLeft > 0 && secondsLeft <= 300;
   const timeUp = secondsLeft !== null && secondsLeft <= 0;
   const minutes = secondsLeft === null ? 0 : Math.floor(secondsLeft / 60);

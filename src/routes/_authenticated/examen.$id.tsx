@@ -82,8 +82,8 @@ function ExamPreview() {
         <div className="mt-8">
           <h3 className="font-display text-lg font-bold">Intentos anteriores</h3>
           <div className="mt-3 space-y-2">
-            {done.map((a: any) => (
-              <Link key={a.id} to="/examen-sesion/$sessionId/resultado" params={{ sessionId: a.id }} className="flex items-center justify-between rounded-md border border-border bg-card p-3 hover:border-primary/40">
+              {done.map((a: any) => (
+                <Link key={a.id} to="/examen-sesion/$sessionId/resultado" params={{ sessionId: a.id }} className="flex items-center justify-between rounded-md border border-border bg-card p-3 hover:border-primary/40">
                 <div>
                   <p className="text-sm font-medium">{new Date(a.started_at).toLocaleString("es-PE")}</p>
                   <p className="text-xs text-muted-foreground">{a.score ?? 0}% · {a.total} preguntas</p>
