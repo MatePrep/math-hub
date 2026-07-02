@@ -47,7 +47,7 @@ function TakeExam() {
     const elapsed = Date.now() - new Date(session.started_at).getTime();
     setSecondsLeft(Math.max(0, Math.floor((timeLimitMs - elapsed) / 1000)));
     if (session.status !== "in_progress") {
-      navigate({ to: "/_authenticated/examen-sesion/$sessionId/resultado", params: { sessionId }, replace: true });
+      navigate({ to: "/examen-sesion/$sessionId/resultado", params: { sessionId }, replace: true });
     }
   }, [session, navigate, sessionId]);
 
