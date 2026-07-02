@@ -94,7 +94,7 @@ export const startExamSession = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
 
-    // Check for resumable in-progress session
+    // Resume any in-progress session
     const { data: ongoing } = await supabase
       .from("exam_sessions")
       .select("id, started_at, time_limit_min")
@@ -107,41 +107,72 @@ export const startExamSession = createServerFn({ method: "POST" })
       if (elapsed < (ongoing.time_limit_min ?? 60)) {
         return { sessionId: ongoing.id as string };
       }
-      // expired: auto-finalize
       await supabase
         .from("exam_sessions")
         .update({ status: "submitted", finished_at: new Date().toISOString() })
         .eq("id", ongoing.id);
     }
 
-    // Load exam + questions
+    // Load exam metadata
     const { data: exam, error: examErr } = await supabase
       .from("exams")
-      .select("id, status, time_limit_min, max_attempts, question_order, exam_questions(exercise_id, position)")
+      .select("id, status, time_limit_min, max_attempts, allow_multiple_attempts, question_order, exam_type")
       .eq("id", data.examId)
       .maybeSingle();
     if (examErr) throw new Error(examErr.message);
-    if (!exam || exam.status !== "published") throw new Error("Examen no disponible");
+    if (!exam || exam.status !== "published") throw new Error("Este examen no está disponible en este momento.");
 
-    // Enforce max attempts (excluding in-progress just expired)
-    if (exam.max_attempts) {
-      const { count } = await supabase
-        .from("exam_sessions")
-        .select("id", { head: true, count: "exact" })
-        .eq("user_id", userId)
-        .eq("exam_id", exam.id)
-        .in("status", ["submitted", "graded"]);
-      if ((count ?? 0) >= exam.max_attempts) {
-        throw new Error("Ya alcanzaste el máximo de intentos para este examen.");
-      }
+    // Enforce max_attempts / allow_multiple_attempts
+    const { count: finishedCount } = await supabase
+      .from("exam_sessions")
+      .select("id", { head: true, count: "exact" })
+      .eq("user_id", userId)
+      .eq("exam_id", exam.id)
+      .in("status", ["submitted", "graded"]);
+    const done = finishedCount ?? 0;
+    if (done > 0 && !exam.allow_multiple_attempts && !exam.max_attempts) {
+      throw new Error("Este examen permite un solo intento y ya lo completaste.");
+    }
+    if (exam.max_attempts && done >= exam.max_attempts) {
+      throw new Error(`Ya alcanzaste el máximo de ${exam.max_attempts} intentos para este examen.`);
     }
 
-    let questionIds = (exam.exam_questions ?? [])
-      .sort((a: any, b: any) => a.position - b.position)
-      .map((q: any) => q.exercise_id as string);
-    if (questionIds.length === 0) throw new Error("El examen no tiene preguntas.");
-    if (exam.question_order === "random") {
-      questionIds = [...questionIds].sort(() => Math.random() - 0.5);
+    // Build question list based on exam_type
+    let questionIds: string[] = [];
+    if (exam.exam_type === "template") {
+      const { data: rules, error: rErr } = await supabase
+        .from("exam_template_rules")
+        .select("topic_id, difficulty_filter, question_count, position")
+        .eq("exam_id", exam.id)
+        .order("position");
+      if (rErr) throw new Error(rErr.message);
+      if (!rules || rules.length === 0) throw new Error("Este examen no tiene reglas configuradas.");
+      for (const rule of rules) {
+        let q = supabase.from("exercises").select("id").eq("topic_id", rule.topic_id);
+        if (rule.difficulty_filter) q = q.eq("difficulty", rule.difficulty_filter);
+        const { data: pool, error: pErr } = await q;
+        if (pErr) throw new Error(pErr.message);
+        const ids = (pool ?? []).map((e: any) => e.id as string);
+        if (ids.length < rule.question_count) {
+          throw new Error("Este examen no está disponible en este momento (faltan preguntas en el banco).");
+        }
+        const picked = [...ids].sort(() => Math.random() - 0.5).slice(0, rule.question_count);
+        questionIds.push(...picked);
+      }
+      // template exams always shuffle across all rules
+      questionIds = questionIds.sort(() => Math.random() - 0.5);
+    } else {
+      const { data: eqs, error: eqErr } = await supabase
+        .from("exam_questions")
+        .select("exercise_id, position")
+        .eq("exam_id", exam.id)
+        .order("position");
+      if (eqErr) throw new Error(eqErr.message);
+      questionIds = (eqs ?? []).map((q: any) => q.exercise_id as string);
+      if (questionIds.length === 0) throw new Error("El examen no tiene preguntas.");
+      if (exam.question_order === "random") {
+        questionIds = [...questionIds].sort(() => Math.random() - 0.5);
+      }
     }
 
     const { data: row, error } = await supabase
