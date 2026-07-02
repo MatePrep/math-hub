@@ -346,19 +346,73 @@ export const deleteTopic = createServerFn({ method: "POST" })
 
 // ========== EXAMS management ==========
 
-const examSchema = z.object({
-  title: z.string().trim().min(3).max(120),
-  description: z.string().trim().max(1000).nullable().optional(),
-  time_limit_min: z.number().int().min(1).max(600),
-  passing_score: z.number().int().min(0).max(100),
-  max_attempts: z.number().int().min(1).max(50).nullable().optional(),
-  status: z.enum(["draft", "published", "archived"]),
-  question_order: z.enum(["fixed", "random"]),
-  exercise_ids: z.array(z.string().uuid()).min(1).max(200),
+const templateRuleSchema = z.object({
+  topic_id: z.string().uuid(),
+  difficulty_filter: z.enum(["facil", "medio", "dificil"]).nullable().optional(),
+  question_count: z.number().int().min(1).max(100),
 });
 
-const examUpdateSchema = examSchema.extend({ id: z.string().uuid() });
+const examSchema = z
+  .object({
+    title: z.string().trim().min(3).max(120),
+    description: z.string().trim().max(1000).nullable().optional(),
+    time_limit_min: z.number().int().min(1).max(600),
+    passing_score: z.number().int().min(0).max(100),
+    max_attempts: z.number().int().min(1).max(50).nullable().optional(),
+    status: z.enum(["draft", "published", "archived"]),
+    question_order: z.enum(["fixed", "random"]),
+    exam_type: z.enum(["standard", "template"]).default("standard"),
+    allow_multiple_attempts: z.boolean().default(false),
+    exercise_ids: z.array(z.string().uuid()).max(200).default([]),
+    template_rules: z.array(templateRuleSchema).max(50).default([]),
+  })
+  .refine(
+    (d) =>
+      d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1,
+    { message: "Un examen estándar requiere preguntas; uno de plantilla requiere reglas." },
+  );
 
+const examUpdateSchema = z
+  .object({
+    id: z.string().uuid(),
+    title: z.string().trim().min(3).max(120),
+    description: z.string().trim().max(1000).nullable().optional(),
+    time_limit_min: z.number().int().min(1).max(600),
+    passing_score: z.number().int().min(0).max(100),
+    max_attempts: z.number().int().min(1).max(50).nullable().optional(),
+    status: z.enum(["draft", "published", "archived"]),
+    question_order: z.enum(["fixed", "random"]),
+    exam_type: z.enum(["standard", "template"]).default("standard"),
+    allow_multiple_attempts: z.boolean().default(false),
+    exercise_ids: z.array(z.string().uuid()).max(200).default([]),
+    template_rules: z.array(templateRuleSchema).max(50).default([]),
+  })
+  .refine(
+    (d) =>
+      d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1,
+    { message: "Un examen estándar requiere preguntas; uno de plantilla requiere reglas." },
+  );
+
+async function validateTemplateRules(
+  supabase: any,
+  rules: Array<{ topic_id: string; difficulty_filter?: string | null; question_count: number }>,
+) {
+  for (const rule of rules) {
+    let q = supabase
+      .from("exercises")
+      .select("id", { head: true, count: "exact" })
+      .eq("topic_id", rule.topic_id);
+    if (rule.difficulty_filter) q = q.eq("difficulty", rule.difficulty_filter);
+    const { count, error } = await q;
+    if (error) throw new Error(error.message);
+    if ((count ?? 0) < rule.question_count) {
+      const { data: topic } = await supabase.from("topics").select("name").eq("id", rule.topic_id).maybeSingle();
+      throw new Error(
+        `La materia "${topic?.name ?? rule.topic_id}" solo tiene ${count ?? 0} ejercicios${rule.difficulty_filter ? ` (${rule.difficulty_filter})` : ""}, pero pediste ${rule.question_count}.`,
+      );
+    }
+  }
+}
 
 export const listAdminExams = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -366,7 +420,7 @@ export const listAdminExams = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data, error } = await context.supabase
       .from("exams")
-      .select("id, title, status, time_limit_min, created_at, exam_questions(count), exam_sessions(count)")
+      .select("id, title, status, exam_type, time_limit_min, created_at, exam_questions(count), exam_sessions(count)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []).map((e: any) => ({
@@ -383,7 +437,7 @@ export const getAdminExam = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data: exam, error } = await context.supabase
       .from("exams")
-      .select("*, exam_questions(exercise_id, position)")
+      .select("*, exam_questions(exercise_id, position), exam_template_rules(id, topic_id, difficulty_filter, question_count, position)")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -395,7 +449,14 @@ export const getAdminExam = createServerFn({ method: "GET" })
     const exercise_ids = (exam.exam_questions ?? [])
       .sort((a: any, b: any) => a.position - b.position)
       .map((q: any) => q.exercise_id);
-    return { ...exam, exercise_ids, attemptCount: attemptCount ?? 0 };
+    const template_rules = (exam.exam_template_rules ?? [])
+      .sort((a: any, b: any) => a.position - b.position)
+      .map((r: any) => ({
+        topic_id: r.topic_id,
+        difficulty_filter: r.difficulty_filter,
+        question_count: r.question_count,
+      }));
+    return { ...exam, exercise_ids, template_rules, attemptCount: attemptCount ?? 0 };
   });
 
 export const listExerciseBank = createServerFn({ method: "GET" })
@@ -416,6 +477,9 @@ export const createExam = createServerFn({ method: "POST" })
   .inputValidator((d) => examSchema.parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
+    if (data.exam_type === "template") {
+      await validateTemplateRules(context.supabase, data.template_rules);
+    }
     const { data: row, error } = await context.supabase
       .from("exams")
       .insert({
@@ -426,52 +490,85 @@ export const createExam = createServerFn({ method: "POST" })
         max_attempts: data.max_attempts ?? null,
         status: data.status,
         question_order: data.question_order,
+        exam_type: data.exam_type,
+        allow_multiple_attempts: data.allow_multiple_attempts,
         created_by: context.userId,
       })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    const inserts = data.exercise_ids.map((eid, i) => ({
-      exam_id: row.id,
-      exercise_id: eid,
-      position: i,
-      points: 1,
-    }));
-    const { error: qErr } = await context.supabase.from("exam_questions").insert(inserts);
-    if (qErr) throw new Error(qErr.message);
+
+    if (data.exam_type === "standard") {
+      const inserts = data.exercise_ids.map((eid, i) => ({
+        exam_id: row.id,
+        exercise_id: eid,
+        position: i,
+        points: 1,
+      }));
+      const { error: qErr } = await context.supabase.from("exam_questions").insert(inserts);
+      if (qErr) throw new Error(qErr.message);
+    } else {
+      const inserts = data.template_rules.map((r, i) => ({
+        exam_id: row.id,
+        topic_id: r.topic_id,
+        difficulty_filter: r.difficulty_filter ?? null,
+        question_count: r.question_count,
+        position: i,
+      }));
+      const { error: rErr } = await context.supabase.from("exam_template_rules").insert(inserts);
+      if (rErr) throw new Error(rErr.message);
+    }
     return { id: row.id as string };
   });
 
 export const updateExam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => examUpdateSchema.parse(d))
-
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { id, exercise_ids, ...rest } = data;
+    if (data.exam_type === "template") {
+      await validateTemplateRules(context.supabase, data.template_rules);
+    }
+    const { id } = data;
     const { error } = await context.supabase
       .from("exams")
       .update({
-        title: rest.title,
-        description: rest.description ?? null,
-        time_limit_min: rest.time_limit_min,
-        passing_score: rest.passing_score,
-        max_attempts: rest.max_attempts ?? null,
-        status: rest.status,
-        question_order: rest.question_order,
+        title: data.title,
+        description: data.description ?? null,
+        time_limit_min: data.time_limit_min,
+        passing_score: data.passing_score,
+        max_attempts: data.max_attempts ?? null,
+        status: data.status,
+        question_order: data.question_order,
+        exam_type: data.exam_type,
+        allow_multiple_attempts: data.allow_multiple_attempts,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);
-    // Replace exam_questions
+
     await context.supabase.from("exam_questions").delete().eq("exam_id", id);
-    const inserts = exercise_ids.map((eid, i) => ({
-      exam_id: id,
-      exercise_id: eid,
-      position: i,
-      points: 1,
-    }));
-    const { error: qErr } = await context.supabase.from("exam_questions").insert(inserts);
-    if (qErr) throw new Error(qErr.message);
+    await context.supabase.from("exam_template_rules").delete().eq("exam_id", id);
+
+    if (data.exam_type === "standard") {
+      const inserts = data.exercise_ids.map((eid, i) => ({
+        exam_id: id,
+        exercise_id: eid,
+        position: i,
+        points: 1,
+      }));
+      const { error: qErr } = await context.supabase.from("exam_questions").insert(inserts);
+      if (qErr) throw new Error(qErr.message);
+    } else {
+      const inserts = data.template_rules.map((r, i) => ({
+        exam_id: id,
+        topic_id: r.topic_id,
+        difficulty_filter: r.difficulty_filter ?? null,
+        question_count: r.question_count,
+        position: i,
+      }));
+      const { error: rErr } = await context.supabase.from("exam_template_rules").insert(inserts);
+      if (rErr) throw new Error(rErr.message);
+    }
     return { id };
   });
 
@@ -484,3 +581,4 @@ export const deleteExam = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+

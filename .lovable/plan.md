@@ -1,102 +1,67 @@
-# Plan — Imágenes en ejercicios, gestión de materias y módulo de Exámenes
 
-Trabajo dividido en 3 entregas, en orden. Cada una se puede verificar de forma independiente.
+## Root cause of the current crash
 
----
+`public.has_role(uuid, app_role)` has **zero EXECUTE grants** (they were revoked in an earlier turn). Every RLS policy on `exercises`, `topics`, `exams`, `exam_questions`, etc. calls `public.has_role(auth.uid(), 'admin')`, so as soon as the student's "Iniciar examen" flow touches any of those tables Postgres throws `permission denied for function has_role` and the server function crashes. Fix: `GRANT EXECUTE ON FUNCTION public.has_role(uuid, app_role) TO authenticated, anon;` (SECURITY DEFINER keeps it safe — it only reads `user_roles`).
 
-## 1) Admin: subir imágenes en ejercicios
+## Schema replacement
 
-### Backend (storage + esquema)
-- Crear bucket público `exercise-images` en Lovable Cloud Storage.
-- Políticas en `storage.objects`:
-  - `SELECT` público (anon + authenticated) sobre el bucket.
-  - `INSERT/UPDATE/DELETE` sólo si `has_role(auth.uid(), 'admin')`.
-- Migración en `exercises`:
-  - `statement_image_url text null`
-  - `solution_image_url text null`
-- Server function nueva en `src/lib/admin.functions.ts`:
-  - `deleteExerciseImage({ path })` — borra del bucket cuando el admin reemplaza/quita.
+Rename/replace the exam domain to match the requested model. Keep `exercises` as the underlying question bank (it already stores statement/choices/correct_choice/solution) and rename it conceptually to `questions` via a view alias — no data loss.
 
-### UI (form de ejercicios)
-- Nuevo componente `src/components/image-upload.tsx`:
-  - Drag-and-drop + click-to-browse.
-  - Valida tipo (jpg, png, webp, svg) y tamaño ≤ 5MB; error inline.
-  - Sube directo a `exercise-images` con `supabase.storage` (admin autenticado, RLS lo permite).
-  - Muestra barra de progreso y miniatura del archivo final.
-  - Permite eliminar/reemplazar; al reemplazar en edición, llama a `deleteExerciseImage` para limpiar el archivo previo.
-- `ExerciseForm` integra dos campos opcionales: imagen del enunciado y imagen de la solución.
-- Botón **Guardar** deshabilitado mientras alguna subida está en curso; los demás campos no se pierden si la subida falla (estado local del formulario intacto).
-- `MathText` ya renderiza el enunciado; añadimos render de la imagen debajo cuando existe.
+New/changed tables:
 
----
+- `exams` — add `exam_type text check in ('standard','template')` default `'standard'`, `allow_multiple_attempts bool default false`. Keep `max_attempts`, `time_limit_min`, `passing_score`, `status`, `question_order`.
+- `exam_template_rules` (new): `id`, `exam_id fk`, `topic_id fk`, `difficulty_filter difficulty_level nullable`, `question_count int check > 0`, `position int`.
+- `exam_attempts` (rename of `exam_sessions`): `id`, `exam_id fk nullable` (nullable to keep supporting universidad simulacros), `student_id uuid = auth.uid()`, `status text ('in_progress','submitted','graded')`, `started_at`, `finished_at`, `score`, `total`, `time_limit_min`, `answers jsonb`, `flagged jsonb`.
+- `exam_attempt_questions` (new, replaces the `question_ids[]` array on the session): `id`, `attempt_id fk`, `position int`, `points numeric default 1`, `question_id fk exercises(id)`, snapshot columns `statement_md`, `statement_image_path`, `choices jsonb`, `correct_choice int`, `solution_md`, `selected_choice int nullable`, `is_correct bool nullable`.
 
-## 2) Materias dinámicas + gestión básica
+Migration steps in one SQL migration:
 
-### Datos
-- Migración sobre `topics`:
-  - `description text null`, `color text null` (hex corto), `active boolean not null default true`.
-- Server functions en `admin.functions.ts`:
-  - `createTopic({ name, description?, color? })` — normaliza el slug, valida duplicado case-insensitive (`lower(name)`), devuelve el topic existente si ya existe.
-  - `renameTopic`, `setTopicActive`, `deleteTopic` (bloquea borrado si tiene ejercicios; mensaje claro).
+1. `ALTER TABLE exams ADD exam_type`, `allow_multiple_attempts`.
+2. `CREATE TABLE exam_template_rules` + GRANTs + RLS (admin manage, authenticated select for their exam start).
+3. Rename `exam_sessions` → `exam_attempts`; rename `user_id` → `student_id`. Update indexes/FKs.
+4. `CREATE TABLE exam_attempt_questions` + GRANTs + RLS (student can select/update rows where the parent attempt is theirs; admin all).
+5. Backfill: for each existing `exam_attempts` row with a `question_ids[]`, insert one `exam_attempt_questions` per id copying snapshot columns from `exercises`. Then drop `question_ids`.
+6. Update `attempts.exam_session_id` FK to point at renamed `exam_attempts`.
+7. **Grant execute on `has_role` to `authenticated, anon`** (the actual crash fix).
+8. Add trigger `enforce_attempt_limit` on `exam_attempts` insert: rejects when the student already has ≥ `max_attempts` graded/submitted attempts and `allow_multiple_attempts=false`.
 
-### UI
-- En el selector de "Tema" del `ExerciseForm`:
-  - Opción final **"+ Agregar nueva materia"** abre un `Dialog` con nombre (obligatorio), descripción y color.
-  - Al guardar: si existe, mensaje "Ya existe, ¿usarla?" + botón para seleccionarla; si no, se crea, se invalida la query de meta y se selecciona automáticamente.
-- Nueva ruta `/_authenticated/admin/materias`:
-  - Tabla con nombre, # ejercicios, estado activo, acciones (renombrar, activar/desactivar, eliminar con confirmación).
-- Filtros públicos (`/temas`, `/buscar`) usan `active = true`; el resto del app ya consume `topics` así que las nuevas aparecen en todos lados automáticamente.
+All new public tables get the standard grant block (`authenticated` CRUD as appropriate, `service_role` ALL).
 
----
+## Server functions (`src/lib/exams.functions.ts`)
 
-## 3) Módulo de Exámenes (prioridad alta)
+Rewrite `startExamSession` to:
 
-### Esquema (migración única)
-- `exams`: `title`, `description`, `time_limit_min`, `passing_score`, `max_attempts` (null = ilimitado), `status` ('draft'|'published'|'archived'), `question_order` ('fixed'|'random'), `created_by`.
-- `exam_topics(exam_id, topic_id)` — materias cubiertas.
-- `exam_questions`: `exam_id`, `exercise_id`, `position`, `points` (default 1). Permite selección manual.
-- `exam_rules`: `exam_id`, `topic_id`, `difficulty`, `count` — para generación aleatoria opcional (se materializan en `exam_questions` al publicar, o se resuelven al iniciar el intento).
-- Reutilizamos `exam_sessions` ya existente y le añadimos: `exam_id`, `status` ('in_progress'|'submitted'|'graded'), `answers jsonb` (autosave), `score`, `started_at`, `submitted_at`, `question_ids uuid[]` (snapshot del orden por estudiante).
-- GRANTs + RLS:
-  - Lectura pública sólo de exámenes `published` (anon/authenticated).
-  - Escritura sólo admin.
-  - `exam_sessions`: el estudiante sólo ve/edita las suyas; admin las ve todas.
+1. Load exam with `exam_type`, `max_attempts`, `allow_multiple_attempts`, `time_limit_min`, `status`.
+2. Reject if not `published` → friendly toast.
+3. Count prior non-in-progress attempts; if limit reached and `!allow_multiple_attempts`, throw `"Ya alcanzaste el máximo de intentos"` (client shows toast, no crash).
+4. Resume in-progress attempt if still within time window.
+5. Build the question list:
+   - `standard`: read `exam_questions` ordered by `position`.
+   - `template`: for each rule, `select id from exercises where topic_id=... and (difficulty=filter or filter is null) and active order by random() limit question_count`. If any rule returns fewer rows than `question_count`, throw `"Este examen no está disponible en este momento (faltan preguntas para el tema X)"` — do NOT crash.
+6. Shuffle combined list when `question_order='random'` (always for template).
+7. Insert `exam_attempts` row (trigger enforces the limit as backup); then bulk insert `exam_attempt_questions` with snapshot columns from `exercises` (single join query, no N+1).
+8. Return `{ attemptId }`.
 
-### Admin
-- Rutas bajo `/_authenticated/admin/examenes`:
-  - `index` — tabla con estado, # preguntas, # intentos.
-  - `nuevo` y `$id` — form con: título, descripción, materias, tiempo, nota mínima, intentos, orden, estado.
-  - Selección de preguntas: pestaña **Manual** (buscador con filtros por materia/dificultad, multi-select) y pestaña **Reglas** (lista de "N preguntas de materia X dificultad Y").
-  - Aviso amarillo si ya hay intentos cuando se edita.
+Rewrite `getExamSession`, `saveExamAnswers`, `submitExamSession`, `getExamResult` to read from `exam_attempt_questions` instead of `question_ids[]` + join to `exercises`. Grading uses the snapshot `correct_choice` so late edits to the bank don't invalidate old attempts.
 
-### Estudiante
-- `/examenes` (lista pública de publicados) + `/examenes/$id` (pantalla previa con título, # preguntas, tiempo, botón "Comenzar").
-- `/examenes/$id/intento/$sessionId` — interfaz de examen:
-  - Una pregunta por pantalla, indicador "Pregunta N de M", botones anterior/siguiente, botón "Marcar para revisar".
-  - Render con `MathText` + imagen si existe.
-  - Timer persistente calculado desde `started_at` (sobrevive a recargas).
-  - Autosave de `answers` cada cambio (debounce ~500ms) vía server fn `saveExamAnswers`.
-  - Auto-submit al llegar a 0; submit manual con confirmación que indica preguntas sin responder.
-- Resultados `/examenes/$id/resultado/$sessionId`:
-  - Score, pass/fail, desglose por pregunta con respuesta correcta + explicación (auto-graded).
-  - Si hay preguntas que requieran revisión manual (futuro), marca "Pendiente de revisión" y oculta el score final.
-- Historial de intentos visible en `/panel` y en la pantalla previa del examen.
+Add admin server fns: `listTemplateRules`, `upsertTemplateRule`, `deleteTemplateRule`, plus validation (`question_count <= available` at save time — returns actionable error).
 
-### Servidor (funciones)
-- `listPublishedExams`, `getExamForStudent`, `startExamSession` (valida intentos restantes, materializa `question_ids` según orden/reglas), `saveExamAnswers`, `submitExamSession` (autograde objetivas), `getExamResult`.
-- Admin: `listAdminExams`, `getAdminExam`, `createExam`, `updateExam`, `setExamStatus`, `listExamAttempts`.
+## Frontend
 
-### Edge cases cubiertos
-- **Reload mid-exam**: la sesión `in_progress` se reanuda con tiempo restante calculado server-side.
-- **Sin intentos restantes**: `startExamSession` lanza error → UI muestra mensaje y enlace al historial.
-- **Examen despublicado/eliminado durante intento**: la sesión existente puede finalizarse y verse el resultado; nuevos inicios bloqueados con mensaje.
-- **Auto-submit por tiempo**: cron del cliente + verificación server-side al `submitExamSession` (si `now > started_at + time_limit`, se acepta sin penalizar).
+- `src/routes/_authenticated/examen.$id.tsx`: rename param usage `sessionId → attemptId`, add `isLoading` state on the Iniciar button (already partially there — extend), wrap `startFn` in try/catch and surface `toast.error(e.message)` for the friendly errors above.
+- `src/routes/_authenticated/examen-sesion.$sessionId.tsx` → rename file to `examen-intento.$attemptId.tsx`, read `exam_attempt_questions` rows directly.
+- `src/routes/_authenticated/examen-sesion.$sessionId.resultado.tsx` → same rename + read snapshot rows.
+- Admin exam builder (`src/routes/_authenticated/admin/examenes.$id.tsx` / `.nuevo.tsx` / `exam-form.tsx`): add `exam_type` toggle. When `template`, hide the question picker and show a rules editor (topic + difficulty + count) using `exam_template_rules` CRUD. Validate available question count client-side too.
+- `src/components/exam-form.tsx`: add fields for `exam_type`, `allow_multiple_attempts`.
 
----
+## Verification
 
-## Orden de ejecución
-1. Bucket + migración de imágenes + `ImageUpload` + integración en `ExerciseForm`.
-2. Migración `topics` + `createTopic` + UI inline + pantalla de gestión de materias.
-3. Migración de exámenes + funciones server + admin CRUD + flujo estudiante end-to-end + resultados + edge cases.
+1. Playwright: sign in as student, click Iniciar on a `standard` exam → lands on attempt page with the right questions.
+2. Create a `template` exam via admin, then start it as student → questions are randomized from the bank.
+3. Set `max_attempts=1`, submit once, click Iniciar again → toast appears, no crash.
+4. Break a template rule (count > available) → toast appears, no crash.
 
-Cada paso queda funcional antes de pasar al siguiente.
+## Out of scope
+
+- Not touching the "simulacro por universidad" flow beyond the `exam_sessions → exam_attempts` rename (it will keep working via `exam_id=null`).
+- Not adding per-question `points` scoring UI (schema supports it; UI stays simple pass/fail).

@@ -92,7 +92,7 @@ function Simulacro() {
                     Genera un examen con preguntas seleccionadas al azar. Estimado {estimatedMinutes} minutos.
                   </p>
                 </div>
-                <Button size="lg" onClick={onStartRandom} loading={starting}>
+                <Button size="lg" onClick={onStartRandom} disabled={starting}>
                   {starting ? "Iniciando…" : "Generar simulacro"}
                 </Button>
               </div>

@@ -30,7 +30,10 @@ function EditExam() {
           max_attempts: e.max_attempts,
           status: e.status,
           question_order: e.question_order,
+          exam_type: e.exam_type ?? "standard",
+          allow_multiple_attempts: !!e.allow_multiple_attempts,
           exercise_ids: e.exercise_ids ?? [],
+          template_rules: e.template_rules ?? [],
         }}
       />
     </div>

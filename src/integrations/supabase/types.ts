@@ -157,11 +157,58 @@ export type Database = {
           },
         ]
       }
+      exam_template_rules: {
+        Row: {
+          created_at: string
+          difficulty_filter: Database["public"]["Enums"]["difficulty"] | null
+          exam_id: string
+          id: string
+          position: number
+          question_count: number
+          topic_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty_filter?: Database["public"]["Enums"]["difficulty"] | null
+          exam_id: string
+          id?: string
+          position?: number
+          question_count: number
+          topic_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty_filter?: Database["public"]["Enums"]["difficulty"] | null
+          exam_id?: string
+          id?: string
+          position?: number
+          question_count?: number
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_template_rules_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_template_rules_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exams: {
         Row: {
+          allow_multiple_attempts: boolean
           created_at: string
           created_by: string | null
           description: string | null
+          exam_type: string
           id: string
           max_attempts: number | null
           passing_score: number
@@ -172,9 +219,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_multiple_attempts?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
+          exam_type?: string
           id?: string
           max_attempts?: number | null
           passing_score?: number
@@ -185,9 +234,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_multiple_attempts?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
+          exam_type?: string
           id?: string
           max_attempts?: number | null
           passing_score?: number
