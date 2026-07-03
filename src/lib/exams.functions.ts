@@ -60,6 +60,33 @@ export const listPublishedExams = createServerFn({ method: "GET" })
     }));
   });
 
+export const listPublishedTemplates = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const sb = publicClient();
+    const { data: exams, error } = await sb
+      .from("exams")
+      .select("id, title, description, time_limit_min, passing_score, allow_multiple_attempts, max_attempts, exam_template_rules(question_count)")
+      .eq("status", "published")
+      .eq("exam_type", "template")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (exams ?? []).map((e: any) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      time_limit_min: e.time_limit_min,
+      passing_score: e.passing_score,
+      max_attempts: e.max_attempts,
+      allow_multiple_attempts: e.allow_multiple_attempts,
+      totalQuestions: (e.exam_template_rules ?? []).reduce(
+        (sum: number, r: any) => sum + (r.question_count ?? 0),
+        0,
+      ),
+      ruleCount: (e.exam_template_rules ?? []).length,
+    }));
+  });
+
+
 export const getExamPreview = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
