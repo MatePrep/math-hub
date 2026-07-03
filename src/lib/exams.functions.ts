@@ -22,7 +22,9 @@ export const listPublishedExams = createServerFn({ method: "GET" })
       .from("exams")
       .select("id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, exam_questions(count)")
       .eq("status", "published")
+      .eq("exam_type", "standard")
       .order("created_at", { ascending: false });
+
 
     if (!data?.universitySlug) {
       const { data: exams, error } = await baseQuery;
@@ -57,6 +59,33 @@ export const listPublishedExams = createServerFn({ method: "GET" })
       questionCount: e.exam_questions?.[0]?.count ?? 0,
     }));
   });
+
+export const listPublishedTemplates = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const sb = publicClient();
+    const { data: exams, error } = await sb
+      .from("exams")
+      .select("id, title, description, time_limit_min, passing_score, allow_multiple_attempts, max_attempts, exam_template_rules(question_count)")
+      .eq("status", "published")
+      .eq("exam_type", "template")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (exams ?? []).map((e: any) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      time_limit_min: e.time_limit_min,
+      passing_score: e.passing_score,
+      max_attempts: e.max_attempts,
+      allow_multiple_attempts: e.allow_multiple_attempts,
+      totalQuestions: (e.exam_template_rules ?? []).reduce(
+        (sum: number, r: any) => sum + (r.question_count ?? 0),
+        0,
+      ),
+      ruleCount: (e.exam_template_rules ?? []).length,
+    }));
+  });
+
 
 export const getExamPreview = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
@@ -154,12 +183,16 @@ export const startExamSession = createServerFn({ method: "POST" })
       .eq("exam_id", exam.id)
       .in("status", ["submitted", "graded"]);
     const done = finishedCount ?? 0;
-    if (done > 0 && !exam.allow_multiple_attempts && !exam.max_attempts) {
-      throw new Error("Este examen permite un solo intento y ya lo completaste.");
+    // Simulacros (templates) siempre permiten regenerar
+    if (exam.exam_type !== "template") {
+      if (done > 0 && !exam.allow_multiple_attempts && !exam.max_attempts) {
+        throw new Error("Este examen permite un solo intento y ya lo completaste.");
+      }
+      if (exam.max_attempts && done >= exam.max_attempts) {
+        throw new Error(`Ya alcanzaste el máximo de ${exam.max_attempts} intentos para este examen.`);
+      }
     }
-    if (exam.max_attempts && done >= exam.max_attempts) {
-      throw new Error(`Ya alcanzaste el máximo de ${exam.max_attempts} intentos para este examen.`);
-    }
+
 
     // Build question list based on exam_type
     let questionIds: string[] = [];
@@ -171,21 +204,42 @@ export const startExamSession = createServerFn({ method: "POST" })
         .order("position");
       if (rErr) throw new Error(rErr.message);
       if (!rules || rules.length === 0) throw new Error("Este examen no tiene reglas configuradas.");
+
+      // Collect questions the student has already seen in prior sessions of this template
+      const { data: priorSessions } = await supabase
+        .from("exam_sessions")
+        .select("question_ids")
+        .eq("user_id", userId)
+        .eq("exam_id", exam.id);
+      const seen = new Set<string>();
+      (priorSessions ?? []).forEach((s: any) => {
+        (s.question_ids ?? []).forEach((id: string) => seen.add(id));
+      });
+
       for (const rule of rules) {
-        let q = supabase.from("exercises").select("id").eq("topic_id", rule.topic_id);
+        let q = supabase.from("exercises").select("id, topic:topics(name)").eq("topic_id", rule.topic_id);
         if (rule.difficulty_filter) q = q.eq("difficulty", rule.difficulty_filter);
         const { data: pool, error: pErr } = await q;
         if (pErr) throw new Error(pErr.message);
         const ids = (pool ?? []).map((e: any) => e.id as string);
+        const topicName = (pool ?? [])[0]?.topic?.name ?? "una materia";
         if (ids.length < rule.question_count) {
-          throw new Error("Este examen no está disponible en este momento (faltan preguntas en el banco).");
+          throw new Error(`No hay suficientes preguntas de ${topicName} para generar este simulacro.`);
         }
-        const picked = [...ids].sort(() => Math.random() - 0.5).slice(0, rule.question_count);
+        const unseen = ids.filter((id) => !seen.has(id));
+        const alreadySeen = ids.filter((id) => seen.has(id));
+        const shuffle = <T,>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
+        const picked: string[] = [];
+        picked.push(...shuffle(unseen).slice(0, rule.question_count));
+        if (picked.length < rule.question_count) {
+          picked.push(...shuffle(alreadySeen).slice(0, rule.question_count - picked.length));
+        }
         questionIds.push(...picked);
       }
       // template exams always shuffle across all rules
       questionIds = questionIds.sort(() => Math.random() - 0.5);
     } else {
+
       const { data: eqs, error: eqErr } = await supabase
         .from("exam_questions")
         .select("exercise_id, position")

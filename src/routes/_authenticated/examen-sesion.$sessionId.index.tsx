@@ -10,7 +10,7 @@ import { MathText, ChoiceText } from "@/lib/math-render";
 import { getExamSession, saveExamAnswers, submitExamSession } from "@/lib/exams.functions";
 import { getExerciseImageUrl } from "@/lib/storage";
 
-export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId")({
+export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/")({
   component: TakeExam,
 });
 

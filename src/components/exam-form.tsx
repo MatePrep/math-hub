@@ -22,7 +22,9 @@ import {
   updateExam,
   listExerciseBank,
   listAdminMeta,
+  getTopicQuestionCounts,
 } from "@/lib/admin.functions";
+
 
 type Status = "draft" | "published" | "archived";
 type Order = "fixed" | "random";
@@ -70,8 +72,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const update = useServerFn(updateExam);
   const bankFn = useServerFn(listExerciseBank);
   const metaFn = useServerFn(listAdminMeta);
+  const countsFn = useServerFn(getTopicQuestionCounts);
   const bank = useQuery({ queryKey: ["exercise-bank"], queryFn: () => bankFn() });
   const meta = useQuery({ queryKey: ["admin-meta"], queryFn: () => metaFn() });
+
 
   const [v, setV] = useState<ExamFormValues>(initial ?? empty);
   const [saving, setSaving] = useState(false);
@@ -141,6 +145,36 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     setV((s) => ({ ...s, template_rules: s.template_rules.filter((_, idx) => idx !== i) }));
   }
 
+  const templateTotal = useMemo(
+    () => v.template_rules.reduce((sum, r) => sum + (Number(r.question_count) || 0), 0),
+    [v.template_rules],
+  );
+
+  const availabilityPairs = useMemo(
+    () =>
+      v.exam_type === "template"
+        ? v.template_rules
+            .filter((r) => r.topic_id)
+            .map((r) => ({ topic_id: r.topic_id, difficulty_filter: r.difficulty_filter }))
+        : [],
+    [v.exam_type, v.template_rules],
+  );
+
+  const availability = useQuery({
+    queryKey: ["topic-question-counts", availabilityPairs],
+    queryFn: () => countsFn({ data: { pairs: availabilityPairs } }),
+    enabled: availabilityPairs.length > 0,
+  });
+
+  function availableFor(topicId: string, diff: Difficulty | null): number | null {
+    const rows = availability.data ?? [];
+    const match = rows.find(
+      (r: any) => r.topic_id === topicId && (r.difficulty_filter ?? null) === (diff ?? null),
+    );
+    return match ? match.count : null;
+  }
+
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (v.exam_type === "standard" && v.exercise_ids.length === 0) {
@@ -155,7 +189,23 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       toast.error("Cada regla necesita materia y cantidad ≥ 1");
       return;
     }
+    if (v.exam_type === "template") {
+      const shortages = v.template_rules
+        .map((r) => ({ r, avail: availableFor(r.topic_id, r.difficulty_filter) }))
+        .filter((x) => x.avail !== null && x.r.question_count > (x.avail as number));
+      if (shortages.length > 0) {
+        if (v.status === "published") {
+          toast.error("No puedes publicar: algunas reglas piden más preguntas de las que existen en el banco.");
+          return;
+        }
+        const ok = confirm(
+          `Advertencia: ${shortages.length} regla(s) piden más preguntas de las disponibles. Puedes guardar como borrador; los estudiantes no podrán generar el examen hasta que agregues más ejercicios. ¿Continuar?`,
+        );
+        if (!ok) return;
+      }
+    }
     setSaving(true);
+
     try {
       const payload = {
         title: v.title,
@@ -247,11 +297,16 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
 
       {v.exam_type === "template" ? (
         <div>
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-bold">Reglas de plantilla ({v.template_rules.length})</h3>
-            <Button type="button" size="sm" variant="outline" onClick={addRule} disabled={allTopics.length === 0}>
-              <Plus className="mr-1 h-3 w-3" /> Añadir regla
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-lg font-bold">
+              Reglas de plantilla ({v.template_rules.length})
+            </h3>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">Total: {templateTotal} preguntas</Badge>
+              <Button type="button" size="sm" variant="outline" onClick={addRule} disabled={allTopics.length === 0}>
+                <Plus className="mr-1 h-3 w-3" /> Añadir regla
+              </Button>
+            </div>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             Cada regla escoge N ejercicios aleatorios de una materia y (opcionalmente) una dificultad. Al iniciar, todas las preguntas se mezclan.
@@ -262,43 +317,62 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                 Aún no hay reglas.
               </p>
             )}
-            {v.template_rules.map((r, i) => (
-              <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-border bg-card p-3 sm:grid-cols-[1fr_1fr_120px_40px]">
-                <Select value={r.topic_id} onValueChange={(x) => updateRule(i, { topic_id: x })}>
-                  <SelectTrigger><SelectValue placeholder="Materia" /></SelectTrigger>
-                  <SelectContent>
-                    {allTopics.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={r.difficulty_filter ?? "any"}
-                  onValueChange={(x) => updateRule(i, { difficulty_filter: x === "any" ? null : (x as Difficulty) })}
+            {v.template_rules.map((r, i) => {
+              const avail = r.topic_id ? availableFor(r.topic_id, r.difficulty_filter) : null;
+              const insufficient = avail !== null && r.question_count > avail;
+              return (
+                <div
+                  key={i}
+                  className={`rounded-md border bg-card p-3 ${insufficient ? "border-destructive/60" : "border-border"}`}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Cualquier dificultad</SelectItem>
-                    <SelectItem value="facil">Fácil</SelectItem>
-                    <SelectItem value="medio">Medio</SelectItem>
-                    <SelectItem value="dificil">Difícil</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={r.question_count}
-                  onChange={(e) => updateRule(i, { question_count: Number(e.target.value) })}
-                  aria-label="Cantidad"
-                />
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeRule(i)} aria-label="Quitar regla">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_120px_40px]">
+                    <Select value={r.topic_id} onValueChange={(x) => updateRule(i, { topic_id: x })}>
+                      <SelectTrigger><SelectValue placeholder="Materia" /></SelectTrigger>
+                      <SelectContent>
+                        {allTopics.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={r.difficulty_filter ?? "any"}
+                      onValueChange={(x) => updateRule(i, { difficulty_filter: x === "any" ? null : (x as Difficulty) })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Cualquier dificultad</SelectItem>
+                        <SelectItem value="facil">Fácil</SelectItem>
+                        <SelectItem value="medio">Medio</SelectItem>
+                        <SelectItem value="dificil">Difícil</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={r.question_count}
+                      onChange={(e) => updateRule(i, { question_count: Number(e.target.value) })}
+                      aria-label="Cantidad"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRule(i)} aria-label="Quitar regla">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {r.topic_id && (
+                    <p className={`mt-2 text-xs ${insufficient ? "text-destructive" : "text-muted-foreground"}`}>
+                      {avail === null
+                        ? "Consultando disponibilidad…"
+                        : insufficient
+                          ? `Solo hay ${avail} preguntas en el banco para este filtro. Añade más ejercicios o reduce la cantidad.`
+                          : `Disponibles en el banco: ${avail}`}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
+
       ) : (
         <>
           <div>

@@ -1,67 +1,62 @@
+# Plan: Templates de examen con generación aleatoria
 
-## Root cause of the current crash
+Aprovechamos la infraestructura existente (`exams.exam_type='template'` + `exam_template_rules` + `exam_sessions`) y añadimos lo que falta: UI dedicada para el estudiante, refinamientos al formulario admin, y las reglas de negocio nuevas.
 
-`public.has_role(uuid, app_role)` has **zero EXECUTE grants** (they were revoked in an earlier turn). Every RLS policy on `exercises`, `topics`, `exams`, `exam_questions`, etc. calls `public.has_role(auth.uid(), 'admin')`, so as soon as the student's "Iniciar examen" flow touches any of those tables Postgres throws `permission denied for function has_role` and the server function crashes. Fix: `GRANT EXECUTE ON FUNCTION public.has_role(uuid, app_role) TO authenticated, anon;` (SECURITY DEFINER keeps it safe — it only reads `user_roles`).
+## 1. Admin — Gestión de templates
 
-## Schema replacement
+Refinar `src/components/exam-form.tsx` cuando `exam_type='template'`:
+- Mostrar **total de preguntas calculado** (suma de `question_count`) en tiempo real.
+- Por cada regla, mostrar **cuántas preguntas hay disponibles** en el banco para ese tema+dificultad (consulta ligera vía nueva server fn `getTopicQuestionCounts`) y marcar en rojo si `question_count > disponibles`.
+- Botón "Guardar" muestra advertencia (`toast` + `AlertDialog` confirmación) cuando hay reglas insuficientes, pero permite guardar como *borrador* (`status='draft'`).
+- Validación server-side existente en `validateTemplateRules` se mantiene; solo bloquea publicar (`status='published'`) si falta stock.
 
-Rename/replace the exam domain to match the requested model. Keep `exercises` as the underlying question bank (it already stores statement/choices/correct_choice/solution) and rename it conceptually to `questions` via a view alias — no data loss.
+Listado en `src/routes/_authenticated/admin/examenes.index.tsx`:
+- Agregar tab/filtro "Plantillas" vs "Estándar".
+- Para plantillas mostrar: nombre, duración, total de preguntas (suma de reglas), nº de intentos generados, estado.
+- Acción **Eliminar**: bloqueada si existen `exam_sessions` con `exam_id=<template>` (nuevo chequeo en `deleteExam`); si hay intentos, ofrecer archivar (`status='archived'`).
 
-New/changed tables:
+## 2. Estudiante — Nueva sección "Simulacros"
 
-- `exams` — add `exam_type text check in ('standard','template')` default `'standard'`, `allow_multiple_attempts bool default false`. Keep `max_attempts`, `time_limit_min`, `passing_score`, `status`, `question_order`.
-- `exam_template_rules` (new): `id`, `exam_id fk`, `topic_id fk`, `difficulty_filter difficulty_level nullable`, `question_count int check > 0`, `position int`.
-- `exam_attempts` (rename of `exam_sessions`): `id`, `exam_id fk nullable` (nullable to keep supporting universidad simulacros), `student_id uuid = auth.uid()`, `status text ('in_progress','submitted','graded')`, `started_at`, `finished_at`, `score`, `total`, `time_limit_min`, `answers jsonb`, `flagged jsonb`.
-- `exam_attempt_questions` (new, replaces the `question_ids[]` array on the session): `id`, `attempt_id fk`, `position int`, `points numeric default 1`, `question_id fk exercises(id)`, snapshot columns `statement_md`, `statement_image_path`, `choices jsonb`, `correct_choice int`, `solution_md`, `selected_choice int nullable`, `is_correct bool nullable`.
+Rutas nuevas:
+- `src/routes/_authenticated/simulacros.index.tsx` — lista de templates publicados (nombre, descripción, duración, total de preguntas, botón **Generar examen**).
+- Enlace en `SiteHeader` para usuarios autenticados.
 
-Migration steps in one SQL migration:
+Server fn nueva `listPublishedTemplates` en `src/lib/exams.functions.ts`:
+- SELECT de `exams` con `exam_type='template'` y `status='published'`, incluyendo suma de `exam_template_rules.question_count`.
 
-1. `ALTER TABLE exams ADD exam_type`, `allow_multiple_attempts`.
-2. `CREATE TABLE exam_template_rules` + GRANTs + RLS (admin manage, authenticated select for their exam start).
-3. Rename `exam_sessions` → `exam_attempts`; rename `user_id` → `student_id`. Update indexes/FKs.
-4. `CREATE TABLE exam_attempt_questions` + GRANTs + RLS (student can select/update rows where the parent attempt is theirs; admin all).
-5. Backfill: for each existing `exam_attempts` row with a `question_ids[]`, insert one `exam_attempt_questions` per id copying snapshot columns from `exercises`. Then drop `question_ids`.
-6. Update `attempts.exam_session_id` FK to point at renamed `exam_attempts`.
-7. **Grant execute on `has_role` to `authenticated, anon`** (the actual crash fix).
-8. Add trigger `enforce_attempt_limit` on `exam_attempts` insert: rejects when the student already has ≥ `max_attempts` graded/submitted attempts and `allow_multiple_attempts=false`.
+Flujo "Generar examen":
+- Botón llama a `startExamSession({ examId })` existente (ya soporta template) → redirige a `/examen-sesion/$sessionId`.
+- Añadir manejo de errores amistoso (toast) cuando falte stock o se viole la regla de uno-en-curso.
 
-All new public tables get the standard grant block (`authenticated` CRUD as appropriate, `service_role` ALL).
+## 3. Reglas de negocio nuevas
 
-## Server functions (`src/lib/exams.functions.ts`)
+Aplicar dentro de `startExamSession` (template únicamente):
 
-Rewrite `startExamSession` to:
+- **Uno en curso por template**: la lógica actual ya resume la sesión `in_progress` existente del mismo `exam_id` — comportamiento correcto, se mantiene, se documenta con mensaje claro ("Ya tienes un simulacro en curso para esta plantilla, se retomará").
+- **Evitar repetición de preguntas ya vistas**: antes de armar el pool aleatorio por regla, obtener `exercise_id` distintos de `exam_sessions` previos del mismo `user_id`+`exam_id` (leyendo `question_ids`). Preferir preguntas no vistas; si no alcanzan, completar con vistas anteriores (nunca fallar por esto).
+- **Stock insuficiente al generar**: si el total real de preguntas disponibles (vistas+nuevas) para una regla < `question_count`, lanzar error claro: "No hay suficientes preguntas de <tema> para generar este simulacro."
+- **Mezcla final**: ya implementada (shuffle cross-rule).
 
-1. Load exam with `exam_type`, `max_attempts`, `allow_multiple_attempts`, `time_limit_min`, `status`.
-2. Reject if not `published` → friendly toast.
-3. Count prior non-in-progress attempts; if limit reached and `!allow_multiple_attempts`, throw `"Ya alcanzaste el máximo de intentos"` (client shows toast, no crash).
-4. Resume in-progress attempt if still within time window.
-5. Build the question list:
-   - `standard`: read `exam_questions` ordered by `position`.
-   - `template`: for each rule, `select id from exercises where topic_id=... and (difficulty=filter or filter is null) and active order by random() limit question_count`. If any rule returns fewer rows than `question_count`, throw `"Este examen no está disponible en este momento (faltan preguntas para el tema X)"` — do NOT crash.
-6. Shuffle combined list when `question_order='random'` (always for template).
-7. Insert `exam_attempts` row (trigger enforces the limit as backup); then bulk insert `exam_attempt_questions` with snapshot columns from `exercises` (single join query, no N+1).
-8. Return `{ attemptId }`.
+## 4. Borrado seguro de templates
 
-Rewrite `getExamSession`, `saveExamAnswers`, `submitExamSession`, `getExamResult` to read from `exam_attempt_questions` instead of `question_ids[]` + join to `exercises`. Grading uses the snapshot `correct_choice` so late edits to the bank don't invalidate old attempts.
+Modificar `deleteExam` en `src/lib/admin.functions.ts`:
+- Antes de borrar, contar `exam_sessions` con `exam_id=id`.
+- Si > 0 → responder con error específico "No se puede eliminar: existen N intentos generados. Archívalo en su lugar."
+- Añadir server fn `archiveExam` que setea `status='archived'` (nuevo valor de enum, ver migración).
+- UI del listado añade acción "Archivar".
 
-Add admin server fns: `listTemplateRules`, `upsertTemplateRule`, `deleteTemplateRule`, plus validation (`question_count <= available` at save time — returns actionable error).
+## Sección técnica
 
-## Frontend
+**Migración de BD:**
+- Añadir `'archived'` al enum `exam_status` (si no existe): `ALTER TYPE exam_status ADD VALUE IF NOT EXISTS 'archived';`
+- No se requieren tablas nuevas.
 
-- `src/routes/_authenticated/examen.$id.tsx`: rename param usage `sessionId → attemptId`, add `isLoading` state on the Iniciar button (already partially there — extend), wrap `startFn` in try/catch and surface `toast.error(e.message)` for the friendly errors above.
-- `src/routes/_authenticated/examen-sesion.$sessionId.tsx` → rename file to `examen-intento.$attemptId.tsx`, read `exam_attempt_questions` rows directly.
-- `src/routes/_authenticated/examen-sesion.$sessionId.resultado.tsx` → same rename + read snapshot rows.
-- Admin exam builder (`src/routes/_authenticated/admin/examenes.$id.tsx` / `.nuevo.tsx` / `exam-form.tsx`): add `exam_type` toggle. When `template`, hide the question picker and show a rules editor (topic + difficulty + count) using `exam_template_rules` CRUD. Validate available question count client-side too.
-- `src/components/exam-form.tsx`: add fields for `exam_type`, `allow_multiple_attempts`.
+**Archivos a modificar:**
+- `src/lib/admin.functions.ts` — nuevas fns `getTopicQuestionCounts`, `archiveExam`; refuerzo en `deleteExam`.
+- `src/lib/exams.functions.ts` — nueva fn `listPublishedTemplates`; refactor de `startExamSession` (rama template) para excluir preguntas ya vistas con fallback.
+- `src/components/exam-form.tsx` — total en vivo, contador disponible por regla, confirm dialog al guardar con déficit.
+- `src/routes/_authenticated/admin/examenes.index.tsx` — filtro estándar/plantilla, columnas de intentos, acciones eliminar/archivar.
+- `src/routes/_authenticated/simulacros.index.tsx` — nueva ruta.
+- `src/components/site-header.tsx` — enlace "Simulacros".
 
-## Verification
-
-1. Playwright: sign in as student, click Iniciar on a `standard` exam → lands on attempt page with the right questions.
-2. Create a `template` exam via admin, then start it as student → questions are randomized from the bank.
-3. Set `max_attempts=1`, submit once, click Iniciar again → toast appears, no crash.
-4. Break a template rule (count > available) → toast appears, no crash.
-
-## Out of scope
-
-- Not touching the "simulacro por universidad" flow beyond the `exam_sessions → exam_attempts` rename (it will keep working via `exam_id=null`).
-- Not adding per-question `points` scoring UI (schema supports it; UI stays simple pass/fail).
+**Sin cambios de esquema mayores**: la tabla `exam_template_rules` y las columnas `exam_type`/`allow_multiple_attempts` ya existen. La sesión sigue almacenando `question_ids` snapshot, garantizando que editar/eliminar el template no afecte exámenes en curso ni resultados históricos.

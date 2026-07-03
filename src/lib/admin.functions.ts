@@ -577,8 +577,59 @@ export const deleteExam = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
+    const { count } = await context.supabase
+      .from("exam_sessions")
+      .select("id", { head: true, count: "exact" })
+      .eq("exam_id", data.id);
+    if ((count ?? 0) > 0) {
+      throw new Error(
+        `No se puede eliminar: hay ${count} intento(s) generado(s). Archívalo en su lugar para conservar el historial.`,
+      );
+    }
     const { error } = await context.supabase.from("exams").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const archiveExam = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase
+      .from("exams")
+      .update({ status: "archived" })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Returns, for each provided topic/difficulty pair, how many exercises exist.
+export const getTopicQuestionCounts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      pairs: z.array(
+        z.object({
+          topic_id: z.string().uuid(),
+          difficulty_filter: z.enum(["facil", "medio", "dificil"]).nullable().optional(),
+        }),
+      ).max(50),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const out: Array<{ topic_id: string; difficulty_filter: string | null; count: number }> = [];
+    for (const p of data.pairs) {
+      let q = context.supabase
+        .from("exercises")
+        .select("id", { head: true, count: "exact" })
+        .eq("topic_id", p.topic_id);
+      if (p.difficulty_filter) q = q.eq("difficulty", p.difficulty_filter);
+      const { count } = await q;
+      out.push({ topic_id: p.topic_id, difficulty_filter: p.difficulty_filter ?? null, count: count ?? 0 });
+    }
+    return out;
+  });
+
 
