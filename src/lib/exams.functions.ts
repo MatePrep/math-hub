@@ -183,12 +183,16 @@ export const startExamSession = createServerFn({ method: "POST" })
       .eq("exam_id", exam.id)
       .in("status", ["submitted", "graded"]);
     const done = finishedCount ?? 0;
-    if (done > 0 && !exam.allow_multiple_attempts && !exam.max_attempts) {
-      throw new Error("Este examen permite un solo intento y ya lo completaste.");
+    // Simulacros (templates) siempre permiten regenerar
+    if (exam.exam_type !== "template") {
+      if (done > 0 && !exam.allow_multiple_attempts && !exam.max_attempts) {
+        throw new Error("Este examen permite un solo intento y ya lo completaste.");
+      }
+      if (exam.max_attempts && done >= exam.max_attempts) {
+        throw new Error(`Ya alcanzaste el máximo de ${exam.max_attempts} intentos para este examen.`);
+      }
     }
-    if (exam.max_attempts && done >= exam.max_attempts) {
-      throw new Error(`Ya alcanzaste el máximo de ${exam.max_attempts} intentos para este examen.`);
-    }
+
 
     // Build question list based on exam_type
     let questionIds: string[] = [];
