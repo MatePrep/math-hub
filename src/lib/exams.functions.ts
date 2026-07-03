@@ -432,6 +432,21 @@ export const submitExamSession = createServerFn({ method: "POST" })
     return { score: scorePct, total, correctCount };
   });
 
+export const listMyTemplateSessions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
+      .from("exam_sessions")
+      .select("id, exam_id, status, started_at, finished_at, score, total, exam:exams(id, title, exam_type)")
+      .eq("user_id", userId)
+      .in("status", ["submitted", "graded"])
+      .not("exam_id", "is", null)
+      .order("started_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []).filter((r: any) => r.exam?.exam_type === "template");
+  });
+
 export const getExamResult = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ sessionId: z.string().uuid() }).parse(d))

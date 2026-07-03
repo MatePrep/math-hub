@@ -30,7 +30,7 @@ function ExamHub() {
       <header>
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Exámenes de admisión</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Elige una universidad para practicar ejercicios o iniciar un simulacro cronometrado.
+          Elige una universidad para acceder a sus exámenes oficiales cronometrados.
         </p>
       </header>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

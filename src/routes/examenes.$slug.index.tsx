@@ -1,12 +1,10 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Timer } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { Timer, ListChecks } from "lucide-react";
 import { getUniversityBySlug } from "@/lib/exercises.functions";
-import { listMyUniversityExamSessions } from "@/lib/exams.functions";
+import { listPublishedExams } from "@/lib/exams.functions";
 
 const uniQO = (slug: string) =>
   queryOptions({
@@ -14,19 +12,20 @@ const uniQO = (slug: string) =>
     queryFn: () => getUniversityBySlug({ data: { slug } }),
   });
 
-const sessionsQO = (slug: string) =>
+const examsQO = (slug: string) =>
   queryOptions({
-    queryKey: ["my-university-sessions", slug],
-    queryFn: () => listMyUniversityExamSessions({ data: { universitySlug: slug } }),
-    staleTime: 1000 * 60 * 2,
+    queryKey: ["published-exams", slug],
+    queryFn: () => listPublishedExams({ data: { universitySlug: slug } }),
+    staleTime: 1000 * 60 * 5,
   });
 
 export const Route = createFileRoute("/examenes/$slug/")({
   loader: async ({ context, params }) => {
     const u = await context.queryClient.ensureQueryData(uniQO(params.slug));
     if (!u) throw notFound();
+    await context.queryClient.ensureQueryData(examsQO(params.slug));
   },
-  head: ({ params }) => ({ meta: [{ title: `${params.slug} · Examen · MatePre` }] }),
+  head: ({ params }) => ({ meta: [{ title: `${params.slug} · Exámenes oficiales · MatePre` }] }),
   component: UniPage,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
@@ -45,125 +44,57 @@ export const Route = createFileRoute("/examenes/$slug/")({
 
 function UniPage() {
   const { slug } = Route.useParams();
-  const navigate = useNavigate();
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const { data: u } = useSuspenseQuery(uniQO(slug));
-  const sessionsFn = useServerFn(listMyUniversityExamSessions);
-  const sessionsQuery = useQuery({
-    queryKey: ["my-university-sessions", slug],
-    queryFn: () => sessionsFn({ data: { universitySlug: slug } }),
-    enabled: signedIn === true,
-    staleTime: 1000 * 60 * 2,
-  });
-
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSignedIn(!!data.session);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
-      if (mounted) setSignedIn(!!session);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  const { data: exams } = useSuspenseQuery(examsQO(slug));
 
   if (!u) return null;
-
-  const sessions = sessionsQuery.data ?? [];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <nav className="text-xs text-muted-foreground">
-        <Link to="/examenes" className="hover:underline">
-          Exámenes
-        </Link>{" "}
+        <Link to="/examenes" className="hover:underline">Exámenes</Link>{" "}
         / <span className="text-foreground">{u.short_name}</span>
       </nav>
 
-      <div className="mt-3 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
-        <div>
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">{u.name}</h1>
-          {u.description && <p className="mt-2 max-w-2xl text-muted-foreground">{u.description}</p>}
-        </div>
+      <div className="mt-4">
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">{u.name}</h1>
+        {u.description && <p className="mt-2 max-w-2xl text-muted-foreground">{u.description}</p>}
       </div>
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="space-y-6">
-          <section className="rounded-xl border border-border bg-card p-6">
-            <h2 className="font-display text-xl font-bold">Simulacro</h2>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Genera un examen con preguntas seleccionadas al azar de esta universidad. Tus respuestas se guardan automáticamente y podrás retomar el examen si no lo envías.
-            </p>
-            <div className="mt-4">
-              <Button asChild size="lg" className="min-h-11">
-                <Link to="/examenes/$slug/simulacro" params={{ slug: u.slug }}>
-                  <Timer className="mr-2 h-4 w-4" /> Iniciar simulacro
-                </Link>
-              </Button>
-            </div>
-          </section>
+      <div className="mt-10">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="font-display text-xl font-bold">Exámenes oficiales</h2>
+          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
+            {(exams ?? []).length} exámenes
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Exámenes con preguntas fijas definidas por el equipo. Puedes rendir cada examen las veces que quieras.
+        </p>
 
-          <section className="rounded-xl border border-border bg-card p-6">
-            <h2 className="font-display text-xl font-bold">Tus últimas sesiones</h2>
-            {signedIn === null ? (
-              <p className="mt-3 text-sm text-muted-foreground">Cargando estado de sesión...</p>
-            ) : signedIn === false ? (
-              <div className="mt-3 space-y-3 text-sm text-muted-foreground">
-                <p>No estás conectado. Inicia sesión para ver y reanudar tus simulacros.</p>
-                <Button asChild size="sm" className="min-h-11">
-                  <Link to="/auth">Ingresar</Link>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {(exams ?? []).length === 0 ? (
+            <div className="col-span-full rounded-xl border border-dashed border-border bg-background p-10 text-center text-sm text-muted-foreground">
+              Aún no hay exámenes oficiales publicados para esta universidad.
+            </div>
+          ) : (
+            (exams ?? []).map((exam: any) => (
+              <div key={exam.id} className="flex flex-col rounded-xl border border-border bg-card p-5">
+                <h3 className="font-display font-bold">{exam.title}</h3>
+                {exam.description && (
+                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{exam.description}</p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <Badge variant="outline"><Timer className="mr-1 h-3 w-3" /> {exam.time_limit_min} min</Badge>
+                  <Badge variant="outline"><ListChecks className="mr-1 h-3 w-3" /> {exam.questionCount} preguntas</Badge>
+                </div>
+                <Button asChild size="sm" className="mt-4 self-start">
+                  <Link to="/examen/$id" params={{ id: exam.id }}>Ver examen →</Link>
                 </Button>
               </div>
-            ) : sessionsQuery.isLoading ? (
-              <p className="mt-3 text-sm text-muted-foreground">Cargando tus sesiones...</p>
-            ) : sessions.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">Aún no tienes simulacros registrados para esta universidad.</p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {sessions.map((session: any) => (
-                  <div key={session.id} className="rounded-xl border border-border bg-background p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{session.status === "in_progress" ? "En progreso" : "Completado"}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Iniciado {new Date(session.started_at).toLocaleString("es-PE")}
-                        </p>
-                      </div>
-                      <div className="text-right text-sm text-muted-foreground">
-                        <p>{session.total ?? 0} preguntas</p>
-                        {session.score !== null && <p>{session.score}%</p>}
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {session.status === "in_progress" ? (
-                        <Button size="sm" onClick={() => navigate({ to: "/examen-sesion/$sessionId", params: { sessionId: session.id } })}>
-                          Reanudar
-                        </Button>
-                      ) : (
-                        <Button asChild size="sm" variant="outline">
-                          <Link to="/examen-sesion/$sessionId/resultado" params={{ sessionId: session.id }}>
-                            Ver resultado
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+            ))
+          )}
         </div>
-
-        <aside className="space-y-6">
-          <div className="rounded-xl border border-border bg-card p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Información</p>
-            <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <p>Los simulacros aleatorios usan preguntas de esta universidad y se pueden retomar si no se envían.</p>
-              <p>Después de enviar, verás tu puntaje y revisión detallada.</p>
-              <p>Si no estás autenticado, inicia sesión para conservar tus intentos.</p>
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
   );
