@@ -1,25 +1,31 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus } from "lucide-react";
-import { listAdminExams, deleteExam } from "@/lib/admin.functions";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Pencil, Trash2, Plus, Archive } from "lucide-react";
+import { listAdminExams, deleteExam, archiveExam } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/examenes/")({
   component: AdminExamsList,
 });
 
+type Filter = "all" | "standard" | "template";
+
 function AdminExamsList() {
   const router = useRouter();
   const listFn = useServerFn(listAdminExams);
   const del = useServerFn(deleteExam);
+  const archive = useServerFn(archiveExam);
   const q = useQuery({ queryKey: ["admin-exams"], queryFn: () => listFn() });
+  const [filter, setFilter] = useState<Filter>("all");
 
   async function onDelete(id: string) {
-    if (!confirm("¿Eliminar este examen? Se borrarán también las sesiones asociadas.")) return;
+    if (!confirm("¿Eliminar este examen definitivamente?")) return;
     try {
       await del({ data: { id } });
       toast.success("Examen eliminado");
@@ -30,10 +36,34 @@ function AdminExamsList() {
     }
   }
 
+  async function onArchive(id: string) {
+    if (!confirm("¿Archivar este examen? Dejará de aparecer para los estudiantes, pero se conserva el historial.")) return;
+    try {
+      await archive({ data: { id } });
+      toast.success("Examen archivado");
+      q.refetch();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Error");
+    }
+  }
+
+  const rows = (q.data ?? []).filter((e: any) =>
+    filter === "all" ? true : (e.exam_type ?? "standard") === filter,
+  );
+
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{q.data?.length ?? 0} exámenes</p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{rows.length} exámenes</p>
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
+            <TabsList>
+              <TabsTrigger value="all">Todos</TabsTrigger>
+              <TabsTrigger value="standard">Estándar</TabsTrigger>
+              <TabsTrigger value="template">Plantillas</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <Button asChild size="sm">
           <Link to="/admin/examenes/nuevo"><Plus className="mr-1 h-4 w-4" /> Nuevo examen</Link>
         </Button>
@@ -43,6 +73,7 @@ function AdminExamsList() {
           <TableHeader>
             <TableRow>
               <TableHead>Título</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Preguntas</TableHead>
               <TableHead>Tiempo</TableHead>
@@ -51,26 +82,49 @@ function AdminExamsList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {q.isLoading && <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">Cargando…</TableCell></TableRow>}
-            {q.data?.map((e: any) => (
-              <TableRow key={e.id}>
-                <TableCell className="font-medium">{e.title}</TableCell>
-                <TableCell>
-                  <Badge variant={e.status === "published" ? "default" : "outline"} className="capitalize">{e.status}</Badge>
-                </TableCell>
-                <TableCell>{e.questionCount}</TableCell>
-                <TableCell>{e.time_limit_min} min</TableCell>
-                <TableCell>{e.attemptCount}</TableCell>
-                <TableCell className="text-right">
-                  <Button asChild size="icon" variant="ghost">
-                    <Link to="/admin/examenes/$id" params={{ id: e.id }} aria-label="Editar"><Pencil className="h-4 w-4" /></Link>
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => onDelete(e.id)} aria-label="Eliminar"><Trash2 className="h-4 w-4" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {q.data?.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">Sin exámenes todavía.</TableCell></TableRow>
+            {q.isLoading && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">Cargando…</TableCell></TableRow>}
+            {rows.map((e: any) => {
+              const isTemplate = (e.exam_type ?? "standard") === "template";
+              const hasAttempts = (e.attemptCount ?? 0) > 0;
+              return (
+                <TableRow key={e.id}>
+                  <TableCell className="font-medium">{e.title}</TableCell>
+                  <TableCell>
+                    <Badge variant={isTemplate ? "secondary" : "outline"}>
+                      {isTemplate ? "Plantilla" : "Estándar"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={e.status === "published" ? "default" : "outline"} className="capitalize">{e.status}</Badge>
+                  </TableCell>
+                  <TableCell>{isTemplate ? "—" : e.questionCount}</TableCell>
+                  <TableCell>{e.time_limit_min} min</TableCell>
+                  <TableCell>{e.attemptCount ?? 0}</TableCell>
+                  <TableCell className="text-right">
+                    <Button asChild size="icon" variant="ghost">
+                      <Link to="/admin/examenes/$id" params={{ id: e.id }} aria-label="Editar"><Pencil className="h-4 w-4" /></Link>
+                    </Button>
+                    {e.status !== "archived" && (
+                      <Button size="icon" variant="ghost" onClick={() => onArchive(e.id)} aria-label="Archivar" title="Archivar">
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onDelete(e.id)}
+                      aria-label="Eliminar"
+                      disabled={hasAttempts}
+                      title={hasAttempts ? "Archivar en su lugar: hay intentos generados" : "Eliminar"}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {rows.length === 0 && !q.isLoading && (
+              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">Sin exámenes.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
