@@ -72,8 +72,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const update = useServerFn(updateExam);
   const bankFn = useServerFn(listExerciseBank);
   const metaFn = useServerFn(listAdminMeta);
+  const countsFn = useServerFn(getTopicQuestionCounts);
   const bank = useQuery({ queryKey: ["exercise-bank"], queryFn: () => bankFn() });
   const meta = useQuery({ queryKey: ["admin-meta"], queryFn: () => metaFn() });
+
 
   const [v, setV] = useState<ExamFormValues>(initial ?? empty);
   const [saving, setSaving] = useState(false);
