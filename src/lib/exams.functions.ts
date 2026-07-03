@@ -22,7 +22,9 @@ export const listPublishedExams = createServerFn({ method: "GET" })
       .from("exams")
       .select("id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, exam_questions(count)")
       .eq("status", "published")
+      .eq("exam_type", "standard")
       .order("created_at", { ascending: false });
+
 
     if (!data?.universitySlug) {
       const { data: exams, error } = await baseQuery;
