@@ -145,6 +145,36 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     setV((s) => ({ ...s, template_rules: s.template_rules.filter((_, idx) => idx !== i) }));
   }
 
+  const templateTotal = useMemo(
+    () => v.template_rules.reduce((sum, r) => sum + (Number(r.question_count) || 0), 0),
+    [v.template_rules],
+  );
+
+  const availabilityPairs = useMemo(
+    () =>
+      v.exam_type === "template"
+        ? v.template_rules
+            .filter((r) => r.topic_id)
+            .map((r) => ({ topic_id: r.topic_id, difficulty_filter: r.difficulty_filter }))
+        : [],
+    [v.exam_type, v.template_rules],
+  );
+
+  const availability = useQuery({
+    queryKey: ["topic-question-counts", availabilityPairs],
+    queryFn: () => countsFn({ data: { pairs: availabilityPairs } }),
+    enabled: availabilityPairs.length > 0,
+  });
+
+  function availableFor(topicId: string, diff: Difficulty | null): number | null {
+    const rows = availability.data ?? [];
+    const match = rows.find(
+      (r: any) => r.topic_id === topicId && (r.difficulty_filter ?? null) === (diff ?? null),
+    );
+    return match ? match.count : null;
+  }
+
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (v.exam_type === "standard" && v.exercise_ids.length === 0) {
