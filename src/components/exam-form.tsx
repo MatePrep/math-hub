@@ -189,7 +189,23 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       toast.error("Cada regla necesita materia y cantidad ≥ 1");
       return;
     }
+    if (v.exam_type === "template") {
+      const shortages = v.template_rules
+        .map((r) => ({ r, avail: availableFor(r.topic_id, r.difficulty_filter) }))
+        .filter((x) => x.avail !== null && x.r.question_count > (x.avail as number));
+      if (shortages.length > 0) {
+        if (v.status === "published") {
+          toast.error("No puedes publicar: algunas reglas piden más preguntas de las que existen en el banco.");
+          return;
+        }
+        const ok = confirm(
+          `Advertencia: ${shortages.length} regla(s) piden más preguntas de las disponibles. Puedes guardar como borrador; los estudiantes no podrán generar el examen hasta que agregues más ejercicios. ¿Continuar?`,
+        );
+        if (!ok) return;
+      }
+    }
     setSaving(true);
+
     try {
       const payload = {
         title: v.title,
