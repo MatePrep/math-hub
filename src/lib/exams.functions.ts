@@ -171,21 +171,42 @@ export const startExamSession = createServerFn({ method: "POST" })
         .order("position");
       if (rErr) throw new Error(rErr.message);
       if (!rules || rules.length === 0) throw new Error("Este examen no tiene reglas configuradas.");
+
+      // Collect questions the student has already seen in prior sessions of this template
+      const { data: priorSessions } = await supabase
+        .from("exam_sessions")
+        .select("question_ids")
+        .eq("user_id", userId)
+        .eq("exam_id", exam.id);
+      const seen = new Set<string>();
+      (priorSessions ?? []).forEach((s: any) => {
+        (s.question_ids ?? []).forEach((id: string) => seen.add(id));
+      });
+
       for (const rule of rules) {
-        let q = supabase.from("exercises").select("id").eq("topic_id", rule.topic_id);
+        let q = supabase.from("exercises").select("id, topic:topics(name)").eq("topic_id", rule.topic_id);
         if (rule.difficulty_filter) q = q.eq("difficulty", rule.difficulty_filter);
         const { data: pool, error: pErr } = await q;
         if (pErr) throw new Error(pErr.message);
         const ids = (pool ?? []).map((e: any) => e.id as string);
+        const topicName = (pool ?? [])[0]?.topic?.name ?? "una materia";
         if (ids.length < rule.question_count) {
-          throw new Error("Este examen no está disponible en este momento (faltan preguntas en el banco).");
+          throw new Error(`No hay suficientes preguntas de ${topicName} para generar este simulacro.`);
         }
-        const picked = [...ids].sort(() => Math.random() - 0.5).slice(0, rule.question_count);
+        const unseen = ids.filter((id) => !seen.has(id));
+        const alreadySeen = ids.filter((id) => seen.has(id));
+        const shuffle = <T,>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
+        const picked: string[] = [];
+        picked.push(...shuffle(unseen).slice(0, rule.question_count));
+        if (picked.length < rule.question_count) {
+          picked.push(...shuffle(alreadySeen).slice(0, rule.question_count - picked.length));
+        }
         questionIds.push(...picked);
       }
       // template exams always shuffle across all rules
       questionIds = questionIds.sort(() => Math.random() - 0.5);
     } else {
+
       const { data: eqs, error: eqErr } = await supabase
         .from("exam_questions")
         .select("exercise_id, position")
