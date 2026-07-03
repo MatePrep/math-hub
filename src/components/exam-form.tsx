@@ -22,7 +22,9 @@ import {
   updateExam,
   listExerciseBank,
   listAdminMeta,
+  getTopicQuestionCounts,
 } from "@/lib/admin.functions";
+
 
 type Status = "draft" | "published" | "archived";
 type Order = "fixed" | "random";
