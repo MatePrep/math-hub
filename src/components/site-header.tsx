@@ -15,8 +15,10 @@ import {
 const nav = [
   { to: "/temas", label: "Temas" },
   { to: "/examenes", label: "Exámenes" },
+  { to: "/simulacros", label: "Simulacros" },
   { to: "/panel", label: "Panel" },
 ];
+
 
 export function SiteHeader() {
   const navigate = useNavigate();
