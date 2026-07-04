@@ -56,8 +56,9 @@ export const getExamStats = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: rows, error } = await supabase.rpc("get_exam_stats", {
       _exam_id: data.examId,
-      _my_score_pct: data.myScorePct ?? null,
+      _my_score_pct: data.myScorePct ?? undefined,
     });
+
     if (error) throw new Error(error.message);
     const first = Array.isArray(rows) ? rows[0] : rows;
     return first ?? { avg_score: null, sessions_count: 0, my_percentile: null };
