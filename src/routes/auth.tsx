@@ -18,6 +18,17 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function GoogleLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 18 18" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9086c1.7018-1.5668 2.6836-3.8741 2.6836-6.615z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9086-2.2581c-.8059.54-1.8368.8591-3.0477.8591-2.3436 0-4.3282-1.5831-5.0359-3.7104H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z" />
+      <path fill="#FBBC05" d="M3.9641 10.71c-.18-.54-.2822-1.1168-.2822-1.71s.1023-1.17.2822-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.9641 10.71z" />
+      <path fill="#EA4335" d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.9641 7.29C4.6718 5.1627 6.6564 3.5795 9 3.5795z" />
+    </svg>
+  );
+}
+
 function translateAuthError(err: any): string {
   const code: string | undefined = err?.code ?? err?.error_code;
   const msg: string = err?.message ?? "";
@@ -55,6 +66,7 @@ function translateAuthError(err: any): string {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<"auth" | "forgot">("auth");
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -74,7 +86,34 @@ function AuthPage() {
   useEffect(() => {
     setFormError(null);
     setInfo(null);
-  }, [tab]);
+  }, [tab, mode]);
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setPendingAction("form");
+    setFormError(null);
+    setInfo(null);
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setFormError("Ingresa un correo válido.");
+      setBusy(false);
+      setPendingAction(null);
+      return;
+    }
+    try {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/restablecer-password`,
+      });
+    } catch (err) {
+      // Swallow the real error on purpose — always show the same message below,
+      // regardless of outcome, so this can't be used to check which emails exist.
+      console.error("[auth] resetPasswordForEmail", err);
+    } finally {
+      setBusy(false);
+      setPendingAction(null);
+      setInfo("Si el correo existe en nuestro sistema, te enviamos un enlace para restablecer tu contraseña. Si tu cuenta usa \"Continuar con Google\", ingresa con ese botón en vez de una contraseña.");
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -143,7 +182,7 @@ function AuthPage() {
       return;
     }
 
-    let url: string | null = null;
+    let url: string;
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -200,10 +239,70 @@ function AuthPage() {
   return (
     <div className="mx-auto grid min-h-[80dvh] max-w-md place-items-center px-4 py-10">
       <div className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <h1 className="font-display text-2xl font-bold">Bienvenido a MatePre</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Crea una cuenta para guardar tu progreso.
-        </p>
+        {mode === "forgot" ? (
+          <div className="animate-alert-in">
+            <h1 className="text-balance font-display text-2xl font-bold">Recuperar contraseña</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ingresa tu correo y te enviaremos un enlace para restablecerla.
+            </p>
+
+            <form onSubmit={handleForgotPassword} className="mt-6 space-y-4">
+              <div>
+                <Label htmlFor="forgot-email">Correo</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@correo.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              {formError && (
+                <p
+                  role="alert"
+                  className="animate-alert-in rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {formError}
+                </p>
+              )}
+              {info && (
+                <p
+                  role="status"
+                  className="animate-alert-in rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground"
+                >
+                  {info}
+                </p>
+              )}
+
+              <Button type="submit" className="press w-full min-h-11" disabled={busy}>
+                {pendingAction === "form" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {pendingAction === "form" ? "Enviando…" : "Enviar enlace de recuperación"}
+              </Button>
+            </form>
+
+            <button
+              type="button"
+              onClick={() => setMode("auth")}
+              className="mt-6 text-sm font-medium text-primary hover:underline"
+            >
+              ← Volver a ingresar
+            </button>
+          </div>
+        ) : (
+          <>
+        <div key={tab} className="animate-alert-in">
+          <h1 className="text-balance font-display text-2xl font-bold">
+            {tab === "signup" ? "Crea tu cuenta" : "Bienvenido de nuevo"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {tab === "signup"
+              ? "Es gratis y toma menos de un minuto."
+              : "Ingresa para continuar con tu progreso."}
+          </p>
+        </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-6">
           <TabsList className="grid grid-cols-2">
@@ -269,6 +368,15 @@ function AuthPage() {
                   Mínimo 8 caracteres. Evita contraseñas comunes (como “123456” o “password”).
                 </p>
               )}
+              {tab === "signin" && (
+                <button
+                  type="button"
+                  onClick={() => setMode("forgot")}
+                  className="mt-1 text-xs font-medium text-primary hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
             </div>
 
             {formError && (
@@ -280,7 +388,10 @@ function AuthPage() {
               </p>
             )}
             {info && (
-              <p className="animate-alert-in rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+              <p
+                role="status"
+                className="animate-alert-in rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground"
+              >
                 {info}
               </p>
             )}
@@ -304,9 +415,15 @@ function AuthPage() {
           disabled={busy}
           onClick={handleGoogle}
         >
-          {pendingAction === "google" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {pendingAction === "google" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <GoogleLogo className="mr-2 h-4 w-4" />
+          )}
           Continuar con Google
         </Button>
+          </>
+        )}
       </div>
     </div>
   );
