@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TemasIndexRouteImport } from './routes/temas.index'
 import { Route as ExamenesIndexRouteImport } from './routes/examenes.index'
 import { Route as EjercicioIdRouteImport } from './routes/ejercicio.$id'
+import { Route as AuthenticatedRankingRouteImport } from './routes/_authenticated/ranking'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
 import { Route as AuthenticatedFavoritasRouteImport } from './routes/_authenticated/favoritas'
@@ -77,6 +78,11 @@ const EjercicioIdRoute = EjercicioIdRouteImport.update({
   id: '/ejercicio/$id',
   path: '/ejercicio/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRankingRoute = AuthenticatedRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
   id: '/perfil',
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/favoritas': typeof AuthenticatedFavoritasRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/ranking': typeof AuthenticatedRankingRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
   '/examenes/': typeof ExamenesIndexRoute
   '/temas/': typeof TemasIndexRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/favoritas': typeof AuthenticatedFavoritasRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/ranking': typeof AuthenticatedRankingRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
   '/examenes': typeof ExamenesIndexRoute
   '/temas': typeof TemasIndexRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/_authenticated/favoritas': typeof AuthenticatedFavoritasRoute
   '/_authenticated/panel': typeof AuthenticatedPanelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/ranking': typeof AuthenticatedRankingRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
   '/examenes/': typeof ExamenesIndexRoute
   '/temas/': typeof TemasIndexRoute
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/favoritas'
     | '/panel'
     | '/perfil'
+    | '/ranking'
     | '/ejercicio/$id'
     | '/examenes/'
     | '/temas/'
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/favoritas'
     | '/panel'
     | '/perfil'
+    | '/ranking'
     | '/ejercicio/$id'
     | '/examenes'
     | '/temas'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/_authenticated/favoritas'
     | '/_authenticated/panel'
     | '/_authenticated/perfil'
+    | '/_authenticated/ranking'
     | '/ejercicio/$id'
     | '/examenes/'
     | '/temas/'
@@ -452,6 +464,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ejercicio/$id'
       preLoaderRoute: typeof EjercicioIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ranking': {
+      id: '/_authenticated/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof AuthenticatedRankingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/perfil': {
       id: '/_authenticated/perfil'
@@ -654,6 +673,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFavoritasRoute: typeof AuthenticatedFavoritasRoute
   AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedRankingRoute: typeof AuthenticatedRankingRoute
   AuthenticatedExamenSesionSessionIdRoute: typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
   AuthenticatedExamenIdRoute: typeof AuthenticatedExamenIdRoute
   AuthenticatedPracticaTopicSlugRoute: typeof AuthenticatedPracticaTopicSlugRoute
@@ -665,6 +685,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFavoritasRoute: AuthenticatedFavoritasRoute,
   AuthenticatedPanelRoute: AuthenticatedPanelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedRankingRoute: AuthenticatedRankingRoute,
   AuthenticatedExamenSesionSessionIdRoute:
     AuthenticatedExamenSesionSessionIdRouteWithChildren,
   AuthenticatedExamenIdRoute: AuthenticatedExamenIdRoute,
