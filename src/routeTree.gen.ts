@@ -26,6 +26,7 @@ import { Route as ExamenesSlugIndexRouteImport } from './routes/examenes.$slug.i
 import { Route as AuthenticatedSimulacrosIndexRouteImport } from './routes/_authenticated/simulacros.index'
 import { Route as TemasSlugSubtopicRouteImport } from './routes/temas.$slug.$subtopic'
 import { Route as ExamenesSlugSimulacroRouteImport } from './routes/examenes.$slug.simulacro'
+import { Route as AuthenticatedPracticaTopicSlugRouteImport } from './routes/_authenticated/practica.$topicSlug'
 import { Route as AuthenticatedExamenIdRouteImport } from './routes/_authenticated/examen.$id'
 import { Route as AuthenticatedExamenSesionSessionIdRouteImport } from './routes/_authenticated/examen-sesion.$sessionId'
 import { Route as AuthenticatedAdminMateriasRouteImport } from './routes/_authenticated/admin/materias'
@@ -123,6 +124,12 @@ const ExamenesSlugSimulacroRoute = ExamenesSlugSimulacroRouteImport.update({
   path: '/examenes/$slug/simulacro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedPracticaTopicSlugRoute =
+  AuthenticatedPracticaTopicSlugRouteImport.update({
+    id: '/practica/$topicSlug',
+    path: '/practica/$topicSlug',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedExamenIdRoute = AuthenticatedExamenIdRouteImport.update({
   id: '/examen/$id',
   path: '/examen/$id',
@@ -204,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/admin/materias': typeof AuthenticatedAdminMateriasRoute
   '/examen-sesion/$sessionId': typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
   '/examen/$id': typeof AuthenticatedExamenIdRoute
+  '/practica/$topicSlug': typeof AuthenticatedPracticaTopicSlugRoute
   '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/simulacros/': typeof AuthenticatedSimulacrosIndexRoute
@@ -232,6 +240,7 @@ export interface FileRoutesByTo {
   '/temas': typeof TemasIndexRoute
   '/admin/materias': typeof AuthenticatedAdminMateriasRoute
   '/examen/$id': typeof AuthenticatedExamenIdRoute
+  '/practica/$topicSlug': typeof AuthenticatedPracticaTopicSlugRoute
   '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/simulacros': typeof AuthenticatedSimulacrosIndexRoute
@@ -263,6 +272,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/materias': typeof AuthenticatedAdminMateriasRoute
   '/_authenticated/examen-sesion/$sessionId': typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
   '/_authenticated/examen/$id': typeof AuthenticatedExamenIdRoute
+  '/_authenticated/practica/$topicSlug': typeof AuthenticatedPracticaTopicSlugRoute
   '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
   '/_authenticated/simulacros/': typeof AuthenticatedSimulacrosIndexRoute
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/admin/materias'
     | '/examen-sesion/$sessionId'
     | '/examen/$id'
+    | '/practica/$topicSlug'
     | '/examenes/$slug/simulacro'
     | '/temas/$slug/$subtopic'
     | '/simulacros/'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/temas'
     | '/admin/materias'
     | '/examen/$id'
+    | '/practica/$topicSlug'
     | '/examenes/$slug/simulacro'
     | '/temas/$slug/$subtopic'
     | '/simulacros'
@@ -352,6 +364,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/materias'
     | '/_authenticated/examen-sesion/$sessionId'
     | '/_authenticated/examen/$id'
+    | '/_authenticated/practica/$topicSlug'
     | '/examenes/$slug/simulacro'
     | '/temas/$slug/$subtopic'
     | '/_authenticated/simulacros/'
@@ -503,6 +516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamenesSlugSimulacroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/practica/$topicSlug': {
+      id: '/_authenticated/practica/$topicSlug'
+      path: '/practica/$topicSlug'
+      fullPath: '/practica/$topicSlug'
+      preLoaderRoute: typeof AuthenticatedPracticaTopicSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/examen/$id': {
       id: '/_authenticated/examen/$id'
       path: '/examen/$id'
@@ -636,6 +656,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedExamenSesionSessionIdRoute: typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
   AuthenticatedExamenIdRoute: typeof AuthenticatedExamenIdRoute
+  AuthenticatedPracticaTopicSlugRoute: typeof AuthenticatedPracticaTopicSlugRoute
   AuthenticatedSimulacrosIndexRoute: typeof AuthenticatedSimulacrosIndexRoute
 }
 
@@ -647,6 +668,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExamenSesionSessionIdRoute:
     AuthenticatedExamenSesionSessionIdRouteWithChildren,
   AuthenticatedExamenIdRoute: AuthenticatedExamenIdRoute,
+  AuthenticatedPracticaTopicSlugRoute: AuthenticatedPracticaTopicSlugRoute,
   AuthenticatedSimulacrosIndexRoute: AuthenticatedSimulacrosIndexRoute,
 }
 

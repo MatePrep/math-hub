@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { getTopicBySlug, listExercises } from "@/lib/exercises.functions";
+import { getTopicBySlug, listExercises, getExercise } from "@/lib/exercises.functions";
 import { recordAttempt } from "@/lib/attempts.functions";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { Button } from "@/components/ui/button";
