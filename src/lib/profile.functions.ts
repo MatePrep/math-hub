@@ -70,13 +70,21 @@ export const updateFullProfile = createServerFn({ method: "POST" })
       if (existing) throw new Error("Ese pseudónimo ya está en uso. Elige otro.");
     }
 
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      full_name?: string;
+      pseudonym?: string | null;
+      career?: string | null;
+      leaderboard_opt_in?: boolean;
+      weekly_goal_questions?: number;
+      weekly_goal_exams?: number;
+    } = {};
     if (data.fullName !== undefined) patch.full_name = data.fullName;
     if (data.pseudonym !== undefined) patch.pseudonym = data.pseudonym;
     if (data.career !== undefined) patch.career = data.career;
     if (data.leaderboardOptIn !== undefined) patch.leaderboard_opt_in = data.leaderboardOptIn;
     if (data.weeklyGoalQuestions !== undefined) patch.weekly_goal_questions = data.weeklyGoalQuestions;
     if (data.weeklyGoalExams !== undefined) patch.weekly_goal_exams = data.weeklyGoalExams;
+
 
     if (Object.keys(patch).length > 0) {
       const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
