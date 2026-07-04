@@ -174,12 +174,13 @@ function PracticePage() {
                 <><XCircle className="h-4 w-4 text-destructive" /> Incorrecto. La respuesta era {String.fromCharCode(65 + result.correctChoice)}.</>
               )}
             </div>
-            {current.solution_md && (
+            {detailQ.data?.solution_md && (
               <details className="mt-2">
                 <summary className="cursor-pointer text-xs font-medium text-primary">Ver solución</summary>
-                <div className="mt-2"><MathText text={current.solution_md} /></div>
+                <div className="mt-2"><MathText text={detailQ.data.solution_md} /></div>
               </details>
             )}
+
           </div>
         )}
 
