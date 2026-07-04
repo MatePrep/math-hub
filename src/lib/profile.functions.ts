@@ -10,7 +10,7 @@ export const getFullProfile = createServerFn({ method: "GET" })
       supabase
         .from("profiles")
         .select(
-          "id, full_name, target_university, pseudonym, career, leaderboard_opt_in, weekly_goal_questions, weekly_goal_exams",
+          "id, full_name, target_university, pseudonym, career, leaderboard_opt_in, weekly_goal_questions, weekly_goal_exams, onboarding_completed, prep_time, prep_method, weekly_study_hours, initial_weak_topic_ids",
         )
         .eq("id", userId)
         .maybeSingle(),
@@ -54,6 +54,9 @@ function containsBlockedWord(value: string): boolean {
   return PSEUDONYM_BLOCKLIST.some((word) => normalized.includes(word));
 }
 
+export const PREP_TIME_VALUES = ["recien_empiezo", "menos_3_meses", "3_a_6_meses", "mas_6_meses"] as const;
+export const PREP_METHOD_VALUES = ["academia", "autodidacta", "colegio_particular", "primera_vez"] as const;
+
 const updateSchema = z.object({
   fullName: z.string().trim().max(120).optional(),
   pseudonym: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_\-]+$/).nullable().optional(),
@@ -61,6 +64,11 @@ const updateSchema = z.object({
   leaderboardOptIn: z.boolean().optional(),
   weeklyGoalQuestions: z.number().int().min(1).max(1000).optional(),
   weeklyGoalExams: z.number().int().min(0).max(50).optional(),
+  prepTime: z.enum(PREP_TIME_VALUES).nullable().optional(),
+  prepMethod: z.enum(PREP_METHOD_VALUES).nullable().optional(),
+  weeklyStudyHours: z.number().int().min(0).max(168).nullable().optional(),
+  initialWeakTopicIds: z.array(z.string().uuid()).max(20).nullable().optional(),
+  onboardingCompleted: z.boolean().optional(),
   universities: z
     .array(
       z.object({
@@ -100,6 +108,12 @@ export const updateFullProfile = createServerFn({ method: "POST" })
       leaderboard_opt_in?: boolean;
       weekly_goal_questions?: number;
       weekly_goal_exams?: number;
+      prep_time?: string | null;
+      prep_method?: string | null;
+      weekly_study_hours?: number | null;
+      initial_weak_topic_ids?: string[] | null;
+      onboarding_completed?: boolean;
+      onboarding_completed_at?: string;
     } = {};
     if (data.fullName !== undefined) patch.full_name = data.fullName;
     if (data.pseudonym !== undefined) patch.pseudonym = data.pseudonym;
@@ -107,7 +121,14 @@ export const updateFullProfile = createServerFn({ method: "POST" })
     if (data.leaderboardOptIn !== undefined) patch.leaderboard_opt_in = data.leaderboardOptIn;
     if (data.weeklyGoalQuestions !== undefined) patch.weekly_goal_questions = data.weeklyGoalQuestions;
     if (data.weeklyGoalExams !== undefined) patch.weekly_goal_exams = data.weeklyGoalExams;
-
+    if (data.prepTime !== undefined) patch.prep_time = data.prepTime;
+    if (data.prepMethod !== undefined) patch.prep_method = data.prepMethod;
+    if (data.weeklyStudyHours !== undefined) patch.weekly_study_hours = data.weeklyStudyHours;
+    if (data.initialWeakTopicIds !== undefined) patch.initial_weak_topic_ids = data.initialWeakTopicIds;
+    if (data.onboardingCompleted) {
+      patch.onboarding_completed = true;
+      patch.onboarding_completed_at = new Date().toISOString();
+    }
 
     if (Object.keys(patch).length > 0) {
       const { error } = await supabase.from("profiles").update(patch).eq("id", userId);

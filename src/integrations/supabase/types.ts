@@ -402,33 +402,51 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          initial_weak_topic_ids: string[] | null
           leaderboard_opt_in: boolean
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
+          prep_method: string | null
+          prep_time: string | null
           pseudonym: string | null
           target_university: string | null
           weekly_goal_exams: number
           weekly_goal_questions: number
+          weekly_study_hours: number | null
         }
         Insert: {
           career?: string | null
           created_at?: string
           full_name?: string | null
           id: string
+          initial_weak_topic_ids?: string[] | null
           leaderboard_opt_in?: boolean
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          prep_method?: string | null
+          prep_time?: string | null
           pseudonym?: string | null
           target_university?: string | null
           weekly_goal_exams?: number
           weekly_goal_questions?: number
+          weekly_study_hours?: number | null
         }
         Update: {
           career?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
+          initial_weak_topic_ids?: string[] | null
           leaderboard_opt_in?: boolean
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          prep_method?: string | null
+          prep_time?: string | null
           pseudonym?: string | null
           target_university?: string | null
           weekly_goal_exams?: number
           weekly_goal_questions?: number
+          weekly_study_hours?: number | null
         }
         Relationships: []
       }
