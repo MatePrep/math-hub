@@ -19,6 +19,7 @@ import { Route as ExamenesIndexRouteImport } from './routes/examenes.index'
 import { Route as EjercicioIdRouteImport } from './routes/ejercicio.$id'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
+import { Route as AuthenticatedFavoritasRouteImport } from './routes/_authenticated/favoritas'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as TemasSlugIndexRouteImport } from './routes/temas.$slug.index'
 import { Route as ExamenesSlugIndexRouteImport } from './routes/examenes.$slug.index'
@@ -84,6 +85,11 @@ const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
 const AuthenticatedPanelRoute = AuthenticatedPanelRouteImport.update({
   id: '/panel',
   path: '/panel',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFavoritasRoute = AuthenticatedFavoritasRouteImport.update({
+  id: '/favoritas',
+  path: '/favoritas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/favoritas': typeof AuthenticatedFavoritasRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/favoritas': typeof AuthenticatedFavoritasRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/favoritas': typeof AuthenticatedFavoritasRoute
   '/_authenticated/panel': typeof AuthenticatedPanelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/examenes-oficiales'
     | '/admin'
+    | '/favoritas'
     | '/panel'
     | '/perfil'
     | '/ejercicio/$id'
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/examenes-oficiales'
     | '/admin'
+    | '/favoritas'
     | '/panel'
     | '/perfil'
     | '/ejercicio/$id'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/examenes-oficiales'
     | '/_authenticated/admin'
+    | '/_authenticated/favoritas'
     | '/_authenticated/panel'
     | '/_authenticated/perfil'
     | '/ejercicio/$id'
@@ -440,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/panel'
       fullPath: '/panel'
       preLoaderRoute: typeof AuthenticatedPanelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/favoritas': {
+      id: '/_authenticated/favoritas'
+      path: '/favoritas'
+      fullPath: '/favoritas'
+      preLoaderRoute: typeof AuthenticatedFavoritasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
@@ -612,6 +631,7 @@ const AuthenticatedExamenSesionSessionIdRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedFavoritasRoute: typeof AuthenticatedFavoritasRoute
   AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedExamenSesionSessionIdRoute: typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
@@ -621,6 +641,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedFavoritasRoute: AuthenticatedFavoritasRoute,
   AuthenticatedPanelRoute: AuthenticatedPanelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedExamenSesionSessionIdRoute:
