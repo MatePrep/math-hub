@@ -115,7 +115,9 @@ export function SiteHeader() {
               <Shield className="h-4 w-4" /> Admin
             </Link>
           )}
+          {signedIn && <NotificationsBell />}
           {signedIn ? (
+
             <Button
               variant="ghost"
               size="sm"
