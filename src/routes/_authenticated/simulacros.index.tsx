@@ -1,12 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Timer, Shuffle, Play, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
 import { listPublishedTemplates, startExamSession, listMyTemplateSessions } from "@/lib/exams.functions";
+import { getFullProfile, listAllUniversities } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/_authenticated/simulacros/")({
   head: () => ({
@@ -25,10 +33,27 @@ function SimulacrosPage() {
   const listFn = useServerFn(listPublishedTemplates);
   const startFn = useServerFn(startExamSession);
   const sessionsFn = useServerFn(listMyTemplateSessions);
-  const q = useQuery({ queryKey: ["published-templates"], queryFn: () => listFn() });
+  const profileFn = useServerFn(getFullProfile);
+  const universitiesFn = useServerFn(listAllUniversities);
+
+  const [universityId, setUniversityId] = useState<string | "all" | null>(null);
+
+  const profileQ = useQuery({ queryKey: ["full-profile-mini"], queryFn: () => profileFn() });
+  const universitiesQ = useQuery({ queryKey: ["all-universities"], queryFn: () => universitiesFn() });
+  const q = useQuery({
+    queryKey: ["published-templates", universityId],
+    queryFn: () => listFn({ data: { universityId: universityId && universityId !== "all" ? universityId : undefined } }),
+    enabled: universityId !== null,
+  });
   const sessionsQ = useQuery({ queryKey: ["my-template-sessions"], queryFn: () => sessionsFn() });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (universityId === null && profileQ.data) {
+      setUniversityId(profileQ.data.universities[0]?.university_id ?? "all");
+    }
+  }, [profileQ.data, universityId]);
 
   const sessionsByExam = new Map<string, any[]>();
   (sessionsQ.data ?? []).forEach((s: any) => {
@@ -70,6 +95,20 @@ function SimulacrosPage() {
         </p>
       </header>
 
+      <div className="mb-6 max-w-xs">
+        <Select value={universityId ?? undefined} onValueChange={(v) => setUniversityId(v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Universidad" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las universidades</SelectItem>
+            {(universitiesQ.data ?? []).map((u: any) => (
+              <SelectItem key={u.id} value={u.id}>{u.short_name ?? u.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {q.isLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
       {q.data && q.data.length === 0 && (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
@@ -87,6 +126,7 @@ function SimulacrosPage() {
                 <h2 className="font-display text-lg font-bold">{t.title}</h2>
                 {t.description && <p className="mt-1 text-sm text-muted-foreground">{t.description}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {t.university && <Badge variant="secondary">{t.university.short_name}</Badge>}
                   <Badge variant="outline"><Timer className="mr-1 h-3 w-3" /> {t.time_limit_min} min</Badge>
                   <Badge variant="outline">{t.totalQuestions} preguntas</Badge>
                   <Badge variant="outline">{t.ruleCount} materia(s)</Badge>

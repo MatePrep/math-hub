@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { MathText } from "@/lib/math-render";
+import { FavoriteButton } from "@/components/favorite-button";
 
 const difficultyLabel = { facil: "Fácil", medio: "Medio", dificil: "Difícil" } as const;
 const difficultyClass: Record<string, string> = {
@@ -24,9 +25,10 @@ export function ExerciseCard({ ex }: { ex: ExerciseRow }) {
     <Link
       to="/ejercicio/$id"
       params={{ id: ex.id }}
-      className="group block rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
+      className="group relative block rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
     >
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <FavoriteButton exerciseId={ex.id} className="absolute right-3 top-3" />
+      <div className="flex flex-wrap items-center gap-2 pr-8 text-xs">
         <Badge variant="outline" className={difficultyClass[ex.difficulty]}>
           {difficultyLabel[ex.difficulty]}
         </Badge>

@@ -60,15 +60,20 @@ export const listPublishedExams = createServerFn({ method: "GET" })
     }));
   });
 
+const listPublishedTemplatesInput = z.object({ universityId: z.string().uuid().optional() });
+
 export const listPublishedTemplates = createServerFn({ method: "GET" })
-  .handler(async () => {
+  .inputValidator((d) => listPublishedTemplatesInput.parse(d ?? {}))
+  .handler(async ({ data }) => {
     const sb = publicClient();
-    const { data: exams, error } = await sb
+    let query = sb
       .from("exams")
-      .select("id, title, description, time_limit_min, passing_score, allow_multiple_attempts, max_attempts, exam_template_rules(question_count)")
+      .select("id, title, description, time_limit_min, passing_score, allow_multiple_attempts, max_attempts, university:universities(id, slug, short_name), exam_template_rules(question_count)")
       .eq("status", "published")
       .eq("exam_type", "template")
       .order("created_at", { ascending: false });
+    if (data?.universityId) query = query.eq("university_id", data.universityId);
+    const { data: exams, error } = await query;
     if (error) throw new Error(error.message);
     return (exams ?? []).map((e: any) => ({
       id: e.id,
@@ -78,6 +83,7 @@ export const listPublishedTemplates = createServerFn({ method: "GET" })
       passing_score: e.passing_score,
       max_attempts: e.max_attempts,
       allow_multiple_attempts: e.allow_multiple_attempts,
+      university: e.university,
       totalQuestions: (e.exam_template_rules ?? []).reduce(
         (sum: number, r: any) => sum + (r.question_count ?? 0),
         0,
@@ -370,6 +376,7 @@ export const submitExamSession = createServerFn({ method: "POST" })
     z.object({
       sessionId: z.string().uuid(),
       answers: z.record(z.string(), z.number().int().min(0).max(20)).optional(),
+      timeSpentMs: z.record(z.string(), z.number().int().min(0).max(60 * 60 * 1000)).optional(),
     }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -406,7 +413,7 @@ export const submitExamSession = createServerFn({ method: "POST" })
         exercise_id: id,
         selected_choice: selected ?? -1,
         is_correct: isCorrect,
-        time_spent_ms: 0,
+        time_spent_ms: data.timeSpentMs?.[id] ?? 0,
         exam_session_id: session.id,
       };
     }).filter((a) => a.selected_choice >= 0);
@@ -463,9 +470,29 @@ export const getExamResult = createServerFn({ method: "GET" })
     const ids: string[] = (session.question_ids ?? []) as any;
     const { data: exs } = await supabase
       .from("exercises")
-      .select("id, statement_md, choices, correct_choice, solution_md")
+      .select("id, statement_md, choices, correct_choice, solution_md, expected_time_ms")
       .in("id", ids);
     const byId = new Map((exs ?? []).map((e: any) => [e.id, e]));
-    const questions = ids.map((id) => byId.get(id)).filter(Boolean);
+
+    const [{ data: sessionAttempts }, { data: avgRows }] = await Promise.all([
+      supabase.from("attempts").select("exercise_id, time_spent_ms").eq("exam_session_id", data.sessionId),
+      ids.length > 0
+        ? supabase.rpc("get_exercise_avg_times", { _exercise_ids: ids })
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const timeByQuestion = new Map((sessionAttempts ?? []).map((a: any) => [a.exercise_id, a.time_spent_ms]));
+    const avgByQuestion = new Map((avgRows ?? []).map((r: any) => [r.exercise_id, r.avg_time_ms]));
+
+    const questions = ids
+      .map((id) => {
+        const base = byId.get(id);
+        if (!base) return null;
+        return {
+          ...base,
+          time_spent_ms: timeByQuestion.get(id) ?? null,
+          avg_time_ms: base.expected_time_ms ?? avgByQuestion.get(id) ?? null,
+        };
+      })
+      .filter(Boolean);
     return { session, questions };
   });

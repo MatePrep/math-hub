@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo } from "react";
 import { getUserStats } from "@/lib/attempts.functions";
+import { getFullProfile } from "@/lib/profile.functions";
+import { getWeeklyProgress } from "@/lib/goals.functions";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
-import { Flame, Target, ListChecks, Trophy } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Flame, Target, ListChecks, Trophy, CalendarClock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/panel")({
   head: () => ({ meta: [{ title: "Panel · MatePre" }] }),
@@ -18,18 +21,39 @@ export const Route = createFileRoute("/_authenticated/panel")({
 
 function PanelPage() {
   const fetchStats = useServerFn(getUserStats);
+  const fetchProfile = useServerFn(getFullProfile);
+  const fetchWeeklyProgress = useServerFn(getWeeklyProgress);
   const qo = useMemo(
     () => queryOptions({ queryKey: ["user-stats"], queryFn: () => fetchStats() }),
     [fetchStats],
   );
   const { data: stats } = useSuspenseQuery(qo);
+  const profileQ = useQuery({ queryKey: ["full-profile-mini"], queryFn: () => fetchProfile() });
+  const weeklyQ = useQuery({ queryKey: ["weekly-progress"], queryFn: () => fetchWeeklyProgress() });
 
   const weakest = [...stats.topicStats].sort((a, b) => a.accuracy - b.accuracy)[0];
+
+  const universities = (profileQ.data?.universities ?? [])
+    .filter((u: any) => u.exam_date)
+    .map((u: any) => ({
+      id: u.id,
+      name: u.university?.short_name ?? u.university?.name ?? "",
+      examDate: u.exam_date as string,
+      daysLeft: Math.ceil((new Date(u.exam_date).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000),
+    }))
+    .sort((a, b) => a.daysLeft - b.daysLeft);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="font-display text-3xl font-bold sm:text-4xl">Tu panel</h1>
       <p className="mt-1 text-muted-foreground">Revisa tu progreso y planifica tu próxima sesión.</p>
+
+      {(universities.length > 0 || weeklyQ.data) && (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          {universities.length > 0 && <CountdownCard universities={universities} />}
+          {weeklyQ.data && <WeeklyGoalsCard progress={weeklyQ.data} />}
+        </div>
+      )}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -142,6 +166,72 @@ function PanelPage() {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function CountdownCard({
+  universities,
+}: {
+  universities: Array<{ id: string; name: string; examDate: string; daysLeft: number }>;
+}) {
+  const [featured, ...rest] = universities;
+  return (
+    <div className="rounded-xl border border-border bg-card p-5">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <span className="grid h-7 w-7 place-items-center rounded-md bg-primary/10 text-primary">
+          <CalendarClock className="h-4 w-4" />
+        </span>
+        <span className="text-xs font-medium uppercase tracking-wider">Cuenta regresiva</span>
+      </div>
+      <p className="mt-3 font-display text-3xl font-bold">
+        {featured.daysLeft > 0 ? `Faltan ${featured.daysLeft} días` : featured.daysLeft === 0 ? "¡Es hoy!" : "Ya pasó"}
+      </p>
+      <p className="text-sm text-muted-foreground">{featured.name}</p>
+      {rest.length > 0 && (
+        <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm text-muted-foreground">
+          {rest.map((u) => (
+            <li key={u.id}>
+              {u.name}: {u.daysLeft > 0 ? `${u.daysLeft} días` : u.daysLeft === 0 ? "hoy" : "ya pasó"}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function WeeklyGoalsCard({
+  progress,
+}: {
+  progress: { questionsGoal: number; questionsDone: number; examsGoal: number; examsDone: number };
+}) {
+  const questionsPct = Math.min(100, Math.round((progress.questionsDone / Math.max(1, progress.questionsGoal)) * 100));
+  const examsPct = Math.min(100, Math.round((progress.examsDone / Math.max(1, progress.examsGoal)) * 100));
+  return (
+    <div className="rounded-xl border border-border bg-card p-5">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <span className="grid h-7 w-7 place-items-center rounded-md bg-primary/10 text-primary">
+          <Target className="h-4 w-4" />
+        </span>
+        <span className="text-xs font-medium uppercase tracking-wider">Metas semanales</span>
+      </div>
+      <div className="mt-4 space-y-4">
+        <div>
+          <div className="flex items-center justify-between text-sm">
+            <span>Preguntas</span>
+            <span className="font-medium">{progress.questionsDone}/{progress.questionsGoal}</span>
+          </div>
+          <Progress value={questionsPct} className="mt-1.5" />
+        </div>
+        <div>
+          <div className="flex items-center justify-between text-sm">
+            <span>Simulacros</span>
+            <span className="font-medium">{progress.examsDone}/{progress.examsGoal}</span>
+          </div>
+          <Progress value={examsPct} className="mt-1.5" />
+        </div>
+      </div>
     </div>
   );
 }

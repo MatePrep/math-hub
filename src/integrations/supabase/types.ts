@@ -594,6 +594,14 @@ export type Database = {
           sessions_count: number
         }[]
       }
+      get_exercise_avg_times: {
+        Args: { _exercise_ids: string[] }
+        Returns: {
+          avg_time_ms: number
+          exercise_id: string
+          samples: number
+        }[]
+      }
       get_university_leaderboard: {
         Args: { _limit?: number; _university_id: string }
         Returns: {

@@ -356,6 +356,7 @@ const examSchema = z
   .object({
     title: z.string().trim().min(3).max(120),
     description: z.string().trim().max(1000).nullable().optional(),
+    university_id: z.string().uuid(),
     time_limit_min: z.number().int().min(1).max(600),
     passing_score: z.number().int().min(0).max(100),
     max_attempts: z.number().int().min(1).max(50).nullable().optional(),
@@ -377,6 +378,7 @@ const examUpdateSchema = z
     id: z.string().uuid(),
     title: z.string().trim().min(3).max(120),
     description: z.string().trim().max(1000).nullable().optional(),
+    university_id: z.string().uuid(),
     time_limit_min: z.number().int().min(1).max(600),
     passing_score: z.number().int().min(0).max(100),
     max_attempts: z.number().int().min(1).max(50).nullable().optional(),
@@ -485,6 +487,7 @@ export const createExam = createServerFn({ method: "POST" })
       .insert({
         title: data.title,
         description: data.description ?? null,
+        university_id: data.university_id,
         time_limit_min: data.time_limit_min,
         passing_score: data.passing_score,
         max_attempts: data.max_attempts ?? null,
@@ -535,6 +538,7 @@ export const updateExam = createServerFn({ method: "POST" })
       .update({
         title: data.title,
         description: data.description ?? null,
+        university_id: data.university_id,
         time_limit_min: data.time_limit_min,
         passing_score: data.passing_score,
         max_attempts: data.max_attempts ?? null,

@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import { CheckCircle2, XCircle, MinusCircle, Clock, Users } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { getExamResult } from "@/lib/exams.functions";
+import { getExamStats } from "@/lib/goals.functions";
 
 export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/resultado")({
   component: ResultPage,
@@ -15,7 +16,16 @@ export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/r
 function ResultPage() {
   const { sessionId } = Route.useParams();
   const fn = useServerFn(getExamResult);
+  const statsFn = useServerFn(getExamStats);
   const q = useQuery({ queryKey: ["exam-result", sessionId], queryFn: () => fn({ data: { sessionId } }) });
+
+  const examId: string | null = q.data?.session?.exam_id ?? null;
+  const myScorePct: number | null = q.data?.session?.score ?? null;
+  const statsQ = useQuery({
+    queryKey: ["exam-stats", examId, myScorePct],
+    queryFn: () => statsFn({ data: { examId: examId as string, myScorePct } }),
+    enabled: !!examId,
+  });
 
   if (q.isLoading) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>;
   if (!q.data) return <div className="mx-auto max-w-3xl px-4 py-16 text-center">No encontrado.</div>;
@@ -74,6 +84,34 @@ function ResultPage() {
         </div>
       </div>
 
+      {statsQ.data && statsQ.data.sessions_count > 0 && (
+        <div className="mt-4 rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Users className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Comparación con otros estudiantes</span>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+            <div>
+              <p className="text-muted-foreground">Tu puntaje</p>
+              <p className="font-display text-xl font-bold">{score}%</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Promedio general</p>
+              <p className="font-display text-xl font-bold">{statsQ.data.avg_score}%</p>
+            </div>
+            {statsQ.data.my_percentile !== null && (
+              <div>
+                <p className="text-muted-foreground">Tu percentil</p>
+                <p className="font-display text-xl font-bold">{statsQ.data.my_percentile}</p>
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Basado en {statsQ.data.sessions_count} intento{statsQ.data.sessions_count !== 1 ? "s" : ""} de este examen. La comparación es anónima.
+          </p>
+        </div>
+      )}
+
       <div className="mt-8 grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="rounded-xl border border-border bg-card p-4">
           <h2 className="font-display text-xl font-bold">Revisión</h2>
@@ -124,12 +162,28 @@ function ResultPage() {
                   {selectedUnanswered ? "Sin responder" : selectedAnswer === selectedCorrect ? "Correcta" : "Incorrecta"}
                 </p>
               </div>
-              <Badge
-                variant="outline"
-                className={selectedUnanswered ? "border-muted-foreground text-muted-foreground" : selectedAnswer === selectedCorrect ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}
-              >
-                {selectedUnanswered ? "No respondida" : selectedAnswer === selectedCorrect ? "Correcta" : "Incorrecta"}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {selectedQuestion.time_spent_ms !== null && selectedQuestion.time_spent_ms !== undefined && (
+                  <Badge
+                    variant="outline"
+                    className={
+                      selectedQuestion.avg_time_ms && selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5
+                        ? "border-amber-500/40 text-amber-600"
+                        : ""
+                    }
+                  >
+                    <Clock className="mr-1 h-3 w-3" />
+                    {formatDuration(selectedQuestion.time_spent_ms / 1000)}
+                    {selectedQuestion.avg_time_ms && selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5 ? " · Lento" : ""}
+                  </Badge>
+                )}
+                <Badge
+                  variant="outline"
+                  className={selectedUnanswered ? "border-muted-foreground text-muted-foreground" : selectedAnswer === selectedCorrect ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}
+                >
+                  {selectedUnanswered ? "No respondida" : selectedAnswer === selectedCorrect ? "Correcta" : "Incorrecta"}
+                </Badge>
+              </div>
             </div>
             <div className="mt-3 text-sm"><MathText text={selectedQuestion.statement_md} /></div>
             {selectedQuestion.statement_image_path && (

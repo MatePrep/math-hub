@@ -100,37 +100,3 @@ export const getUserStats = createServerFn({ method: "GET" })
 
     return { total, correct, accuracy, streak, topicStats, recent };
   });
-
-export const getProfile = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("profiles")
-      .select("id, full_name, target_university")
-      .eq("id", context.userId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    return data;
-  });
-
-export const updateProfile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z
-      .object({
-        fullName: z.string().max(120).optional(),
-        targetUniversity: z.string().max(120).nullable().optional(),
-      })
-      .parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("profiles")
-      .update({
-        full_name: data.fullName,
-        target_university: data.targetUniversity ?? null,
-      })
-      .eq("id", context.userId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });

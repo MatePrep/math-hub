@@ -41,6 +41,7 @@ export interface ExamFormValues {
   id?: string;
   title: string;
   description: string | null;
+  university_id: string;
   time_limit_min: number;
   passing_score: number;
   max_attempts: number | null;
@@ -55,6 +56,7 @@ export interface ExamFormValues {
 const empty: ExamFormValues = {
   title: "",
   description: "",
+  university_id: "",
   time_limit_min: 60,
   passing_score: 60,
   max_attempts: null,
@@ -96,6 +98,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   }, [bank.data]);
 
   const allTopics: Array<{ id: string; name: string }> = (meta.data?.topics ?? []) as any;
+  const allUniversities: Array<{ id: string; short_name: string; name: string }> = (meta.data?.universities ?? []) as any;
 
   const selectedSet = new Set(v.exercise_ids);
   const available = (bank.data ?? []).filter((e: any) => {
@@ -177,6 +180,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!v.university_id) {
+      toast.error("Selecciona una universidad");
+      return;
+    }
     if (v.exam_type === "standard" && v.exercise_ids.length === 0) {
       toast.error("Añade al menos una pregunta");
       return;
@@ -210,6 +217,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       const payload = {
         title: v.title,
         description: v.description || null,
+        university_id: v.university_id,
         time_limit_min: Number(v.time_limit_min),
         passing_score: Number(v.passing_score),
         max_attempts: v.max_attempts ? Number(v.max_attempts) : null,
@@ -245,6 +253,17 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         <div className="sm:col-span-2">
           <Label>Descripción</Label>
           <Textarea value={v.description ?? ""} onChange={(e) => setV((s) => ({ ...s, description: e.target.value }))} rows={2} maxLength={1000} />
+        </div>
+        <div>
+          <Label>Universidad *</Label>
+          <Select value={v.university_id} onValueChange={(x) => setV((s) => ({ ...s, university_id: x }))}>
+            <SelectTrigger><SelectValue placeholder="Selecciona una universidad" /></SelectTrigger>
+            <SelectContent>
+              {allUniversities.map((u) => (
+                <SelectItem key={u.id} value={u.id}>{u.short_name ?? u.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label>Tipo de examen *</Label>

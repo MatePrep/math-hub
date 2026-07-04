@@ -9,6 +9,7 @@ import { Timer, Flag, CheckCircle2 } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { getExamSession, saveExamAnswers, submitExamSession } from "@/lib/exams.functions";
 import { getExerciseImageUrl } from "@/lib/storage";
+import { FavoriteButton } from "@/components/favorite-button";
 
 export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/")({
   component: TakeExam,
@@ -37,6 +38,25 @@ function TakeExam() {
 
   const session = q.data?.session as any | undefined;
   const questions: any[] = q.data?.questions ?? [];
+
+  // Per-question time tracking: accumulate elapsed ms per exercise id as the student navigates.
+  const timeSpentRef = useRef<Record<string, number>>({});
+  const activeSegmentRef = useRef<{ exerciseId: string | null; startedAt: number }>({
+    exerciseId: null,
+    startedAt: Date.now(),
+  });
+  function flushActiveSegment() {
+    const { exerciseId, startedAt } = activeSegmentRef.current;
+    if (!exerciseId) return;
+    const elapsed = Date.now() - startedAt;
+    timeSpentRef.current[exerciseId] = (timeSpentRef.current[exerciseId] ?? 0) + elapsed;
+  }
+  const currentExerciseId: string | undefined = questions[idx]?.id;
+  useEffect(() => {
+    flushActiveSegment();
+    activeSegmentRef.current = { exerciseId: currentExerciseId ?? null, startedAt: Date.now() };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentExerciseId]);
 
   // Init from session
   useEffect(() => {
@@ -72,8 +92,10 @@ function TakeExam() {
   const doSubmit = useCallback(async () => {
     if (submitting) return;
     setSubmitting(true);
+    flushActiveSegment();
+    activeSegmentRef.current = { exerciseId: null, startedAt: Date.now() };
     try {
-      await submitFn({ data: { sessionId, answers } });
+      await submitFn({ data: { sessionId, answers, timeSpentMs: timeSpentRef.current } });
       navigate({ to: "/examen-sesion/$sessionId/resultado", params: { sessionId }, replace: true });
     } catch (e: any) {
       toast.error(e?.message ?? "Error al enviar");
@@ -152,9 +174,12 @@ function TakeExam() {
         <div className="mt-5 rounded-xl border border-border bg-card p-6">
           <div className="mb-3 flex items-center justify-between">
             {ex.topic?.name && <Badge variant="secondary">{ex.topic.name}</Badge>}
-            <Button variant="ghost" size="sm" onClick={toggleFlag} className={flagged.has(ex.id) ? "text-warning" : ""}>
-              <Flag className="mr-1 h-4 w-4" /> {flagged.has(ex.id) ? "Desmarcar" : "Marcar"}
-            </Button>
+            <div className="flex items-center gap-1">
+              <FavoriteButton exerciseId={ex.id} />
+              <Button variant="ghost" size="sm" onClick={toggleFlag} className={flagged.has(ex.id) ? "text-warning" : ""}>
+                <Flag className="mr-1 h-4 w-4" /> {flagged.has(ex.id) ? "Desmarcar" : "Marcar"}
+              </Button>
+            </div>
           </div>
           <MathText text={ex.statement_md} />
           {imgUrls[ex.id] && (

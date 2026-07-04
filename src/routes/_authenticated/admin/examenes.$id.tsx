@@ -25,6 +25,7 @@ function EditExam() {
           id: e.id,
           title: e.title,
           description: e.description,
+          university_id: e.university_id ?? "",
           time_limit_min: e.time_limit_min,
           passing_score: e.passing_score,
           max_attempts: e.max_attempts,
