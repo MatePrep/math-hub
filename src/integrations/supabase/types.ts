@@ -216,6 +216,7 @@ export type Database = {
           status: string
           time_limit_min: number
           title: string
+          university_id: string | null
           updated_at: string
         }
         Insert: {
@@ -231,6 +232,7 @@ export type Database = {
           status?: string
           time_limit_min?: number
           title: string
+          university_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -246,9 +248,18 @@ export type Database = {
           status?: string
           time_limit_min?: number
           title?: string
+          university_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "exams_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       exercises: {
         Row: {
@@ -257,6 +268,7 @@ export type Database = {
           created_at: string
           difficulty: Database["public"]["Enums"]["difficulty"]
           exam_year: number | null
+          expected_time_ms: number | null
           id: string
           solution_image_path: string | null
           solution_md: string
@@ -273,6 +285,7 @@ export type Database = {
           created_at?: string
           difficulty?: Database["public"]["Enums"]["difficulty"]
           exam_year?: number | null
+          expected_time_ms?: number | null
           id?: string
           solution_image_path?: string | null
           solution_md: string
@@ -289,6 +302,7 @@ export type Database = {
           created_at?: string
           difficulty?: Database["public"]["Enums"]["difficulty"]
           exam_year?: number | null
+          expected_time_ms?: number | null
           id?: string
           solution_image_path?: string | null
           solution_md?: string
@@ -323,26 +337,132 @@ export type Database = {
           },
         ]
       }
-      profiles: {
+      favorite_exercises: {
         Row: {
           created_at: string
-          full_name: string | null
+          exercise_id: string
           id: string
-          target_university: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string
-          full_name?: string | null
-          id: string
-          target_university?: string | null
+          exercise_id: string
+          id?: string
+          user_id: string
         }
         Update: {
           created_at?: string
-          full_name?: string | null
+          exercise_id?: string
           id?: string
-          target_university?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
         }
         Relationships: []
+      }
+      profiles: {
+        Row: {
+          career: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          leaderboard_opt_in: boolean
+          pseudonym: string | null
+          target_university: string | null
+          weekly_goal_exams: number
+          weekly_goal_questions: number
+        }
+        Insert: {
+          career?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          leaderboard_opt_in?: boolean
+          pseudonym?: string | null
+          target_university?: string | null
+          weekly_goal_exams?: number
+          weekly_goal_questions?: number
+        }
+        Update: {
+          career?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          leaderboard_opt_in?: boolean
+          pseudonym?: string | null
+          target_university?: string | null
+          weekly_goal_exams?: number
+          weekly_goal_questions?: number
+        }
+        Relationships: []
+      }
+      student_universities: {
+        Row: {
+          created_at: string
+          exam_date: string | null
+          id: string
+          university_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_date?: string | null
+          id?: string
+          university_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string | null
+          id?: string
+          university_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_universities_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subtopics: {
         Row: {
@@ -456,6 +576,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_exam_leaderboard: {
+        Args: { _exam_id: string; _limit?: number }
+        Returns: {
+          attempts_count: number
+          best_score: number
+          is_me: boolean
+          pseudonym: string
+          user_id: string
+        }[]
+      }
+      get_exam_stats: {
+        Args: { _exam_id: string; _my_score_pct?: number }
+        Returns: {
+          avg_score: number
+          my_percentile: number
+          sessions_count: number
+        }[]
+      }
+      get_university_leaderboard: {
+        Args: { _limit?: number; _university_id: string }
+        Returns: {
+          avg_score: number
+          is_me: boolean
+          pseudonym: string
+          sessions_count: number
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
