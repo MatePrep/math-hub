@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -55,6 +55,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"form" | "google" | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -73,6 +74,7 @@ function AuthPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setPendingAction("form");
     setFormError(null);
     setInfo(null);
     try {
@@ -105,11 +107,13 @@ function AuthPage() {
       toast.error(friendly);
     } finally {
       setBusy(false);
+      setPendingAction(null);
     }
   }
 
   async function handleGoogle() {
     setBusy(true);
+    setPendingAction("google");
     setFormError(null);
     try {
       const res = await lovable.auth.signInWithOAuth("google", {
@@ -120,6 +124,7 @@ function AuthPage() {
         setFormError(friendly);
         toast.error(friendly);
         setBusy(false);
+        setPendingAction(null);
         return;
       }
       if (res.redirected) return;
@@ -129,6 +134,7 @@ function AuthPage() {
       setFormError(friendly);
       toast.error(friendly);
       setBusy(false);
+      setPendingAction(null);
     }
   }
 
@@ -147,18 +153,21 @@ function AuthPage() {
           </TabsList>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <TabsContent value="signup" className="mt-0 space-y-4">
-              <div>
-                <Label htmlFor="full_name">Nombre completo</Label>
-                <Input
-                  id="full_name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Ana Pérez"
-                  required={tab === "signup"}
-                />
+            <div className="auth-field-collapse" data-open={tab === "signup"} aria-hidden={tab !== "signup"}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="full_name">Nombre completo</Label>
+                  <Input
+                    id="full_name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Ana Pérez"
+                    required={tab === "signup"}
+                    tabIndex={tab === "signup" ? undefined : -1}
+                  />
+                </div>
               </div>
-            </TabsContent>
+            </div>
 
             <div>
               <Label htmlFor="email">Correo</Label>
@@ -188,10 +197,12 @@ function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center overflow-hidden rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span key={showPassword ? "hide" : "show"} className="animate-auth-icon-pop">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </span>
                 </button>
               </div>
               {tab === "signup" && (
@@ -204,19 +215,20 @@ function AuthPage() {
             {formError && (
               <p
                 role="alert"
-                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                className="animate-auth-alert rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               >
                 {formError}
               </p>
             )}
             {info && (
-              <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+              <p className="animate-auth-alert rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
                 {info}
               </p>
             )}
 
-            <Button type="submit" className="w-full min-h-11" disabled={busy}>
-              {busy ? "Procesando…" : tab === "signin" ? "Ingresar" : "Crear cuenta"}
+            <Button type="submit" className="auth-press w-full min-h-11" disabled={busy}>
+              {pendingAction === "form" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {pendingAction === "form" ? "Procesando…" : tab === "signin" ? "Ingresar" : "Crear cuenta"}
             </Button>
           </form>
         </Tabs>
@@ -229,10 +241,11 @@ function AuthPage() {
         <Button
           type="button"
           variant="outline"
-          className="w-full min-h-11"
+          className="auth-press w-full min-h-11"
           disabled={busy}
           onClick={handleGoogle}
         >
+          {pendingAction === "google" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Continuar con Google
         </Button>
       </div>
