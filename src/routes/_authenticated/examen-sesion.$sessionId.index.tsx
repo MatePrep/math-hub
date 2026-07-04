@@ -162,7 +162,9 @@ function TakeExam() {
             <p className="text-sm text-muted-foreground">Pregunta <strong>{idx + 1}</strong> de {questions.length}</p>
             <p className="text-xs text-muted-foreground">Respondidas: {answered}/{questions.length}</p>
           </div>
-          <div className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${lowTime ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+          <div
+            className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold transition-colors duration-300 ${lowTime ? "animate-flash-once bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}
+          >
             <Timer className="h-4 w-4" />
             {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
           </div>
@@ -171,13 +173,16 @@ function TakeExam() {
           <div className="h-full bg-primary transition-all" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
         </div>
 
-        <div className="mt-5 rounded-xl border border-border bg-card p-6">
+        <div key={ex.id} className="animate-card-swap mt-5 rounded-xl border border-border bg-card p-6">
           <div className="mb-3 flex items-center justify-between">
             {ex.topic?.name && <Badge variant="secondary">{ex.topic.name}</Badge>}
             <div className="flex items-center gap-1">
               <FavoriteButton exerciseId={ex.id} />
               <Button variant="ghost" size="sm" onClick={toggleFlag} className={flagged.has(ex.id) ? "text-warning" : ""}>
-                <Flag className="mr-1 h-4 w-4" /> {flagged.has(ex.id) ? "Desmarcar" : "Marcar"}
+                <span key={flagged.has(ex.id) ? "flagged" : "unflagged"} className="animate-icon-pop mr-1 inline-flex">
+                  <Flag className="h-4 w-4" />
+                </span>
+                {flagged.has(ex.id) ? "Desmarcar" : "Marcar"}
               </Button>
             </div>
           </div>
@@ -194,7 +199,7 @@ function TakeExam() {
                     type="button"
                     disabled={timeUp}
                     onClick={() => pick(i)}
-                    className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${picked ? "border-primary bg-primary/10 font-medium" : "border-border bg-background hover:border-primary/40"}`}
+                    className={`press w-full rounded-lg border px-4 py-3 text-left text-sm transition ${picked ? "border-primary bg-primary/10 font-medium" : "border-border bg-background hover:border-primary/40"}`}
                   >
                     <span className="mr-2 font-semibold text-primary">{String.fromCharCode(65 + i)}.</span>
                     <ChoiceText text={c} />
@@ -206,17 +211,18 @@ function TakeExam() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <Button type="button" variant="outline" disabled={idx === 0} onClick={() => setIdx((i) => i - 1)} className="min-h-11">Anterior</Button>
+          <Button type="button" variant="outline" disabled={idx === 0} onClick={() => setIdx((i) => i - 1)} className="press min-h-11">Anterior</Button>
           {idx < questions.length - 1 ? (
-            <Button type="button" onClick={() => setIdx((i) => i + 1)} className="min-h-11">Siguiente</Button>
+            <Button type="button" onClick={() => setIdx((i) => i + 1)} className="press min-h-11">Siguiente</Button>
           ) : (
             <Button
               type="button"
               onClick={doSubmit}
               disabled={submitting || !canSubmit}
-              className="min-h-11"
+              className="press min-h-11"
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" /> {submitting ? "Enviando…" : "Finalizar examen"}
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              {submitting ? "Enviando…" : "Finalizar examen"}
             </Button>
           )}
         </div>
@@ -234,7 +240,7 @@ function TakeExam() {
                 key={qz.id}
                 type="button"
                 onClick={() => setIdx(i)}
-                className={`relative h-9 rounded-md border text-xs font-semibold transition ${
+                className={`press relative h-9 rounded-md border text-xs font-semibold transition ${
                   isCurrent ? "border-primary ring-2 ring-primary/40" :
                   isAnswered ? "border-success/50 bg-success/10 text-success" :
                   "border-border bg-background hover:border-primary/40"
@@ -253,7 +259,7 @@ function TakeExam() {
         </div>
         <Button
           type="button"
-          className="mt-4 w-full"
+          className="press mt-4 w-full"
           onClick={() => {
             if (!isLastQuestion) {
               setIdx(questions.length - 1);
@@ -264,7 +270,8 @@ function TakeExam() {
           disabled={submitting || (isLastQuestion && !canSubmit)}
           size="sm"
         >
-          {isLastQuestion ? "Finalizar" : "Ir a la última pregunta"}
+          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isLastQuestion ? (submitting ? "Enviando…" : "Finalizar") : "Ir a la última pregunta"}
         </Button>
       </aside>
     </div>

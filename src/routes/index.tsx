@@ -54,17 +54,17 @@ function Index() {
               Domina las matemáticas <span className="text-primary">paso a paso</span> rumbo a tu
               universidad.
             </h1>
-            <p className="mt-5 max-w-md text-base text-muted-foreground sm:text-lg">
+            <p className="mt-5 max-w-md text-pretty text-base text-muted-foreground sm:text-lg">
               Cientos de ejercicios organizados por tema, dificultad y examen de admisión. Practica,
               entiende y mide tu progreso.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="min-h-11">
+              <Button asChild size="lg" className="press min-h-11">
                 <Link to="/temas">
                   Empezar a practicar <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="min-h-11">
+              <Button asChild size="lg" variant="outline" className="press min-h-11">
                 <Link to="/examenes">Ver exámenes de admisión</Link>
               </Button>
             </div>
@@ -77,7 +77,7 @@ function Index() {
             </div>
           </div>
           <div className="relative">
-            <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-xl sm:p-8">
+            <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow sm:p-8">
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 opacity-[0.05]"
@@ -91,7 +91,7 @@ function Index() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Ejercicio del día
                 </p>
-                <h3 className="mt-2 font-display text-2xl font-bold">Álgebra · Cuadráticas</h3>
+                <h3 className="mt-2 text-balance font-display text-2xl font-bold">Álgebra · Cuadráticas</h3>
                 <div className="mt-4 rounded-xl bg-secondary/60 p-4 text-sm">
                   Halla las raíces reales de <em>x² − 5x + 6 = 0</em>.
                 </div>
@@ -114,7 +114,10 @@ function Index() {
                 </p>
               </div>
             </div>
-            <div className="absolute -right-3 -top-3 hidden h-16 w-16 rotate-12 rounded-2xl bg-accent text-accent-foreground shadow-lg sm:grid sm:place-items-center">
+            <div
+              aria-hidden
+              className="absolute -right-3 -top-3 hidden h-16 w-16 rotate-12 rounded-2xl bg-accent text-accent-foreground shadow-lg sm:grid sm:place-items-center"
+            >
               <span className="font-display text-2xl font-bold">π</span>
             </div>
           </div>
@@ -128,10 +131,10 @@ function Index() {
             <div className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <h3 className="mt-4 font-display text-2xl font-bold">Organizado por tu universidad</h3>
-            <p className="mt-2 max-w-md text-muted-foreground">
+            <h3 className="mt-4 text-balance font-display text-2xl font-bold">Organizado por tu universidad</h3>
+            <p className="mt-2 max-w-md text-pretty text-muted-foreground">
               UNI, San Marcos, PUCP, UNALM y UNFV tienen exámenes distintos. Practica con preguntas
-              reales de la tuya, incluido el modo simulacro cronometrado.
+              reales de la universidad a la que postulas, incluido el modo simulacro cronometrado.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {unis.map((u) => (
@@ -160,18 +163,19 @@ function Index() {
       {/* Topics */}
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="mb-6 flex items-end justify-between">
-          <h2 className="font-display text-2xl font-bold sm:text-3xl">Temas</h2>
+          <h2 className="text-balance font-display text-2xl font-bold sm:text-3xl">Temas</h2>
           <Link to="/temas" className="text-sm font-medium text-primary hover:underline">
             Ver todos →
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {topics.map((t) => (
+          {topics.map((t, i) => (
             <Link
               key={t.id}
               to="/temas/$slug"
               params={{ slug: t.slug }}
-              className="group rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
+              className="group animate-fade-up rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
+              style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-lg font-bold">{t.name}</h3>
@@ -189,18 +193,19 @@ function Index() {
       {/* Universities */}
       <section className="border-t border-border bg-secondary/30">
         <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="font-display text-2xl font-bold sm:text-3xl">Exámenes de admisión</h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
+          <h2 className="text-balance font-display text-2xl font-bold sm:text-3xl">Exámenes de admisión</h2>
+          <p className="mt-2 max-w-2xl text-pretty text-muted-foreground">
             Prepárate con preguntas reales y de práctica para las principales universidades del
             Perú.
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {unis.map((u) => (
+            {unis.map((u, i) => (
               <Link
                 key={u.id}
                 to="/examenes/$slug"
                 params={{ slug: u.slug }}
-                className="rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
+                className="animate-fade-up rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
+                style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
               >
                 <div className="flex items-center gap-3">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground font-display text-sm font-bold">

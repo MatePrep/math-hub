@@ -66,7 +66,7 @@ function ResultPage() {
       <h1 className="mt-3 font-display text-3xl font-bold">Resultado</h1>
       <p className="text-muted-foreground">{s.exam?.title}</p>
 
-      <div className={`mt-4 rounded-xl border p-6 ${scorePanelStyle}`}>
+      <div className={`animate-score-in mt-4 rounded-xl border p-6 ${scorePanelStyle}`}>
         <p className="text-sm text-muted-foreground">Puntaje</p>
         <p className={`mt-1 font-display text-5xl font-bold ${scoreStyle}`}>{score}%</p>
         <p className="mt-1 text-sm">
@@ -85,7 +85,7 @@ function ResultPage() {
       </div>
 
       {statsQ.data && statsQ.data.sessions_count > 0 && (
-        <div className="mt-4 rounded-xl border border-border bg-card p-5">
+        <div className="animate-alert-in mt-4 rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Comparación con otros estudiantes</span>
@@ -128,7 +128,7 @@ function ResultPage() {
                   key={ex.id}
                   type="button"
                   onClick={() => setSelectedQuestionIndex(i)}
-                  className={`h-10 rounded-md border text-sm font-semibold transition ${
+                  className={`press h-10 rounded-md border text-sm font-semibold transition ${
                     isSelected ? "border-primary bg-primary/10 text-primary" :
                     isCorrect ? "border-success/50 bg-success/10 text-success" :
                     isAnswered ? "border-destructive/50 bg-destructive/10 text-destructive" :
@@ -154,7 +154,7 @@ function ResultPage() {
         </aside>
 
         <section className="space-y-4">
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div key={selectedQuestion.id} className="animate-card-swap rounded-xl border border-border bg-card p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-semibold">Pregunta {selectedQuestionIndex + 1}</p>
@@ -224,8 +224,8 @@ function ResultPage() {
       </div>
 
       <div className="mt-8 flex gap-2">
-        <Button asChild variant="outline"><Link to="/examenes-oficiales">Volver a exámenes</Link></Button>
-        <Button asChild><Link to="/panel">Ir a mi panel</Link></Button>
+        <Button asChild variant="outline" className="press"><Link to="/examenes-oficiales">Volver a exámenes</Link></Button>
+        <Button asChild className="press"><Link to="/panel">Ir a mi panel</Link></Button>
       </div>
     </div>
   );
