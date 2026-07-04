@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
@@ -18,13 +17,6 @@ export const Route = createFileRoute("/auth")({
   }),
   component: AuthPage,
 });
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), ms)),
-  ]);
-}
 
 function translateAuthError(err: any): string {
   const code: string | undefined = err?.code ?? err?.error_code;
@@ -123,30 +115,22 @@ function AuthPage() {
     setPendingAction("google");
     setFormError(null);
     try {
-      // The Google login provider is configured in the Lovable Cloud dashboard, not just
-      // Supabase's own provider settings. If it isn't enabled there, this call can hang
-      // indefinitely with no error — bound it so the button never gets stuck forever.
-      const res = await withTimeout(
-        lovable.auth.signInWithOAuth("google", {
-          redirect_uri: window.location.origin,
-        }),
-        15000,
-      );
-      if (res.error) {
-        const friendly = translateAuthError(res.error);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) {
+        const friendly = translateAuthError(error);
         setFormError(friendly);
         toast.error(friendly);
         setBusy(false);
         setPendingAction(null);
         return;
       }
-      if (res.redirected) return;
-      navigate({ to: "/panel", replace: true });
+      // On success Supabase immediately redirects the whole page to Google;
+      // this component unmounts before there's anything else to do here.
     } catch (err: any) {
-      const friendly =
-        err?.message === "TIMEOUT"
-          ? "No se pudo conectar con Google. Verifica que el login con Google esté habilitado en Lovable Cloud, o inténtalo de nuevo en unos minutos."
-          : translateAuthError(err);
+      const friendly = translateAuthError(err);
       setFormError(friendly);
       toast.error(friendly);
       setBusy(false);

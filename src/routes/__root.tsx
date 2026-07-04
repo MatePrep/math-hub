@@ -160,10 +160,15 @@ function RootComponent() {
       return;
     }
 
-    const type = capturedAuthHashParams.get("type");
-    if (type !== "signup" && type !== "email_change" && type !== "invite") return;
+    // No `access_token` means this hash isn't an auth redirect at all (nothing to react to).
+    if (!capturedAuthHashParams.has("access_token")) return;
 
-    toast.success("¡Correo confirmado! Tu cuenta ya está activa.");
+    // Email confirmation / magic link / invite carry a `type`; a plain OAuth (Google) login
+    // doesn't, so only show the "confirmed" toast for the former and stay silent for the latter.
+    const type = capturedAuthHashParams.get("type");
+    if (type === "signup" || type === "email_change" || type === "invite") {
+      toast.success("¡Correo confirmado! Tu cuenta ya está activa.");
+    }
 
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
