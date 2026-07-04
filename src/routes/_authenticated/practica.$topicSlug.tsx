@@ -78,11 +78,16 @@ function PracticePage() {
 
   const currentId = order[idx];
   const current = q.data.find((e: any) => e.id === currentId);
+  const detailQ = useQuery({
+    queryKey: ["exercise-detail", currentId],
+    queryFn: () => getExercise({ data: { id: currentId! } }),
+    enabled: !!currentId && !!result,
+  });
   if (!current) return null;
   const total = order.length;
 
   async function submit() {
-    if (selected === null || result) return;
+    if (selected === null || result || !current) return;
     const timeSpent = Math.min(Date.now() - startTime, 30 * 60 * 1000);
     try {
       const r = await recordFn({
@@ -92,6 +97,7 @@ function PracticePage() {
       setStats((s) => ({ correct: s.correct + (r.isCorrect ? 1 : 0), done: s.done + 1 }));
     } catch {}
   }
+
 
   function next() {
     if (idx < total - 1) setIdx(idx + 1);
