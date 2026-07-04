@@ -398,6 +398,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           career: string | null
           created_at: string
           full_name: string | null
@@ -415,6 +416,7 @@ export type Database = {
           weekly_study_hours: number | null
         }
         Insert: {
+          avatar_url?: string | null
           career?: string | null
           created_at?: string
           full_name?: string | null
@@ -432,6 +434,7 @@ export type Database = {
           weekly_study_hours?: number | null
         }
         Update: {
+          avatar_url?: string | null
           career?: string | null
           created_at?: string
           full_name?: string | null

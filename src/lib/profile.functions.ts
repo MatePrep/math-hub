@@ -10,7 +10,7 @@ export const getFullProfile = createServerFn({ method: "GET" })
       supabase
         .from("profiles")
         .select(
-          "id, full_name, target_university, pseudonym, career, leaderboard_opt_in, weekly_goal_questions, weekly_goal_exams, onboarding_completed, prep_time, prep_method, weekly_study_hours, initial_weak_topic_ids",
+          "id, full_name, avatar_url, target_university, pseudonym, career, leaderboard_opt_in, weekly_goal_questions, weekly_goal_exams, onboarding_completed, prep_time, prep_method, weekly_study_hours, initial_weak_topic_ids",
         )
         .eq("id", userId)
         .maybeSingle(),

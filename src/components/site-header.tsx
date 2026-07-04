@@ -1,9 +1,11 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { Search, Menu, LogOut, Shield, User, LayoutDashboard, Star, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,6 +14,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { getFullProfile } from "@/lib/profile.functions";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -42,6 +45,13 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const signedIn = useSignedIn();
   const { isAdmin } = useIsAdmin();
+  const fetchProfile = useServerFn(getFullProfile);
+  const profileQ = useQuery({
+    queryKey: ["full-profile-mini"],
+    queryFn: () => fetchProfile(),
+    enabled: signedIn === true,
+  });
+  const avatarUrl = profileQ.data?.profile?.avatar_url ?? undefined;
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -122,6 +132,7 @@ export function SiteHeader() {
                     aria-label="Cuenta"
                   >
                     <Avatar className="h-8 w-8 border border-border">
+                      {avatarUrl && <AvatarImage src={avatarUrl} alt="" referrerPolicy="no-referrer" />}
                       <AvatarFallback className="bg-secondary text-secondary-foreground">
                         <User className="h-4 w-4" />
                       </AvatarFallback>

@@ -192,7 +192,7 @@ function SimulacrosPage() {
               </div>
 
               {attempts.length > 0 && (
-                <div className="collapse" data-open={isExpanded}>
+                <div className="collapsible" data-open={isExpanded}>
                   <div className="border-t border-border px-5 pb-4 pt-3">
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Historial</p>
                     <div className="space-y-2">

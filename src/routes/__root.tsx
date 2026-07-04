@@ -16,7 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { supabase } from "@/integrations/supabase/client";
-import { capturedAuthHashParams, translateHashAuthError } from "@/lib/auth-redirect";
+import { capturedAuthParams, capturedAuthHasSession, translateHashAuthError } from "@/lib/auth-redirect";
 
 function NotFoundComponent() {
   return (
@@ -151,21 +151,22 @@ function RootComponent() {
 
   // Surface feedback for the redirect Supabase sends after an email confirmation /
   // magic link / OAuth callback lands back on the app (see src/lib/auth-redirect.ts).
+  // Covers both the implicit flow (#access_token in the hash) and PKCE (?code= in the
+  // query string) since we can't assume which one the project is configured to use.
   useEffect(() => {
-    if (!capturedAuthHashParams) return;
+    if (!capturedAuthParams) return;
 
-    const error = capturedAuthHashParams.get("error");
+    const error = capturedAuthParams.get("error");
     if (error) {
-      toast.error(translateHashAuthError(capturedAuthHashParams));
+      toast.error(translateHashAuthError(capturedAuthParams));
       return;
     }
 
-    // No `access_token` means this hash isn't an auth redirect at all (nothing to react to).
-    if (!capturedAuthHashParams.has("access_token")) return;
+    if (!capturedAuthHasSession) return;
 
     // Email confirmation / magic link / invite carry a `type`; a plain OAuth (Google) login
     // doesn't, so only show the "confirmed" toast for the former and stay silent for the latter.
-    const type = capturedAuthHashParams.get("type");
+    const type = capturedAuthParams.get("type");
     if (type === "signup" || type === "email_change" || type === "invite") {
       toast.success("¡Correo confirmado! Tu cuenta ya está activa.");
     }

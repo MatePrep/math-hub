@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, User } from "lucide-react";
 import { toast } from "sonner";
 
 const PREP_TIME_OPTIONS: Array<{ value: (typeof PREP_TIME_VALUES)[number]; label: string }> = [
@@ -169,7 +170,17 @@ function PerfilPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10">
-      <h1 className="font-display text-3xl font-bold">Tu perfil</h1>
+      <div className="flex items-center gap-4">
+        <Avatar className="h-14 w-14 border border-border">
+          {data?.profile?.avatar_url && (
+            <AvatarImage src={data.profile.avatar_url} alt="" referrerPolicy="no-referrer" />
+          )}
+          <AvatarFallback className="bg-secondary text-secondary-foreground">
+            <User className="h-6 w-6" />
+          </AvatarFallback>
+        </Avatar>
+        <h1 className="font-display text-3xl font-bold">Tu perfil</h1>
+      </div>
       <form onSubmit={onSubmit} className="mt-6 space-y-6 rounded-xl border border-border bg-card p-6">
         <div>
           <Label htmlFor="name">Nombre completo</Label>

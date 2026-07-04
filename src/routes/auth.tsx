@@ -26,6 +26,12 @@ function translateAuthError(err: any): string {
   if (code === "weak_password" || m.includes("password") && (m.includes("weak") || m.includes("pwned") || m.includes("leaked") || m.includes("compromised"))) {
     return "Esa contraseña es insegura o ha aparecido en filtraciones. Elige una más fuerte (mínimo 8 caracteres, mezcla letras, números y símbolos).";
   }
+  if (code === "identity_already_exists") {
+    return "Esa cuenta de Google ya está vinculada a otro usuario.";
+  }
+  if (code === "email_exists" || m.includes("identity is already linked") || (m.includes("identity") && m.includes("already"))) {
+    return "Ese correo ya tiene una cuenta. Si te registraste con contraseña, ingresa con ese método primero (o confirma tu correo si aún no lo hiciste) para poder vincular Google.";
+  }
   if (code === "user_already_exists" || m.includes("already registered") || m.includes("already exists")) {
     return "Ya existe una cuenta con ese correo. Intenta ingresar.";
   }
@@ -153,7 +159,7 @@ function AuthPage() {
           </TabsList>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div className="collapse" data-open={tab === "signup"} aria-hidden={tab !== "signup"}>
+            <div className="collapsible" data-open={tab === "signup"} aria-hidden={tab !== "signup"}>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="full_name">Nombre completo</Label>
