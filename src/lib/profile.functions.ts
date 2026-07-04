@@ -35,6 +35,25 @@ export const listAllUniversities = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+// Blocked words for pseudonyms: covers common Spanish/English vulgarity and slurs.
+// Checked server-side (in addition to the format regex) so it can't be bypassed from the client.
+const PSEUDONYM_BLOCKLIST = [
+  "puta", "puto", "putita", "putito", "mierda", "pendejo", "pendeja", "cabron", "cabrona",
+  "verga", "chinga", "chingar", "carajo", "culero", "culera", "maricon", "marica",
+  "gilipollas", "hijueputa", "hdp", "conchatumadre", "conchasumadre", "conchesumadre",
+  "huevon", "huevona", "malparido", "malparida", "estupido", "estupida", "idiota", "imbecil",
+  "fuck", "shit", "bitch", "asshole", "bastard", "whore", "slut", "cunt", "nigger", "faggot",
+  "nazi", "hitler",
+];
+
+function containsBlockedWord(value: string): boolean {
+  const normalized = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+  return PSEUDONYM_BLOCKLIST.some((word) => normalized.includes(word));
+}
+
 const updateSchema = z.object({
   fullName: z.string().trim().max(120).optional(),
   pseudonym: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_\-]+$/).nullable().optional(),
@@ -58,6 +77,10 @@ export const updateFullProfile = createServerFn({ method: "POST" })
   .inputValidator((d) => updateSchema.parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+
+    if (data.pseudonym && containsBlockedWord(data.pseudonym)) {
+      throw new Error("Ese pseudónimo no está permitido. Elige otro que no contenga lenguaje ofensivo.");
+    }
 
     // Check pseudonym uniqueness (case-insensitive)
     if (data.pseudonym) {

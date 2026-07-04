@@ -12,11 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Timer, Shuffle, Play, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
+import { Timer, Shuffle, Play, Loader2, ChevronDown, ChevronUp, History, LogIn } from "lucide-react";
 import { listPublishedTemplates, startExamSession, listMyTemplateSessions } from "@/lib/exams.functions";
 import { getFullProfile, listAllUniversities } from "@/lib/profile.functions";
+import { useSignedIn } from "@/hooks/use-signed-in";
 
-export const Route = createFileRoute("/_authenticated/simulacros/")({
+export const Route = createFileRoute("/simulacros/")({
   head: () => ({
     meta: [
       { title: "Simulacros — MatePre" },
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/simulacros/")({
 
 function SimulacrosPage() {
   const navigate = useNavigate();
+  const signedIn = useSignedIn();
   const listFn = useServerFn(listPublishedTemplates);
   const startFn = useServerFn(startExamSession);
   const sessionsFn = useServerFn(listMyTemplateSessions);
@@ -38,22 +40,30 @@ function SimulacrosPage() {
 
   const [universityId, setUniversityId] = useState<string | "all" | null>(null);
 
-  const profileQ = useQuery({ queryKey: ["full-profile-mini"], queryFn: () => profileFn() });
+  const profileQ = useQuery({
+    queryKey: ["full-profile-mini"],
+    queryFn: () => profileFn(),
+    enabled: signedIn === true,
+  });
   const universitiesQ = useQuery({ queryKey: ["all-universities"], queryFn: () => universitiesFn() });
   const q = useQuery({
     queryKey: ["published-templates", universityId],
     queryFn: () => listFn({ data: { universityId: universityId && universityId !== "all" ? universityId : undefined } }),
     enabled: universityId !== null,
   });
-  const sessionsQ = useQuery({ queryKey: ["my-template-sessions"], queryFn: () => sessionsFn() });
+  const sessionsQ = useQuery({
+    queryKey: ["my-template-sessions"],
+    queryFn: () => sessionsFn(),
+    enabled: signedIn === true,
+  });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (universityId === null && profileQ.data) {
-      setUniversityId(profileQ.data.universities[0]?.university_id ?? "all");
+    if (universityId === null && signedIn !== null) {
+      setUniversityId(profileQ.data?.universities[0]?.university_id ?? "all");
     }
-  }, [profileQ.data, universityId]);
+  }, [profileQ.data, universityId, signedIn]);
 
   const sessionsByExam = new Map<string, any[]>();
   (sessionsQ.data ?? []).forEach((s: any) => {
@@ -72,6 +82,13 @@ function SimulacrosPage() {
   }
 
   async function onGenerate(examId: string) {
+    if (signedIn !== true) {
+      toast("Inicia sesión para generar un simulacro", {
+        description: "Crea una cuenta gratis para guardar tu progreso.",
+      });
+      navigate({ to: "/auth" });
+      return;
+    }
     setBusyId(examId);
     try {
       const { sessionId } = await startFn({ data: { examId } });
@@ -82,6 +99,9 @@ function SimulacrosPage() {
       setBusyId(null);
     }
   }
+
+  const showIncompleteProfileHint =
+    signedIn === true && profileQ.data && profileQ.data.universities.length === 0;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -95,18 +115,28 @@ function SimulacrosPage() {
         </p>
       </header>
 
-      <div className="mb-6 max-w-xs">
-        <Select value={universityId ?? undefined} onValueChange={(v) => setUniversityId(v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Universidad" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las universidades</SelectItem>
-            {(universitiesQ.data ?? []).map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>{u.short_name ?? u.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="max-w-xs flex-1">
+          <Select value={universityId ?? undefined} onValueChange={(v) => setUniversityId(v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Universidad" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las universidades</SelectItem>
+              {(universitiesQ.data ?? []).map((u: any) => (
+                <SelectItem key={u.id} value={u.id}>{u.short_name ?? u.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {showIncompleteProfileHint && (
+          <p className="text-xs text-muted-foreground">
+            Aún no elegiste tu universidad objetivo.{" "}
+            <Link to="/perfil" className="font-medium text-primary hover:underline">
+              Complétalo en tu perfil →
+            </Link>
+          </p>
+        )}
       </div>
 
       {q.isLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
@@ -135,6 +165,8 @@ function SimulacrosPage() {
                   <Button onClick={() => onGenerate(t.id)} disabled={busyId === t.id}>
                     {busyId === t.id ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generando…</>
+                    ) : signedIn === false ? (
+                      <><LogIn className="mr-2 h-4 w-4" /> Ingresar para generar</>
                     ) : (
                       <><Play className="mr-2 h-4 w-4" /> Generar nuevo simulacro</>
                     )}

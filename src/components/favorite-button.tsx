@@ -3,14 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { toggleFavorite, listMyFavoriteIds } from "@/lib/favorites.functions";
-import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useSignedIn } from "@/hooks/use-signed-in";
 
 export function FavoriteButton({ exerciseId, className }: { exerciseId: string; className?: string }) {
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-  }, []);
+  const signedIn = useSignedIn();
 
   const listFn = useServerFn(listMyFavoriteIds);
   const toggleFn = useServerFn(toggleFavorite);

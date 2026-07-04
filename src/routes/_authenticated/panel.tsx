@@ -7,7 +7,7 @@ import { getFullProfile } from "@/lib/profile.functions";
 import { getWeeklyProgress } from "@/lib/goals.functions";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Progress } from "@/components/ui/progress";
-import { Flame, Target, ListChecks, Trophy, CalendarClock } from "lucide-react";
+import { Flame, Target, ListChecks, Trophy, CalendarClock, AlertCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/panel")({
   head: () => ({ meta: [{ title: "Panel · MatePre" }] }),
@@ -33,6 +33,8 @@ function PanelPage() {
 
   const weakest = [...stats.topicStats].sort((a, b) => a.accuracy - b.accuracy)[0];
 
+  const hasNoTargetUniversity = !!profileQ.data && profileQ.data.universities.length === 0;
+
   const universities = (profileQ.data?.universities ?? [])
     .filter((u: any) => u.exam_date)
     .map((u: any) => ({
@@ -47,6 +49,18 @@ function PanelPage() {
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="font-display text-3xl font-bold sm:text-4xl">Tu panel</h1>
       <p className="mt-1 text-muted-foreground">Revisa tu progreso y planifica tu próxima sesión.</p>
+
+      {hasNoTargetUniversity && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
+          <p>
+            Aún no elegiste tu universidad objetivo, así que no podemos mostrarte la cuenta regresiva ni filtrar contenido para ti.{" "}
+            <Link to="/perfil" className="font-medium text-primary hover:underline">
+              Completa tu perfil →
+            </Link>
+          </p>
+        </div>
+      )}
 
       {(universities.length > 0 || weeklyQ.data) && (
         <div className="mt-8 grid gap-4 sm:grid-cols-2">

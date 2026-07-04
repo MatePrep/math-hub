@@ -1,10 +1,19 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Search, Menu, LogOut, Shield } from "lucide-react";
+import { useState } from "react";
+import { Search, Menu, LogOut, Shield, User, LayoutDashboard, Star, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useSignedIn } from "@/hooks/use-signed-in";
 import { NotificationsBell } from "@/components/notifications-bell";
 import {
   Sheet,
@@ -13,40 +22,26 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const nav = [
+const publicNav = [
   { to: "/temas", label: "Temas" },
   { to: "/examenes", label: "Exámenes" },
   { to: "/simulacros", label: "Simulacros" },
-  { to: "/favoritas", label: "Favoritas" },
-  { to: "/ranking", label: "Ranking" },
-  { to: "/panel", label: "Panel" },
 ];
 
-
+const accountNav = [
+  { to: "/panel", label: "Panel", icon: LayoutDashboard },
+  { to: "/perfil", label: "Perfil", icon: User },
+  { to: "/favoritas", label: "Favoritas", icon: Star },
+  { to: "/ranking", label: "Ranking", icon: Trophy },
+];
 
 export function SiteHeader() {
   const navigate = useNavigate();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const signedIn = useSignedIn();
   const { isAdmin } = useIsAdmin();
-
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSignedIn(!!data.session);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((e, session) => {
-      if (e === "SIGNED_IN" || e === "SIGNED_OUT" || e === "USER_UPDATED") {
-        setSignedIn(!!session);
-      }
-    });
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -96,7 +91,7 @@ export function SiteHeader() {
         </form>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
-          {nav.map((n) => (
+          {publicNav.map((n) => (
             <Link
               key={n.to}
               to={n.to}
@@ -106,28 +101,50 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
-          {isAdmin && (
-            <Link
-              to="/admin/ejercicios"
-              activeProps={{ className: "bg-secondary text-foreground" }}
-              className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-secondary"
-            >
-              <Shield className="h-4 w-4" /> Admin
-            </Link>
-          )}
-          {signedIn && <NotificationsBell />}
-          {signedIn ? (
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="ml-2"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="mr-1 h-4 w-4" /> Salir
-            </Button>
-          ) : (
+          {signedIn === true && (
+            <>
+              {isAdmin && (
+                <Link
+                  to="/admin/ejercicios"
+                  activeProps={{ className: "bg-secondary text-foreground" }}
+                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-secondary"
+                >
+                  <Shield className="h-4 w-4" /> Admin
+                </Link>
+              )}
+              <NotificationsBell />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="ml-1 rounded-full transition-opacity hover:opacity-80"
+                    aria-label="Cuenta"
+                  >
+                    <Avatar className="h-8 w-8 border border-border">
+                      <AvatarFallback className="bg-secondary text-secondary-foreground">
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  {accountNav.map((item) => (
+                    <DropdownMenuItem key={item.to} asChild>
+                      <Link to={item.to} className="cursor-pointer">
+                        <item.icon className="h-4 w-4" /> {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={handleSignOut} className="cursor-pointer">
+                    <LogOut className="h-4 w-4" /> Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+          {signedIn === false && (
             <Button asChild size="sm" className="ml-2">
               <Link to="/auth">Ingresar</Link>
             </Button>
@@ -163,7 +180,7 @@ export function SiteHeader() {
                   />
                 </div>
               </form>
-              {nav.map((n) => (
+              {publicNav.map((n) => (
                 <Link
                   key={n.to}
                   to={n.to}
@@ -173,26 +190,41 @@ export function SiteHeader() {
                   {n.label}
                 </Link>
               ))}
-              {isAdmin && (
-                <Link
-                  to="/admin/ejercicios"
-                  onClick={() => setOpen(false)}
-                  className="inline-flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium text-primary hover:bg-secondary"
-                >
-                  <Shield className="h-4 w-4" /> Admin
-                </Link>
+
+              {signedIn === true && (
+                <>
+                  <div className="my-1 h-px bg-border" aria-hidden />
+                  {accountNav.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium hover:bg-secondary"
+                    >
+                      <item.icon className="h-4 w-4" /> {item.label}
+                    </Link>
+                  ))}
+                  {isAdmin && (
+                    <Link
+                      to="/admin/ejercicios"
+                      onClick={() => setOpen(false)}
+                      className="inline-flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium text-primary hover:bg-secondary"
+                    >
+                      <Shield className="h-4 w-4" /> Admin
+                    </Link>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setOpen(false);
+                      handleSignOut();
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                  </Button>
+                </>
               )}
-              {signedIn ? (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setOpen(false);
-                    handleSignOut();
-                  }}
-                >
-                  <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
-                </Button>
-              ) : (
+              {signedIn === false && (
                 <Button asChild onClick={() => setOpen(false)}>
                   <Link to="/auth">Ingresar</Link>
                 </Button>
