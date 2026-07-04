@@ -120,28 +120,81 @@ function AuthPage() {
     setBusy(true);
     setPendingAction("google");
     setFormError(null);
+
+    // Open the popup synchronously, before any `await` — browsers only allow
+    // window.open() as a direct response to the click; once we've awaited
+    // anything, a later window.open() call gets blocked as a popup.
+    const width = 480;
+    const height = 640;
+    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+    const popup = window.open(
+      "about:blank",
+      "matepre-google-auth",
+      `width=${width},height=${height},left=${left},top=${top}`,
+    );
+
+    if (!popup) {
+      const friendly = "Tu navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e inténtalo de nuevo.";
+      setFormError(friendly);
+      toast.error(friendly);
+      setBusy(false);
+      setPendingAction(null);
+      return;
+    }
+
+    let url: string | null = null;
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: window.location.origin, skipBrowserRedirect: true },
       });
-      if (error) {
-        const friendly = translateAuthError(error);
-        setFormError(friendly);
-        toast.error(friendly);
-        setBusy(false);
-        setPendingAction(null);
-        return;
-      }
-      // On success Supabase immediately redirects the whole page to Google;
-      // this component unmounts before there's anything else to do here.
+      if (error || !data?.url) throw error ?? new Error("No se pudo iniciar sesión con Google.");
+      url = data.url;
     } catch (err: any) {
+      popup.close();
       const friendly = translateAuthError(err);
       setFormError(friendly);
       toast.error(friendly);
       setBusy(false);
       setPendingAction(null);
+      return;
     }
+
+    // Google itself (and some providers) send back Cross-Origin-Opener-Policy headers
+    // that can sever window.opener once the popup navigates away and back, so the popup
+    // can't always reliably signal us directly. Poll shared localStorage + the session
+    // instead — both survive regardless of COOP.
+    localStorage.removeItem("matepre_google_auth_error");
+    popup.location.href = url;
+
+    const pollTimer = window.setInterval(async () => {
+      const errorMessage = localStorage.getItem("matepre_google_auth_error");
+      if (errorMessage) {
+        localStorage.removeItem("matepre_google_auth_error");
+        window.clearInterval(pollTimer);
+        if (!popup.closed) popup.close();
+        setFormError(errorMessage);
+        toast.error(errorMessage);
+        setBusy(false);
+        setPendingAction(null);
+        return;
+      }
+      if (popup.closed) {
+        window.clearInterval(pollTimer);
+        setBusy(false);
+        setPendingAction(null);
+        return;
+      }
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        window.clearInterval(pollTimer);
+        if (!popup.closed) popup.close();
+        // Full reload (not the SPA router) so this window's own Supabase client
+        // re-initializes and picks up the session the popup just persisted.
+        window.location.assign("/panel");
+      }
+    }, 700);
   }
 
   return (

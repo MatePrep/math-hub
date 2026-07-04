@@ -156,13 +156,34 @@ function RootComponent() {
   useEffect(() => {
     if (!capturedAuthParams) return;
 
+    // Google auth opens in a popup (see auth.tsx's handleGoogle); when this page loads
+    // inside it, defer to the opener instead of toasting/navigating in the small window.
+    // The opener polls localStorage + the session directly, so this is best-effort —
+    // it just makes the popup close itself a little faster when it works.
+    const isPopup = typeof window !== "undefined" && !!window.opener;
+
     const error = capturedAuthParams.get("error");
     if (error) {
-      toast.error(translateHashAuthError(capturedAuthParams));
+      const message = translateHashAuthError(capturedAuthParams);
+      if (isPopup) {
+        try {
+          localStorage.setItem("matepre_google_auth_error", message);
+        } catch {
+          // ignore — the opener's popup.closed poll still catches this
+        }
+        window.close();
+      } else {
+        toast.error(message);
+      }
       return;
     }
 
     if (!capturedAuthHasSession) return;
+
+    if (isPopup) {
+      window.close();
+      return;
+    }
 
     // Email confirmation / magic link / invite carry a `type`; a plain OAuth (Google) login
     // doesn't, so only show the "confirmed" toast for the former and stay silent for the latter.
