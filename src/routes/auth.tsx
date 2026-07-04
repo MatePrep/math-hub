@@ -19,6 +19,13 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), ms)),
+  ]);
+}
+
 function translateAuthError(err: any): string {
   const code: string | undefined = err?.code ?? err?.error_code;
   const msg: string = err?.message ?? "";
@@ -116,9 +123,15 @@ function AuthPage() {
     setPendingAction("google");
     setFormError(null);
     try {
-      const res = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
+      // The Google login provider is configured in the Lovable Cloud dashboard, not just
+      // Supabase's own provider settings. If it isn't enabled there, this call can hang
+      // indefinitely with no error — bound it so the button never gets stuck forever.
+      const res = await withTimeout(
+        lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.origin,
+        }),
+        15000,
+      );
       if (res.error) {
         const friendly = translateAuthError(res.error);
         setFormError(friendly);
@@ -130,7 +143,10 @@ function AuthPage() {
       if (res.redirected) return;
       navigate({ to: "/panel", replace: true });
     } catch (err: any) {
-      const friendly = translateAuthError(err);
+      const friendly =
+        err?.message === "TIMEOUT"
+          ? "No se pudo conectar con Google. Verifica que el login con Google esté habilitado en Lovable Cloud, o inténtalo de nuevo en unos minutos."
+          : translateAuthError(err);
       setFormError(friendly);
       toast.error(friendly);
       setBusy(false);
@@ -153,7 +169,7 @@ function AuthPage() {
           </TabsList>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div className="auth-field-collapse" data-open={tab === "signup"} aria-hidden={tab !== "signup"}>
+            <div className="collapse" data-open={tab === "signup"} aria-hidden={tab !== "signup"}>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="full_name">Nombre completo</Label>
@@ -200,7 +216,7 @@ function AuthPage() {
                   className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center overflow-hidden rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
-                  <span key={showPassword ? "hide" : "show"} className="animate-auth-icon-pop">
+                  <span key={showPassword ? "hide" : "show"} className="animate-icon-pop">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </span>
                 </button>
@@ -215,18 +231,18 @@ function AuthPage() {
             {formError && (
               <p
                 role="alert"
-                className="animate-auth-alert rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                className="animate-alert-in rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               >
                 {formError}
               </p>
             )}
             {info && (
-              <p className="animate-auth-alert rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+              <p className="animate-alert-in rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
                 {info}
               </p>
             )}
 
-            <Button type="submit" className="auth-press w-full min-h-11" disabled={busy}>
+            <Button type="submit" className="press w-full min-h-11" disabled={busy}>
               {pendingAction === "form" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {pendingAction === "form" ? "Procesando…" : tab === "signin" ? "Ingresar" : "Crear cuenta"}
             </Button>
@@ -241,7 +257,7 @@ function AuthPage() {
         <Button
           type="button"
           variant="outline"
-          className="auth-press w-full min-h-11"
+          className="press w-full min-h-11"
           disabled={busy}
           onClick={handleGoogle}
         >

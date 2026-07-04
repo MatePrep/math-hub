@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Timer, Play, RotateCcw } from "lucide-react";
+import { Timer, Play, RotateCcw, Loader2 } from "lucide-react";
 import { getExamPreview, getMyExamAttempts, startExamSession } from "@/lib/exams.functions";
 
 export const Route = createFileRoute("/_authenticated/examen/$id")({
@@ -67,12 +67,17 @@ function ExamPreview() {
         </ul>
         <div className="mt-4 flex flex-wrap gap-2">
           {inProgress ? (
-            <Button size="lg" onClick={() => navigate({ to: "/examen-sesion/$sessionId", params: { sessionId: inProgress.id } })}>
+            <Button
+              size="lg"
+              className="press"
+              onClick={() => navigate({ to: "/examen-sesion/$sessionId", params: { sessionId: inProgress.id } })}
+            >
               <RotateCcw className="mr-2 h-4 w-4" /> Reanudar intento
             </Button>
           ) : (
-            <Button size="lg" onClick={onStart} disabled={starting || reachedMax}>
-              <Play className="mr-2 h-4 w-4" /> {starting ? "Iniciando…" : reachedMax ? "Sin intentos disponibles" : "Iniciar examen"}
+            <Button size="lg" className="press" onClick={onStart} disabled={starting || reachedMax}>
+              {starting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+              {starting ? "Iniciando…" : reachedMax ? "Sin intentos disponibles" : "Iniciar examen"}
             </Button>
           )}
         </div>

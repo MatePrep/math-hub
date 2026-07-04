@@ -113,8 +113,8 @@
 /* KaTeX inline tweak */
 .katex { font-size: 1.02em; }
 
-/* Auth flow (sign-in/sign-up) motion */
-.auth-field-collapse {
+/* Shared motion primitives (forms, alerts, collapsible panels, tactile feedback) */
+.collapse {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
@@ -122,16 +122,16 @@
     grid-template-rows 300ms cubic-bezier(0.25, 1, 0.5, 1),
     opacity 200ms ease-out;
 }
-.auth-field-collapse[data-open="true"] {
+.collapse[data-open="true"] {
   grid-template-rows: 1fr;
   opacity: 1;
 }
-.auth-field-collapse > div {
+.collapse > div {
   overflow: hidden;
   min-height: 0;
 }
 
-@keyframes auth-alert-in {
+@keyframes alert-in {
   from {
     opacity: 0;
     transform: translateY(-6px);
@@ -141,11 +141,11 @@
     transform: translateY(0);
   }
 }
-.animate-auth-alert {
-  animation: auth-alert-in 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
+.animate-alert-in {
+  animation: alert-in 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
-@keyframes auth-icon-pop {
+@keyframes icon-pop {
   from {
     opacity: 0;
     transform: scale(0.7);
@@ -155,32 +155,99 @@
     transform: scale(1);
   }
 }
-.animate-auth-icon-pop {
+.animate-icon-pop {
   display: inline-flex;
-  animation: auth-icon-pop 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: icon-pop 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.auth-press {
+.press {
   transition:
     transform 100ms cubic-bezier(0.25, 1, 0.5, 1),
     background-color 150ms ease;
 }
-.auth-press:active:not(:disabled) {
+.press:active:not(:disabled) {
   transform: scale(0.97);
 }
 
+/* List rhythm: staggered entrance for cards/rows appearing once their data loads.
+   Drive stagger with `style={{ "--i": index }}` on each item (capped by the caller). */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 300ms cubic-bezier(0.25, 1, 0.5, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/* Exam flow: crossfade the active question/review-panel content when it swaps.
+   Keyed by exercise id so React remounts and replays the entrance. */
+@keyframes card-swap {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-card-swap {
+  animation: card-swap 200ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+/* Exam flow: the one hero moment of the whole flow — the score reveal on the result screen. */
+@keyframes score-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-score-in {
+  animation: score-in 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Exam flow: one-shot attention flash the instant the timer crosses into "low time" —
+   never a repeating pulse, which would undercut the calm-under-pressure principle. */
+@keyframes flash-once {
+  0%, 100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.06);
+  }
+}
+.animate-flash-once {
+  animation: flash-once 500ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .auth-field-collapse,
-  .animate-auth-alert,
-  .animate-auth-icon-pop,
-  .auth-press {
+  .collapse,
+  .animate-alert-in,
+  .animate-icon-pop,
+  .press,
+  .animate-fade-up,
+  .animate-card-swap,
+  .animate-score-in,
+  .animate-flash-once {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
-  .auth-field-collapse[data-open="true"] {
+  .collapse[data-open="true"] {
     opacity: 1;
   }
-  .auth-press:active:not(:disabled) {
+  .press:active:not(:disabled) {
     transform: none;
   }
 }

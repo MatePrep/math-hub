@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Timer, Flag, CheckCircle2 } from "lucide-react";
+import { Timer, Flag, CheckCircle2, Loader2 } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { getExamSession, saveExamAnswers, submitExamSession } from "@/lib/exams.functions";
 import { getExerciseImageUrl } from "@/lib/storage";

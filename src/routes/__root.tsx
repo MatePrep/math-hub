@@ -4,16 +4,19 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { supabase } from "@/integrations/supabase/client";
+import { capturedAuthHashParams, translateHashAuthError } from "@/lib/auth-redirect";
 
 function NotFoundComponent() {
   return (
@@ -134,6 +137,7 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -144,6 +148,36 @@ function RootComponent() {
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
+
+  // Surface feedback for the redirect Supabase sends after an email confirmation /
+  // magic link / OAuth callback lands back on the app (see src/lib/auth-redirect.ts).
+  useEffect(() => {
+    if (!capturedAuthHashParams) return;
+
+    const error = capturedAuthHashParams.get("error");
+    if (error) {
+      toast.error(translateHashAuthError(capturedAuthHashParams));
+      return;
+    }
+
+    const type = capturedAuthHashParams.get("type");
+    if (type !== "signup" && type !== "email_change" && type !== "invite") return;
+
+    toast.success("¡Correo confirmado! Tu cuenta ya está activa.");
+
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled && data.session) navigate({ to: "/panel", replace: true });
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) navigate({ to: "/panel", replace: true });
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
