@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { NotificationsBell } from "@/components/notifications-bell";
 import {
   Sheet,
   SheetContent,
@@ -16,8 +17,11 @@ const nav = [
   { to: "/temas", label: "Temas" },
   { to: "/examenes", label: "Exámenes" },
   { to: "/simulacros", label: "Simulacros" },
+  { to: "/favoritas", label: "Favoritas" },
+  { to: "/ranking", label: "Ranking" },
   { to: "/panel", label: "Panel" },
 ];
+
 
 
 export function SiteHeader() {
@@ -111,7 +115,9 @@ export function SiteHeader() {
               <Shield className="h-4 w-4" /> Admin
             </Link>
           )}
+          {signedIn && <NotificationsBell />}
           {signedIn ? (
+
             <Button
               variant="ghost"
               size="sm"

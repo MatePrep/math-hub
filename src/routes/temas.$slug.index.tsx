@@ -78,12 +78,22 @@ function TopicPage() {
         </Link>{" "}
         / <span className="text-foreground">{topic.name}</span>
       </nav>
-      <header className="mt-3">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">{topic.name}</h1>
-        {topic.description && (
-          <p className="mt-2 max-w-2xl text-muted-foreground">{topic.description}</p>
-        )}
+      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">{topic.name}</h1>
+          {topic.description && (
+            <p className="mt-2 max-w-2xl text-muted-foreground">{topic.description}</p>
+          )}
+        </div>
+        <Link
+          to="/practica/$topicSlug"
+          params={{ topicSlug: topic.slug }}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Practicar tema →
+        </Link>
       </header>
+
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
         <aside>

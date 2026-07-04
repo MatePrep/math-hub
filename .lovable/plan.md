@@ -1,62 +1,138 @@
-# Plan: Templates de examen con generación aleatoria
+# Plan: Perfil, Progreso y Social (Fase 1 ampliada)
 
-Aprovechamos la infraestructura existente (`exams.exam_type='template'` + `exam_template_rules` + `exam_sessions`) y añadimos lo que falta: UI dedicada para el estudiante, refinamientos al formulario admin, y las reglas de negocio nuevas.
+Ámbito acordado: Perfil enriquecido + filtro por universidad + cuenta regresiva + práctica por tema + favoritas + análisis de tiempo + metas semanales + comparación con media + leaderboard (general por universidad y por examen). Notificaciones: solo bandeja in-app. Un examen pertenece a una sola universidad.
 
-## 1. Admin — Gestión de templates
+Fuera de alcance en esta fase: recomendaciones inteligentes con pesos por tema (punto 4), notificaciones automáticas por email/push (punto 5 completo), plan de estudio dinámico (punto 3.2).
 
-Refinar `src/components/exam-form.tsx` cuando `exam_type='template'`:
-- Mostrar **total de preguntas calculado** (suma de `question_count`) en tiempo real.
-- Por cada regla, mostrar **cuántas preguntas hay disponibles** en el banco para ese tema+dificultad (consulta ligera vía nueva server fn `getTopicQuestionCounts`) y marcar en rojo si `question_count > disponibles`.
-- Botón "Guardar" muestra advertencia (`toast` + `AlertDialog` confirmación) cuando hay reglas insuficientes, pero permite guardar como *borrador* (`status='draft'`).
-- Validación server-side existente en `validateTemplateRules` se mantiene; solo bloquea publicar (`status='published'`) si falta stock.
+---
 
-Listado en `src/routes/_authenticated/admin/examenes.index.tsx`:
-- Agregar tab/filtro "Plantillas" vs "Estándar".
-- Para plantillas mostrar: nombre, duración, total de preguntas (suma de reglas), nº de intentos generados, estado.
-- Acción **Eliminar**: bloqueada si existen `exam_sessions` con `exam_id=<template>` (nuevo chequeo en `deleteExam`); si hay intentos, ofrecer archivar (`status='archived'`).
+## 1. Cambios de base de datos (una sola migración)
 
-## 2. Estudiante — Nueva sección "Simulacros"
+**Perfil enriquecido** — extender `profiles`:
+- `pseudonym` text UNIQUE (para leaderboard anónimo)
+- `career` text (opcional)
+- `leaderboard_opt_in` boolean default true
+- `weekly_goal_questions` int default 50
+- `weekly_goal_exams` int default 2
 
-Rutas nuevas:
-- `src/routes/_authenticated/simulacros.index.tsx` — lista de templates publicados (nombre, descripción, duración, total de preguntas, botón **Generar examen**).
-- Enlace en `SiteHeader` para usuarios autenticados.
+**Universidades objetivo del estudiante** (múltiples, con fecha):
+- Nueva tabla `student_universities(id, user_id, university_id, exam_date date, created_at)` con unique(user_id, university_id).
 
-Server fn nueva `listPublishedTemplates` en `src/lib/exams.functions.ts`:
-- SELECT de `exams` con `exam_type='template'` y `status='published'`, incluyendo suma de `exam_template_rules.question_count`.
+**Asociación examen ↔ universidad** (uno):
+- Añadir `university_id uuid references universities(id)` a `exams` (nullable para retrocompatibilidad; UI de admin ya permite elegirla).
 
-Flujo "Generar examen":
-- Botón llama a `startExamSession({ examId })` existente (ya soporta template) → redirige a `/examen-sesion/$sessionId`.
-- Añadir manejo de errores amistoso (toast) cuando falte stock o se viole la regla de uno-en-curso.
+**Favoritas**:
+- Nueva tabla `favorite_exercises(id, user_id, exercise_id, created_at)` unique(user_id, exercise_id).
 
-## 3. Reglas de negocio nuevas
+**Análisis de tiempo**:
+- La tabla `attempts` ya tiene `time_spent_ms` → reutilizar. Añadir `expected_time_ms` opcional a `exercises` (para resaltar preguntas "lentas"; si es NULL, se usa el promedio del ejercicio calculado on-the-fly).
 
-Aplicar dentro de `startExamSession` (template únicamente):
+**Notificaciones in-app**:
+- Nueva tabla `notifications(id, user_id, kind, title, body, read_at, created_at)`.
 
-- **Uno en curso por template**: la lógica actual ya resume la sesión `in_progress` existente del mismo `exam_id` — comportamiento correcto, se mantiene, se documenta con mensaje claro ("Ya tienes un simulacro en curso para esta plantilla, se retomará").
-- **Evitar repetición de preguntas ya vistas**: antes de armar el pool aleatorio por regla, obtener `exercise_id` distintos de `exam_sessions` previos del mismo `user_id`+`exam_id` (leyendo `question_ids`). Preferir preguntas no vistas; si no alcanzan, completar con vistas anteriores (nunca fallar por esto).
-- **Stock insuficiente al generar**: si el total real de preguntas disponibles (vistas+nuevas) para una regla < `question_count`, lanzar error claro: "No hay suficientes preguntas de <tema> para generar este simulacro."
-- **Mezcla final**: ya implementada (shuffle cross-rule).
+**Todas** con RLS scoped a `auth.uid()`, GRANTs a `authenticated` + `service_role`, y grants adicionales solo donde el leaderboard necesite lectura pública anónima (ver §7).
 
-## 4. Borrado seguro de templates
+---
 
-Modificar `deleteExam` en `src/lib/admin.functions.ts`:
-- Antes de borrar, contar `exam_sessions` con `exam_id=id`.
-- Si > 0 → responder con error específico "No se puede eliminar: existen N intentos generados. Archívalo en su lugar."
-- Añadir server fn `archiveExam` que setea `status='archived'` (nuevo valor de enum, ver migración).
-- UI del listado añade acción "Archivar".
+## 2. Perfil del estudiante (UI)
 
-## Sección técnica
+Ampliar `src/routes/_authenticated/perfil.tsx`:
+- Campo pseudónimo (validación de unicidad server-side, feedback amistoso).
+- Selector múltiple de universidades con fecha de examen por cada una (agrega/quita filas).
+- Carrera (texto libre).
+- Toggle "Participar en el ranking".
+- Metas semanales (dos inputs numéricos).
 
-**Migración de BD:**
-- Añadir `'archived'` al enum `exam_status` (si no existe): `ALTER TYPE exam_status ADD VALUE IF NOT EXISTS 'archived';`
-- No se requieren tablas nuevas.
+Server fns nuevas en `attempts.functions.ts` (o nuevo `profile.functions.ts`): `getFullProfile`, `updateFullProfile`, `setStudentUniversities`.
 
-**Archivos a modificar:**
-- `src/lib/admin.functions.ts` — nuevas fns `getTopicQuestionCounts`, `archiveExam`; refuerzo en `deleteExam`.
-- `src/lib/exams.functions.ts` — nueva fn `listPublishedTemplates`; refactor de `startExamSession` (rama template) para excluir preguntas ya vistas con fallback.
-- `src/components/exam-form.tsx` — total en vivo, contador disponible por regla, confirm dialog al guardar con déficit.
-- `src/routes/_authenticated/admin/examenes.index.tsx` — filtro estándar/plantilla, columnas de intentos, acciones eliminar/archivar.
-- `src/routes/_authenticated/simulacros.index.tsx` — nueva ruta.
-- `src/components/site-header.tsx` — enlace "Simulacros".
+---
 
-**Sin cambios de esquema mayores**: la tabla `exam_template_rules` y las columnas `exam_type`/`allow_multiple_attempts` ya existen. La sesión sigue almacenando `question_ids` snapshot, garantizando que editar/eliminar el template no afecte exámenes en curso ni resultados históricos.
+## 3. Contenido filtrado por universidad
+
+- Nuevo selector "Universidad" (dropdown) en `simulacros.index.tsx` y `examenes.index.tsx` (públicos): por defecto muestra las del perfil, con opción "Todas".
+- Server fns `listPublishedTemplates` y equivalente estándar aceptan `universityId?` opcional.
+- Formulario admin de examen (`exam-form.tsx`) añade selector obligatorio de universidad.
+
+---
+
+## 4. Cuenta regresiva en el dashboard
+
+- En `panel.tsx`, nueva sección superior con card por universidad objetivo mostrando "Faltan X días — [Universidad]". Se resalta la más próxima.
+- Cálculo puro cliente a partir de `student_universities`.
+
+---
+
+## 5. Práctica por tema + favoritas
+
+**Práctica dirigida**:
+- Nueva ruta `_authenticated/practica.$topicSlug.tsx`: modo pregunta-por-pregunta, sin timer, feedback inmediato.
+- Reutiliza `recordAttempt` (con `examSessionId=null`) — ya alimenta stats por tema.
+- Botón "Practicar tema" en `temas.$slug.index.tsx`.
+
+**Favoritas**:
+- Botón estrella en `exercise-card.tsx` (visible en cualquier modo: práctica, examen, revisión).
+- Server fns `toggleFavorite`, `listFavorites`.
+- Nueva ruta `_authenticated/favoritas.tsx` con lista filtrable por tema.
+- Enlace en `site-header.tsx`.
+
+---
+
+## 6. Análisis de tiempo + metas + comparación con media
+
+**Tiempo por pregunta**:
+- Ya se registra en `attempts.time_spent_ms`. Verificar que la sesión de examen (`examen-sesion.$sessionId.index.tsx`) lo esté enviando bien.
+- En `examen-sesion.$sessionId.resultado.tsx`: nueva columna con tiempo por pregunta y badge "⏱ Lento" si tomó >150% del promedio de todos los intentos de ese ejercicio.
+
+**Metas semanales**:
+- Nueva server fn `getWeeklyProgress(userId)` calcula: preguntas respondidas y exámenes finalizados en la semana ISO actual, comparando con las metas del perfil.
+- Card en `panel.tsx` con dos barras de progreso.
+
+**Comparación con media**:
+- Al finalizar examen (`resultado.tsx`), mostrar: tu puntaje vs promedio de todos los estudiantes que rindieron ese `exam_id`, más percentil.
+- Server fn `getExamStats(examId)` con agregado sobre `exam_sessions` finalizadas.
+
+---
+
+## 7. Leaderboard (general por universidad + por examen)
+
+- Nueva ruta `_authenticated/ranking.tsx` con dos tabs:
+  - **General por universidad**: promedio de puntajes de simulacros/exámenes finalizados, filtrable por universidad. Muestra pseudónimo + puntaje, resaltando la fila del usuario actual aunque no esté en el top.
+  - **Por examen específico**: selector de examen → tabla de mejores puntajes en ese examen.
+- Solo aparecen estudiantes con `leaderboard_opt_in=true` y `pseudonym` no nulo.
+- Server fns: `getUniversityLeaderboard(universityId, period)`, `getExamLeaderboard(examId)`, `getMyRank(...)`.
+- Enlace en `site-header.tsx`.
+
+---
+
+## 8. Notificaciones in-app (bandeja mínima)
+
+- Ícono campana en `site-header.tsx` con contador de no leídas.
+- Popover con lista + botón "marcar todas como leídas".
+- Server fns `listNotifications`, `markNotificationsRead`.
+- Generadores automáticos (server fn `regenerateNotifications`, llamada perezosa al abrir el panel): "No has practicado en X días", "Faltan N días para tu examen [Univ]". Sin cron ni email.
+
+---
+
+## Detalles técnicos
+
+**Migración única** con todas las tablas/columnas/policies. `student_universities`, `favorite_exercises`, `notifications` tienen RLS por `auth.uid()`. `exams` gana `university_id` sin romper filas existentes. Para leaderboard: se crea vista o server fn `SECURITY DEFINER` que solo expone `pseudonym` + `avg_score` para usuarios opt-in (nunca `user_id` ni email).
+
+**Archivos nuevos**:
+- Rutas: `_authenticated/practica.$topicSlug.tsx`, `_authenticated/favoritas.tsx`, `_authenticated/ranking.tsx`.
+- Server fns: `src/lib/profile.functions.ts`, `src/lib/favorites.functions.ts`, `src/lib/leaderboard.functions.ts`, `src/lib/notifications.functions.ts`, `src/lib/goals.functions.ts`.
+- Componentes: `FavoriteButton`, `CountdownCard`, `WeeklyGoalsCard`, `NotificationsBell`.
+
+**Archivos modificados**:
+- `perfil.tsx`, `panel.tsx`, `site-header.tsx`, `exam-form.tsx`, `simulacros.index.tsx`, `examenes.index.tsx`, `exercise-card.tsx`, `examen-sesion.$sessionId.resultado.tsx`, `temas.$slug.index.tsx`, `attempts.functions.ts`, `exams.functions.ts`.
+
+**Orden de implementación** (en un solo turno, sin bloqueos):
+1. Migración → aprobación → tipos regenerados.
+2. Server fns nuevas.
+3. UI de perfil + universidad en admin exam-form.
+4. Filtros de universidad en listados + countdown en panel.
+5. Práctica por tema + favoritas.
+6. Análisis de tiempo + metas + comparación en resultado.
+7. Leaderboard.
+8. Bandeja de notificaciones.
+
+Es un cambio grande; si prefieres partirlo en 2-3 sub-entregas dime y lo ajusto.
