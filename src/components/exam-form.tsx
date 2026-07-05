@@ -23,7 +23,6 @@ import {
   listExerciseBank,
   listAdminMeta,
   getTopicQuestionCounts,
-  getScoringDefaults,
 } from "@/lib/admin.functions";
 
 
@@ -70,8 +69,8 @@ const empty: ExamFormValues = {
   allow_multiple_attempts: false,
   exercise_ids: [],
   template_rules: [],
-  points_correct: 20,
-  points_incorrect: -2,
+  points_correct: 1,
+  points_incorrect: -1,
   points_empty: 0,
 };
 
@@ -82,17 +81,8 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const bankFn = useServerFn(listExerciseBank);
   const metaFn = useServerFn(listAdminMeta);
   const countsFn = useServerFn(getTopicQuestionCounts);
-  const scoringDefaultsFn = useServerFn(getScoringDefaults);
   const bank = useQuery({ queryKey: ["exercise-bank"], queryFn: () => bankFn() });
   const meta = useQuery({ queryKey: ["admin-meta"], queryFn: () => metaFn() });
-  // Only fetched for brand-new exams — an existing exam already has its own
-  // saved points config, which must never be overwritten by later changes to
-  // the app-wide defaults.
-  const scoringDefaults = useQuery({
-    queryKey: ["scoring-defaults"],
-    queryFn: () => scoringDefaultsFn(),
-    enabled: !initial,
-  });
 
   const [v, setV] = useState<ExamFormValues>(initial ?? empty);
   const [saving, setSaving] = useState(false);
@@ -103,13 +93,6 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     if (initial) setV({ ...empty, ...initial });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial?.id]);
-
-  useEffect(() => {
-    if (!initial && scoringDefaults.data) {
-      setV((s) => ({ ...s, ...scoringDefaults.data }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scoringDefaults.data]);
 
   const bankTopics = useMemo(() => {
     const map = new Map<string, string>();
@@ -341,9 +324,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         <div className="sm:col-span-2 rounded-md border border-border bg-card p-3">
           <Label className="text-base">Puntaje por pregunta</Label>
           <p className="mt-1 text-xs text-muted-foreground">
-            {initial
-              ? "Propio de este examen — cambiar los valores por defecto generales no afecta lo ya guardado aquí."
-              : "Prellenado con los valores por defecto generales (Configuración → Puntaje); puedes ajustarlos solo para este examen."}
+            Propio de este examen — prellenado con +1 / -1 / 0, puedes ajustarlo solo para este examen.
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             <div>

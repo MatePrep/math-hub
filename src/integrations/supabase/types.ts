@@ -14,30 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      app_settings: {
-        Row: {
-          default_points_correct: number
-          default_points_empty: number
-          default_points_incorrect: number
-          id: boolean
-          updated_at: string
-        }
-        Insert: {
-          default_points_correct?: number
-          default_points_empty?: number
-          default_points_incorrect?: number
-          id?: boolean
-          updated_at?: string
-        }
-        Update: {
-          default_points_correct?: number
-          default_points_empty?: number
-          default_points_incorrect?: number
-          id?: boolean
-          updated_at?: string
-        }
-        Relationships: []
-      }
       attempts: {
         Row: {
           created_at: string

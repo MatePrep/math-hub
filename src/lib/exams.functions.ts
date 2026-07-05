@@ -442,7 +442,7 @@ export const saveExamAnswers = createServerFn({ method: "POST" })
 // only formula in the codebase that turns a correct/incorrect/empty count
 // into a score; the result is clamped to 0 (a student's score is never shown
 // as negative, even though the raw formula can go below zero internally).
-const FALLBACK_SCORING = { correct: 20, incorrect: -2, empty: 0 };
+const FALLBACK_SCORING = { correct: 1, incorrect: -1, empty: 0 };
 
 function computeExamScore(
   counts: { correct: number; incorrect: number; empty: number },
@@ -494,18 +494,7 @@ export const submitExamSession = createServerFn({ method: "POST" })
             return { correct: exam.points_correct, incorrect: exam.points_incorrect, empty: exam.points_empty };
           }
         }
-        const { data: settings } = await supabase
-          .from("app_settings")
-          .select("default_points_correct, default_points_incorrect, default_points_empty")
-          .eq("id", true)
-          .maybeSingle();
-        return settings
-          ? {
-              correct: settings.default_points_correct,
-              incorrect: settings.default_points_incorrect,
-              empty: settings.default_points_empty,
-            }
-          : FALLBACK_SCORING;
+        return FALLBACK_SCORING;
       })(),
     ]);
     const correctMap = new Map((exs ?? []).map((e: any) => [e.id, e.correct_choice]));

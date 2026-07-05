@@ -553,52 +553,6 @@ export const deleteUniversity = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ========== APP SETTINGS (scoring defaults) ==========
-// Prefills new exams/templates only at creation time (see exam-form.tsx) —
-// editing these later never retroactively touches already-created exams,
-// since each exam stores its own points_correct/incorrect/empty.
-
-export const getScoringDefaults = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context);
-    const { data, error } = await context.supabase
-      .from("app_settings")
-      .select("default_points_correct, default_points_incorrect, default_points_empty")
-      .eq("id", true)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    return {
-      points_correct: data?.default_points_correct ?? 20,
-      points_incorrect: data?.default_points_incorrect ?? -2,
-      points_empty: data?.default_points_empty ?? 0,
-    };
-  });
-
-export const updateScoringDefaults = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({
-      points_correct: z.number().min(-1000).max(1000),
-      points_incorrect: z.number().min(-1000).max(1000),
-      points_empty: z.number().min(-1000).max(1000),
-    }).parse(d),
-  )
-  .handler(async ({ context, data }) => {
-    await assertAdmin(context);
-    const { error } = await context.supabase
-      .from("app_settings")
-      .update({
-        default_points_correct: data.points_correct,
-        default_points_incorrect: data.points_incorrect,
-        default_points_empty: data.points_empty,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", true);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
 // ========== EXAMS management ==========
 
 const templateRuleSchema = z.object({
@@ -608,9 +562,8 @@ const templateRuleSchema = z.object({
 });
 
 // Points-per-question scoring config (see plan-sistema-puntajes.md): every
-// exam/template carries its own points_correct/incorrect/empty, defaulted
-// from app_settings only at creation time in the client form — never a fixed
-// global value read at grading time.
+// exam/template carries its own points_correct/incorrect/empty (defaulted to
+// +1/-1/0 in the creation form), editable per exam.
 const scoringFields = {
   points_correct: z.number().min(-1000).max(1000),
   points_incorrect: z.number().min(-1000).max(1000),

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Timer, Play, RotateCcw, Loader2, Shuffle, VolumeX, Save } from "lucide-react";
+import { Timer, Play, RotateCcw, Loader2, Shuffle, VolumeX, Save, History, ChevronDown } from "lucide-react";
 import { getExamPreview, getMyExamAttempts, startExamSession } from "@/lib/exams.functions";
 
 export const Route = createFileRoute("/_authenticated/examen/$id")({
@@ -19,6 +19,7 @@ function ExamPreview() {
   const attemptsFn = useServerFn(getMyExamAttempts);
   const startFn = useServerFn(startExamSession);
   const [starting, setStarting] = useState(false);
+  const [showAttempts, setShowAttempts] = useState(false);
 
   const preview = useQuery({ queryKey: ["exam-preview", id], queryFn: () => previewFn({ data: { id } }) });
   const attempts = useQuery({ queryKey: ["exam-attempts", id], queryFn: () => attemptsFn({ data: { examId: id } }) });
@@ -120,17 +121,27 @@ function ExamPreview() {
 
       {done.length > 0 && (
         <div className="mt-8">
-          <h3 className="font-display text-lg font-bold">Intentos anteriores</h3>
-          <div className="mt-3 space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowAttempts((v) => !v)}
+            className="inline-flex items-center gap-1.5 font-display text-lg font-bold hover:text-primary"
+          >
+            <History className="h-4 w-4" />
+            Intentos anteriores ({done.length})
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showAttempts ? "rotate-180" : ""}`} />
+          </button>
+          <div className="collapsible" data-open={showAttempts}>
+            <div className="mt-3 space-y-2">
               {done.map((a: any) => (
                 <Link key={a.id} to="/examen-sesion/$sessionId/resultado" params={{ sessionId: a.id }} className="flex items-center justify-between rounded-md border border-border bg-card p-3 hover:border-primary/40">
-                <div>
-                  <p className="text-sm font-medium">{new Date(a.started_at).toLocaleString("es-PE")}</p>
-                  <p className="text-xs text-muted-foreground">{a.score ?? 0}{a.max_score != null ? ` / ${a.max_score}` : ""} pts · {a.total} preguntas</p>
-                </div>
-                <span className="text-sm text-primary">Ver resultado →</span>
-              </Link>
-            ))}
+                  <div>
+                    <p className="text-sm font-medium">{new Date(a.started_at).toLocaleString("es-PE")}</p>
+                    <p className="text-xs text-muted-foreground">{a.score ?? 0}{a.max_score != null ? ` / ${a.max_score}` : ""} pts · {a.total} preguntas</p>
+                  </div>
+                  <span className="text-sm text-primary">Ver resultado →</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       )}
