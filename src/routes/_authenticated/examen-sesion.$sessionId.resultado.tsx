@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, MinusCircle, Clock, Users } from "lucide-react";
@@ -12,6 +12,30 @@ import { getExamStats } from "@/lib/goals.functions";
 export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/resultado")({
   component: ResultPage,
 });
+
+// Counts up from 0 to `target` on mount/change — the score reveal should feel
+// like a result landing, not a static label. Skips the animation entirely
+// under prefers-reduced-motion.
+function useCountUp(target: number, durationMs = 700) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setValue(target);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    function tick(now: number) {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(eased * target));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+  return value;
+}
 
 function ResultPage() {
   const { sessionId } = Route.useParams();
@@ -27,21 +51,41 @@ function ResultPage() {
     enabled: !!examId,
   });
 
-  if (q.isLoading) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>;
-  if (!q.data) return <div className="mx-auto max-w-3xl px-4 py-16 text-center">No encontrado.</div>;
+  // These hooks must run unconditionally on every render, before either of
+  // the early returns below — calling them after a conditional `return`
+  // (as `useState` used to be, further down) throws a "rendered fewer/more
+  // hooks than expected" crash on the exact render where `q.data` first
+  // arrives, i.e. the moment a student's result becomes available.
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
+  const score: number = q.data?.session?.score ?? 0;
+  const displayScore = useCountUp(score);
+
+  if (q.isLoading) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-muted-foreground">
+        Calculando tu resultado…
+      </div>
+    );
+  }
+  if (!q.data) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <p className="text-muted-foreground">No pudimos cargar tu resultado todavía.</p>
+        <Button className="press mt-4" onClick={() => q.refetch()}>Reintentar</Button>
+      </div>
+    );
+  }
 
   const s: any = q.data.session;
   const questions: any[] = q.data.questions;
   const answers = (s.answers as Record<string, number>) ?? {};
   const passing = s.exam?.passing_score ?? 60;
-  const score = s.score ?? 0;
   const passed = score >= passing;
   const correctCount = questions.filter((ex) => answers[ex.id] === ex.correct_choice).length;
   const totalQuestions = questions.length;
   const incorrectCount = totalQuestions - correctCount;
   const timeLimitMin = s.time_limit_min ?? s.exam?.time_limit_min ?? null;
   const timeTakenSeconds = s.finished_at && s.started_at ? (new Date(s.finished_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null;
-  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const selectedQuestion = questions[selectedQuestionIndex];
   const selectedAnswer = answers[selectedQuestion.id];
   const selectedCorrect = selectedQuestion.correct_choice;
@@ -68,7 +112,7 @@ function ResultPage() {
 
       <div className={`animate-score-in mt-4 rounded-xl border p-6 ${scorePanelStyle}`}>
         <p className="text-sm text-muted-foreground">Puntaje</p>
-        <p className={`mt-1 font-display text-5xl font-bold ${scoreStyle}`}>{score}%</p>
+        <p className={`mt-1 font-display text-5xl font-bold tabular-nums ${scoreStyle}`}>{displayScore}%</p>
         <p className="mt-1 text-sm">
           {correctCount} de {totalQuestions} correctas · {passed ? "Aprobado" : `Aprobación: ${passing}%`}
         </p>

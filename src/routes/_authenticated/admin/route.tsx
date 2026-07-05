@@ -24,6 +24,9 @@ function AdminLayout() {
           <Link to="/admin/ejercicios" activeProps={{ className: "text-primary font-semibold" }} className="text-muted-foreground hover:text-foreground">
             Ejercicios
           </Link>
+          <Link to="/admin/importar" activeProps={{ className: "text-primary font-semibold" }} className="text-muted-foreground hover:text-foreground">
+            Importar
+          </Link>
           <Link to="/admin/examenes" activeProps={{ className: "text-primary font-semibold" }} className="text-muted-foreground hover:text-foreground">
             Exámenes
           </Link>

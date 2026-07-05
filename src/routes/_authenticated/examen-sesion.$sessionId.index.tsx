@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Timer, Flag, CheckCircle2, Loader2 } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
-import { getExamSession, saveExamAnswers, submitExamSession } from "@/lib/exams.functions";
+import { getExamSession, saveExamAnswers, submitExamSession, getExamResult } from "@/lib/exams.functions";
 import { getExerciseImageUrl } from "@/lib/storage";
 import { FavoriteButton } from "@/components/favorite-button";
 
@@ -18,9 +18,11 @@ export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/"
 function TakeExam() {
   const { sessionId } = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const getFn = useServerFn(getExamSession);
   const saveFn = useServerFn(saveExamAnswers);
   const submitFn = useServerFn(submitExamSession);
+  const resultFn = useServerFn(getExamResult);
 
   const q = useQuery({
     queryKey: ["exam-session", sessionId],
@@ -34,6 +36,7 @@ function TakeExam() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [imgUrls, setImgUrls] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [grading, setGrading] = useState(false);
   const savedRef = useRef({ answers: "", flagged: "" });
 
   const session = q.data?.session as any | undefined;
@@ -96,12 +99,34 @@ function TakeExam() {
     activeSegmentRef.current = { exerciseId: null, startedAt: Date.now() };
     try {
       await submitFn({ data: { sessionId, answers, timeSpentMs: timeSpentRef.current } });
+
+      // Warm the results page's query cache with the same key it uses, and
+      // retry briefly if the graded session isn't readable yet. This is what
+      // used to show a transient "not found" on /resultado right after
+      // finishing (fixed on a manual refresh, since by then the row was
+      // visible) — we now only navigate once the result is confirmed
+      // fetchable, or after a few short retries as a last resort.
+      setGrading(true);
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          await queryClient.fetchQuery({
+            queryKey: ["exam-result", sessionId],
+            queryFn: () => resultFn({ data: { sessionId } }),
+          });
+          break;
+        } catch {
+          if (attempt === 3) break;
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        }
+      }
+
       navigate({ to: "/examen-sesion/$sessionId/resultado", params: { sessionId }, replace: true });
     } catch (e: any) {
       toast.error(e?.message ?? "Error al enviar");
       setSubmitting(false);
+      setGrading(false);
     }
-  }, [answers, sessionId, submitFn, navigate, submitting]);
+  }, [answers, sessionId, submitFn, resultFn, queryClient, navigate, submitting]);
 
   const lowTime = secondsLeft !== null && secondsLeft > 0 && secondsLeft <= 300;
   const timeUp = secondsLeft !== null && secondsLeft <= 0;
@@ -222,7 +247,7 @@ function TakeExam() {
               className="press min-h-11"
             >
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-              {submitting ? "Enviando…" : "Finalizar examen"}
+              {grading ? "Calculando tu resultado…" : submitting ? "Enviando…" : "Finalizar examen"}
             </Button>
           )}
         </div>
@@ -271,7 +296,7 @@ function TakeExam() {
           size="sm"
         >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isLastQuestion ? (submitting ? "Enviando…" : "Finalizar") : "Ir a la última pregunta"}
+          {isLastQuestion ? (grading ? "Calculando…" : submitting ? "Enviando…" : "Finalizar") : "Ir a la última pregunta"}
         </Button>
       </aside>
     </div>

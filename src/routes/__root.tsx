@@ -181,13 +181,30 @@ function RootComponent() {
     if (!capturedAuthHasSession) return;
 
     if (isPopup) {
-      window.close();
+      // Confirm the session before closing — getSession() awaits the client's full
+      // initialization, including detectSessionInUrl's code/token exchange. Closing
+      // the popup any earlier risks interrupting that exchange mid-flight, so the
+      // session never actually reaches localStorage and the opener sees nothing.
+      supabase.auth.getSession().then(({ data }) => {
+        try {
+          if (data.session) localStorage.setItem("matepre_google_auth_success", "1");
+        } catch {
+          // ignore — the opener's own getSession() fallback poll still catches this
+        }
+        window.close();
+      });
       return;
     }
 
     // Email confirmation / magic link / invite carry a `type`; a plain OAuth (Google) login
     // doesn't, so only show the "confirmed" toast for the former and stay silent for the latter.
     const type = capturedAuthParams.get("type");
+
+    // Password recovery gets its own dedicated flow: /restablecer-password reads this
+    // same session itself and asks the student to set a new password before treating
+    // them as "logged in normally". Don't race it by auto-redirecting to /panel here.
+    if (type === "recovery") return;
+
     if (type === "signup" || type === "email_change" || type === "invite") {
       toast.success("¡Correo confirmado! Tu cuenta ya está activa.");
     }

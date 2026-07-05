@@ -205,6 +205,7 @@ function AuthPage() {
     // can't always reliably signal us directly. Poll shared localStorage + the session
     // instead — both survive regardless of COOP.
     localStorage.removeItem("matepre_google_auth_error");
+    localStorage.removeItem("matepre_google_auth_success");
     popup.location.href = url;
 
     const pollTimer = window.setInterval(async () => {
@@ -219,12 +220,24 @@ function AuthPage() {
         setPendingAction(null);
         return;
       }
+      // Primary success signal: the popup itself confirmed (via its own getSession(),
+      // which awaits full client init) that the session was persisted before closing.
+      if (localStorage.getItem("matepre_google_auth_success")) {
+        localStorage.removeItem("matepre_google_auth_success");
+        window.clearInterval(pollTimer);
+        if (!popup.closed) popup.close();
+        window.location.assign("/panel");
+        return;
+      }
       if (popup.closed) {
         window.clearInterval(pollTimer);
         setBusy(false);
         setPendingAction(null);
         return;
       }
+      // Fallback signal: in case the popup's own opener-detection somehow didn't run
+      // (e.g. window.opener was already null for an unrelated reason), check this
+      // window's own session directly too — cross-tab session sync usually catches it.
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) {
         window.clearInterval(pollTimer);

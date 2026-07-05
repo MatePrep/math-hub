@@ -126,6 +126,60 @@ export const createExercise = createServerFn({ method: "POST" })
     return { id: row.id };
   });
 
+// Bulk import (see plan-importar-ejercicios-markdown.md): the client parses
+// and catalog-resolves each markdown file itself and only sends rows it
+// believes are valid, but we still re-validate every row against the same
+// schema used for manual creation (exerciseBase) — cheap defense in depth,
+// and it lets us report per-file failures instead of rejecting the whole
+// batch if the client and server ever disagree about what's valid.
+const bulkImportItemSchema = exerciseBase
+  .extend({ _filename: z.string() })
+  .refine((d) => d.correct_choice < d.choices.length, {
+    message: "correct_choice fuera de rango",
+    path: ["correct_choice"],
+  });
+
+export const bulkImportExercises = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.array(z.record(z.string(), z.any())).min(1).max(200).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+
+    const valid: Array<ReturnType<typeof bulkImportItemSchema.parse>> = [];
+    const failed: Array<{ filename: string; message: string }> = [];
+    for (const raw of data) {
+      const parsed = bulkImportItemSchema.safeParse(raw);
+      if (!parsed.success) {
+        failed.push({
+          filename: typeof raw._filename === "string" ? raw._filename : "?",
+          message: parsed.error.issues[0]?.message ?? "Ejercicio inválido",
+        });
+        continue;
+      }
+      valid.push(parsed.data);
+    }
+
+    if (valid.length === 0) return { insertedCount: 0, failed };
+
+    const payload = valid.map((d) => ({
+      topic_id: d.topic_id,
+      subtopic_id: d.subtopic_id || null,
+      university_id: d.university_id || null,
+      exam_year: d.exam_year ?? null,
+      difficulty: d.difficulty,
+      statement_md: d.statement_md,
+      statement_image_path: d.statement_image_path ?? null,
+      solution_image_path: d.solution_image_path ?? null,
+      choices: d.choices,
+      correct_choice: d.correct_choice,
+      solution_md: d.solution_md,
+      tags: d.tags ?? [],
+    }));
+    const { data: rows, error } = await context.supabase.from("exercises").insert(payload).select("id");
+    if (error) throw new Error(error.message);
+    return { insertedCount: rows?.length ?? 0, failed };
+  });
+
 export const updateExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => exerciseUpdateSchema.parse(d))

@@ -23,8 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, User } from "lucide-react";
+import { Trash2, Plus, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const PREP_TIME_OPTIONS: Array<{ value: (typeof PREP_TIME_VALUES)[number]; label: string }> = [
   { value: "recien_empiezo", label: "Recién empiezo" },
@@ -83,6 +84,63 @@ function PerfilPage() {
   const [weeklyStudyHours, setWeeklyStudyHours] = useState<string>("");
   const [weakTopicIds, setWeakTopicIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  // Password change: only offered to accounts that actually have an email/password
+  // identity — an account created purely via "Continuar con Google" has none.
+  const [identityProviders, setIdentityProviders] = useState<string[] | null>(null);
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: userData }) => {
+      setIdentityProviders((userData.user?.identities ?? []).map((i) => i.provider));
+      setAccountEmail(userData.user?.email ?? null);
+    });
+  }, []);
+
+  const hasPasswordIdentity = identityProviders?.includes("email") ?? null;
+
+  async function onChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError(null);
+    if (newPassword.length < 8) {
+      setPasswordError("La nueva contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+    if (!accountEmail) {
+      setPasswordError("No se pudo verificar tu cuenta. Recarga la página e inténtalo de nuevo.");
+      return;
+    }
+    setPasswordBusy(true);
+    try {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: accountEmail,
+        password: currentPassword,
+      });
+      if (verifyError) throw new Error("Tu contraseña actual no es correcta.");
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+      toast.success("Contraseña actualizada.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (err: any) {
+      const friendly = err?.message ?? "No se pudo cambiar la contraseña.";
+      setPasswordError(friendly);
+      toast.error(friendly);
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
 
   useEffect(() => {
     const p = data?.profile;
@@ -179,7 +237,12 @@ function PerfilPage() {
             <User className="h-6 w-6" />
           </AvatarFallback>
         </Avatar>
-        <h1 className="font-display text-3xl font-bold">Tu perfil</h1>
+        <div>
+          <h1 className="font-display text-3xl font-bold">Tu perfil</h1>
+          <p className="mt-1 text-muted-foreground">
+            Actualiza tu información y personaliza tu experiencia de estudio.
+          </p>
+        </div>
       </div>
       <form onSubmit={onSubmit} className="mt-6 space-y-6 rounded-xl border border-border bg-card p-6">
         <div>
@@ -219,7 +282,7 @@ function PerfilPage() {
         </div>
 
         <div>
-          <Label className="text-base">Metas semanales</Label>
+          <h2 className="font-display text-lg font-bold">Metas semanales</h2>
           <div className="mt-2 grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="goal-questions" className="text-xs text-muted-foreground">
@@ -252,8 +315,14 @@ function PerfilPage() {
 
         <div>
           <div className="flex items-center justify-between">
-            <Label className="text-base">Universidades objetivo</Label>
-            <Button type="button" size="sm" variant="outline" onClick={addUniversityRow}>
+            <h2 className="font-display text-lg font-bold">Universidades objetivo</h2>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={addUniversityRow}
+              disabled={universitiesQ.isLoading}
+            >
               <Plus className="mr-1 h-3 w-3" /> Agregar
             </Button>
           </div>
@@ -298,7 +367,7 @@ function PerfilPage() {
         </div>
 
         <div>
-          <Label className="text-base">Contexto de preparación</Label>
+          <h2 className="font-display text-lg font-bold">Contexto de preparación</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             Nos ayuda a personalizar tu experiencia. Todo aquí es opcional.
           </p>
@@ -377,10 +446,89 @@ function PerfilPage() {
           </div>
         </div>
 
-        <Button type="submit" className="min-h-11" disabled={busy}>
+        <Button type="submit" className="press min-h-11" disabled={busy}>
           {busy ? "Guardando…" : "Guardar cambios"}
         </Button>
       </form>
+
+      {hasPasswordIdentity !== null && (
+        <div className="mt-6 rounded-xl border border-border bg-card p-6">
+          <h2 className="font-display text-xl font-bold">Contraseña</h2>
+          {hasPasswordIdentity ? (
+            <>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Cambia la contraseña de tu cuenta.
+              </p>
+              <form onSubmit={onChangePassword} className="mt-3 space-y-4">
+                <div>
+                  <Label htmlFor="current-password">Contraseña actual</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new-password">Nueva contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((v) => !v)}
+                      className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center overflow-hidden rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      <span key={showNewPassword ? "hide" : "show"} className="animate-icon-pop">
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </span>
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+                </div>
+                <div>
+                  <Label htmlFor="confirm-new-password">Confirmar nueva contraseña</Label>
+                  <Input
+                    id="confirm-new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                </div>
+                {passwordError && (
+                  <p
+                    role="alert"
+                    className="animate-alert-in rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  >
+                    {passwordError}
+                  </p>
+                )}
+                <Button type="submit" className="press min-h-11" disabled={passwordBusy}>
+                  {passwordBusy ? "Guardando…" : "Cambiar contraseña"}
+                </Button>
+              </form>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Tu cuenta usa "Continuar con Google" y no tiene contraseña propia. Ingresa siempre con ese botón desde la pantalla de acceso.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
