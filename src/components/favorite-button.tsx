@@ -40,12 +40,12 @@ export function FavoriteButton({ exerciseId, className }: { exerciseId: string; 
         m.mutate();
       }}
       aria-label={isFav ? "Quitar de favoritas" : "Marcar como favorita"}
-      className={`inline-flex items-center justify-center rounded-md p-1.5 transition hover:bg-secondary ${className ?? ""}`}
+      className={`inline-flex cursor-pointer items-center justify-center rounded-md p-1.5 transition hover:scale-110 hover:bg-secondary active:scale-90 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ""}`}
       disabled={m.isPending}
     >
-      <Star
-        className={`h-4 w-4 ${isFav ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`}
-      />
+      <span key={isFav ? "fav" : "unfav"} className="animate-icon-pop inline-flex">
+        <Star className={`h-4 w-4 ${isFav ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+      </span>
     </button>
   );
 }

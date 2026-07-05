@@ -414,9 +414,9 @@ function ImportRowCard({
             value={row.universityId ?? "__none"}
             onValueChange={(v) => onOverride({ universityId: v === "__none" ? null : v })}
           >
-            <SelectTrigger><SelectValue placeholder="(ninguna)" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Genérico (todas)" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none">— ninguna —</SelectItem>
+              <SelectItem value="__none">Genérico — todas las universidades</SelectItem>
               {universities.map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.short_name}</SelectItem>
               ))}

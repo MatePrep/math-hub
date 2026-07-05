@@ -217,14 +217,17 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
               value={v.university_id ?? "__none"}
               onValueChange={(val) => setV((s) => ({ ...s, university_id: val === "__none" ? null : val }))}
             >
-              <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Genérico (todas las universidades)" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none">— ninguna —</SelectItem>
+                <SelectItem value="__none">Genérico — todas las universidades</SelectItem>
                 {meta.data?.universities.map((u: any) => (
                   <SelectItem key={u.id} value={u.id}>{u.short_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Déjalo en "Genérico" si el ejercicio no es propio de un examen específico — se mostrará a estudiantes de cualquier universidad.
+            </p>
           </div>
           <div>
             <Label>Año examen</Label>

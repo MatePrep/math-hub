@@ -66,6 +66,17 @@ function PracticePage() {
     setStartTime(Date.now());
   }, [idx]);
 
+  // Must run unconditionally, before the early returns below — calling a hook
+  // only after `q.data` first arrives changes the hook count mid-mount and
+  // throws React error #310 ("rendered more hooks than during the previous
+  // render") on essentially every practice session start.
+  const currentId = order[idx];
+  const detailQ = useQuery({
+    queryKey: ["exercise-detail", currentId],
+    queryFn: () => getExercise({ data: { id: currentId! } }),
+    enabled: !!currentId && !!result,
+  });
+
   if (q.isLoading) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>;
   if (!q.data || q.data.length === 0) {
     return (
@@ -76,13 +87,7 @@ function PracticePage() {
     );
   }
 
-  const currentId = order[idx];
   const current = q.data.find((e: any) => e.id === currentId);
-  const detailQ = useQuery({
-    queryKey: ["exercise-detail", currentId],
-    queryFn: () => getExercise({ data: { id: currentId! } }),
-    enabled: !!currentId && !!result,
-  });
   if (!current) return null;
   const total = order.length;
 

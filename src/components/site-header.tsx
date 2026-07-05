@@ -128,7 +128,7 @@ export function SiteHeader() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="ml-1 rounded-full transition-opacity hover:opacity-80"
+                    className="ml-1 cursor-pointer rounded-full transition duration-150 hover:scale-105 hover:opacity-80 active:scale-95"
                     aria-label="Cuenta"
                   >
                     <Avatar className="h-8 w-8 border border-border">
