@@ -7,7 +7,8 @@ import { getFullProfile } from "@/lib/profile.functions";
 import { getWeeklyProgress } from "@/lib/goals.functions";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Progress } from "@/components/ui/progress";
-import { Flame, Target, ListChecks, Trophy, CalendarClock, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Flame, Target, ListChecks, Trophy, CalendarClock, AlertCircle, Shuffle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/panel")({
   head: () => ({ meta: [{ title: "Panel · MatePre" }] }),
@@ -34,14 +35,20 @@ function PanelPage() {
   const weakest = [...stats.topicStats].sort((a, b) => a.accuracy - b.accuracy)[0];
 
   const hasNoTargetUniversity = !!profileQ.data && profileQ.data.universities.length === 0;
+  const primaryUniversity = profileQ.data?.universities[0]?.university ?? null;
+  const isNewStudent = stats.total === 0;
 
   const universities = (profileQ.data?.universities ?? [])
-    .filter((u: any) => u.exam_date)
+    // A student's own date (set in su perfil) always wins; otherwise fall back to the
+    // university's own known exam date, so an admin updating it there automatically
+    // updates the countdown for every student who hasn't overridden it themselves.
+    .map((u: any) => ({ ...u, effectiveExamDate: u.exam_date ?? u.university?.exam_date ?? null }))
+    .filter((u: any) => u.effectiveExamDate)
     .map((u: any) => ({
       id: u.id,
       name: u.university?.short_name ?? u.university?.name ?? "",
-      examDate: u.exam_date as string,
-      daysLeft: Math.ceil((new Date(u.exam_date).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000),
+      examDate: u.effectiveExamDate as string,
+      daysLeft: Math.ceil((new Date(u.effectiveExamDate).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000),
     }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
@@ -60,6 +67,14 @@ function PanelPage() {
             </Link>
           </p>
         </div>
+      )}
+
+      {!hasNoTargetUniversity && primaryUniversity && (
+        <StartPracticeCard
+          universitySlug={primaryUniversity.slug}
+          universityName={primaryUniversity.short_name ?? primaryUniversity.name}
+          isNewStudent={isNewStudent}
+        />
       )}
 
       {(universities.length > 0 || weeklyQ.data) && (
@@ -180,6 +195,45 @@ function PanelPage() {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function StartPracticeCard({
+  universitySlug,
+  universityName,
+  isNewStudent,
+}: {
+  universitySlug: string;
+  universityName: string;
+  isNewStudent: boolean;
+}) {
+  return (
+    <div className="mt-6 rounded-xl border border-primary/30 bg-primary/5 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display text-lg font-bold">
+            {isNewStudent ? "¡Bienvenido! Da tu primer examen o simulacro" : "Practica con condiciones reales"}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isNewStudent
+              ? `Rinde un examen oficial o genera un simulacro de ${universityName} para ver dónde estás parado.`
+              : `Sigue avanzando con un examen oficial o un nuevo simulacro de ${universityName}.`}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild className="press">
+            <Link to="/examenes/$slug" params={{ slug: universitySlug }}>
+              <ListChecks className="mr-2 h-4 w-4" /> Exámenes de {universityName}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="press">
+            <Link to="/simulacros">
+              <Shuffle className="mr-2 h-4 w-4" /> Generar simulacro
+            </Link>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

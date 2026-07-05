@@ -13,9 +13,18 @@ interface Props {
   onChange: (path: string | null) => void;
   onUploadingChange?: (uploading: boolean) => void;
   label?: string;
+  uploadFn?: (file: File) => Promise<string>;
+  deleteFn?: (path: string) => Promise<void>;
 }
 
-export function ImageUpload({ value, onChange, onUploadingChange, label }: Props) {
+export function ImageUpload({
+  value,
+  onChange,
+  onUploadingChange,
+  label,
+  uploadFn = uploadExerciseImage,
+  deleteFn = deleteExerciseImage,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -56,11 +65,11 @@ export function ImageUpload({ value, onChange, onUploadingChange, label }: Props
     const tick = setInterval(() => setProgress((p) => (p < 85 ? p + 10 : p)), 200);
     try {
       const oldPath = value;
-      const path = await uploadExerciseImage(file);
+      const path = await uploadFn(file);
       setProgress(100);
       onChange(path);
       if (oldPath) {
-        deleteExerciseImage(oldPath).catch(() => {});
+        deleteFn(oldPath).catch(() => {});
       }
     } catch (e: any) {
       setError(e?.message ?? "Error subiendo imagen");
@@ -80,7 +89,7 @@ export function ImageUpload({ value, onChange, onUploadingChange, label }: Props
     const oldPath = value;
     onChange(null);
     setPreview(null);
-    deleteExerciseImage(oldPath).catch(() => {});
+    deleteFn(oldPath).catch(() => {});
   }
 
   function onDrop(e: React.DragEvent) {

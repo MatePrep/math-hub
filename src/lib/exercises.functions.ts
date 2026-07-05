@@ -30,6 +30,7 @@ export const listUniversities = createServerFn({ method: "GET" }).handler(async 
   const { data, error } = await sb
     .from("universities")
     .select("id, slug, name, short_name, description")
+    .eq("active", true)
     .order("short_name");
   if (error) throw new Error(error.message);
   const { data: counts } = await sb.from("exercises").select("university_id");

@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Timer, Shuffle, Play, Loader2, ChevronDown, History, LogIn } from "lucide-react";
-import { listPublishedTemplates, startExamSession, listMyTemplateSessions } from "@/lib/exams.functions";
+import { Timer, Shuffle, Play, ChevronDown, History, LogIn } from "lucide-react";
+import { listPublishedTemplates, listMyTemplateSessions } from "@/lib/exams.functions";
 import { getFullProfile, listAllUniversities } from "@/lib/profile.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 
@@ -33,7 +33,6 @@ function SimulacrosPage() {
   const navigate = useNavigate();
   const signedIn = useSignedIn();
   const listFn = useServerFn(listPublishedTemplates);
-  const startFn = useServerFn(startExamSession);
   const sessionsFn = useServerFn(listMyTemplateSessions);
   const profileFn = useServerFn(getFullProfile);
   const universitiesFn = useServerFn(listAllUniversities);
@@ -56,7 +55,6 @@ function SimulacrosPage() {
     queryFn: () => sessionsFn(),
     enabled: signedIn === true,
   });
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -81,23 +79,11 @@ function SimulacrosPage() {
     });
   }
 
-  async function onGenerate(examId: string) {
-    if (signedIn !== true) {
-      toast("Inicia sesión para generar un simulacro", {
-        description: "Crea una cuenta gratis para guardar tu progreso.",
-      });
-      navigate({ to: "/auth" });
-      return;
-    }
-    setBusyId(examId);
-    try {
-      const { sessionId } = await startFn({ data: { examId } });
-      navigate({ to: "/examen-sesion/$sessionId", params: { sessionId } });
-    } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo generar el simulacro");
-    } finally {
-      setBusyId(null);
-    }
+  function onGenerateClick() {
+    toast("Inicia sesión para generar un simulacro", {
+      description: "Crea una cuenta gratis para guardar tu progreso.",
+    });
+    navigate({ to: "/auth" });
   }
 
   const showIncompleteProfileHint =
@@ -123,9 +109,11 @@ function SimulacrosPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las universidades</SelectItem>
-              {(universitiesQ.data ?? []).map((u: any) => (
-                <SelectItem key={u.id} value={u.id}>{u.short_name ?? u.name}</SelectItem>
-              ))}
+              {(universitiesQ.data ?? [])
+                .filter((u: any) => u.active)
+                .map((u: any) => (
+                  <SelectItem key={u.id} value={u.id}>{u.short_name ?? u.name}</SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -166,15 +154,17 @@ function SimulacrosPage() {
                   <Badge variant="outline">{t.ruleCount} materia(s)</Badge>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <Button className="press" onClick={() => onGenerate(t.id)} disabled={busyId === t.id}>
-                    {busyId === t.id ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generando…</>
-                    ) : signedIn === false ? (
-                      <><LogIn className="mr-2 h-4 w-4" /> Ingresar para generar</>
-                    ) : (
-                      <><Play className="mr-2 h-4 w-4" /> Generar nuevo simulacro</>
-                    )}
-                  </Button>
+                  {signedIn === true ? (
+                    <Button asChild className="press">
+                      <Link to="/simulacro/$id" params={{ id: t.id }}>
+                        <Play className="mr-2 h-4 w-4" /> Generar nuevo simulacro
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button className="press" onClick={onGenerateClick}>
+                      <LogIn className="mr-2 h-4 w-4" /> Ingresar para generar
+                    </Button>
+                  )}
                   {attempts.length > 0 && (
                     <button
                       type="button"

@@ -92,6 +92,43 @@ export const listPublishedTemplates = createServerFn({ method: "GET" })
     }));
   });
 
+export const getTemplatePreview = createServerFn({ method: "GET" })
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = publicClient();
+    const { data: exam, error } = await sb
+      .from("exams")
+      .select(
+        "id, title, description, time_limit_min, passing_score, allow_multiple_attempts, status, exam_type, university:universities(id, slug, short_name), exam_template_rules(question_count, position, topic:topics(name))",
+      )
+      .eq("id", data.id)
+      .eq("status", "published")
+      .eq("exam_type", "template")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!exam) return null;
+
+    const rules = ((exam as any).exam_template_rules ?? []).sort(
+      (a: any, b: any) => a.position - b.position,
+    );
+    const topicBreakdown = rules.map((r: any) => ({
+      name: r.topic?.name ?? "Tema",
+      count: r.question_count as number,
+    }));
+    const totalQuestions = topicBreakdown.reduce((sum: number, r: any) => sum + r.count, 0);
+
+    return {
+      id: exam.id,
+      title: exam.title,
+      description: exam.description,
+      time_limit_min: exam.time_limit_min,
+      passing_score: exam.passing_score,
+      allow_multiple_attempts: exam.allow_multiple_attempts,
+      university: (exam as any).university,
+      topicBreakdown,
+      totalQuestions,
+    };
+  });
 
 export const getExamPreview = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
@@ -105,7 +142,23 @@ export const getExamPreview = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!exam) return null;
-    return { ...exam, questionCount: (exam as any).exam_questions?.[0]?.count ?? 0 };
+
+    const { data: rows } = await sb
+      .from("exam_questions")
+      .select("exercise:exercises(topic:topics(name))")
+      .eq("exam_id", data.id);
+    const counts = new Map<string, number>();
+    (rows ?? []).forEach((r: any) => {
+      const name = r.exercise?.topic?.name ?? "Otros";
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    });
+    const topicBreakdown = Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+
+    return {
+      ...exam,
+      questionCount: (exam as any).exam_questions?.[0]?.count ?? 0,
+      topicBreakdown,
+    };
   });
 
 export const getMyExamAttempts = createServerFn({ method: "GET" })

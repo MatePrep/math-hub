@@ -98,7 +98,7 @@ function OnboardingPage() {
 
   function addUniversityRow() {
     const used = new Set(universities.map((u) => u.universityId));
-    const next = allUniversities.find((u: any) => !used.has(u.id));
+    const next = allUniversities.find((u: any) => u.active && !used.has(u.id));
     if (!next) {
       toast.error("Ya agregaste todas las universidades disponibles");
       return;
@@ -187,11 +187,13 @@ function OnboardingPage() {
                       <SelectValue placeholder="Universidad" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allUniversities.map((u: any) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.short_name ?? u.name}
-                        </SelectItem>
-                      ))}
+                      {allUniversities
+                        .filter((u: any) => u.active)
+                        .map((u: any) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.short_name ?? u.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <Input

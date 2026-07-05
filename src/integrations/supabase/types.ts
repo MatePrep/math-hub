@@ -552,22 +552,31 @@ export type Database = {
       }
       universities: {
         Row: {
+          active: boolean
           description: string | null
+          exam_date: string | null
           id: string
+          logo_path: string | null
           name: string
           short_name: string
           slug: string
         }
         Insert: {
+          active?: boolean
           description?: string | null
+          exam_date?: string | null
           id?: string
+          logo_path?: string | null
           name: string
           short_name: string
           slug: string
         }
         Update: {
+          active?: boolean
           description?: string | null
+          exam_date?: string | null
           id?: string
+          logo_path?: string | null
           name?: string
           short_name?: string
           slug?: string

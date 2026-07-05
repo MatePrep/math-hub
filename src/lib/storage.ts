@@ -31,6 +31,16 @@ export async function uploadExerciseImage(file: File): Promise<string> {
   return path;
 }
 
+export async function uploadUniversityLogo(file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
+  const path = `logos/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from(EXERCISE_IMAGES_BUCKET)
+    .upload(path, file, { cacheControl: "31536000", upsert: false, contentType: file.type });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
 export async function getExerciseImageUrl(path: string | null | undefined): Promise<string | null> {
   if (!path) return null;
   const { data, error } = await supabase.storage

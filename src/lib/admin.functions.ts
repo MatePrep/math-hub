@@ -86,7 +86,7 @@ export const listAdminMeta = createServerFn({ method: "GET" })
     const [topics, subtopics, universities] = await Promise.all([
       context.supabase.from("topics").select("id,name,slug,active,color").order("order"),
       context.supabase.from("subtopics").select("id,name,topic_id").order("order"),
-      context.supabase.from("universities").select("id,short_name,name").order("short_name"),
+      context.supabase.from("universities").select("id,short_name,name,active").order("short_name"),
     ]);
     if (topics.error) throw new Error(topics.error.message);
     if (subtopics.error) throw new Error(subtopics.error.message);
@@ -395,6 +395,161 @@ export const deleteTopic = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase.from("topics").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ========== UNIVERSITIES management ==========
+
+export const listAdminUniversities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data, error } = await context.supabase
+      .from("universities")
+      .select("id, name, short_name, slug, description, logo_path, exam_date, active")
+      .order("name");
+    if (error) throw new Error(error.message);
+
+    const [{ data: studentRows }, { data: examRows }, { data: exerciseRows }] = await Promise.all([
+      context.supabase.from("student_universities").select("university_id"),
+      context.supabase.from("exams").select("university_id, exam_type").not("university_id", "is", null),
+      context.supabase.from("exercises").select("university_id").not("university_id", "is", null),
+    ]);
+
+    const bump = (m: Map<string, number>, key: string) => m.set(key, (m.get(key) ?? 0) + 1);
+    const studentCounts = new Map<string, number>();
+    (studentRows ?? []).forEach((r: any) => bump(studentCounts, r.university_id));
+    const officialExamCounts = new Map<string, number>();
+    const templateCounts = new Map<string, number>();
+    (examRows ?? []).forEach((r: any) =>
+      bump(r.exam_type === "template" ? templateCounts : officialExamCounts, r.university_id),
+    );
+    const exerciseCounts = new Map<string, number>();
+    (exerciseRows ?? []).forEach((r: any) => bump(exerciseCounts, r.university_id));
+
+    return (data ?? []).map((u: any) => ({
+      ...u,
+      studentCount: studentCounts.get(u.id) ?? 0,
+      examCount: officialExamCounts.get(u.id) ?? 0,
+      templateCount: templateCounts.get(u.id) ?? 0,
+      exerciseCount: exerciseCounts.get(u.id) ?? 0,
+    }));
+  });
+
+const universityBase = z.object({
+  name: z.string().trim().min(2).max(150),
+  short_name: z.string().trim().min(1).max(40),
+  description: z.string().trim().max(500).nullable().optional(),
+  logo_path: z.string().nullable().optional(),
+  exam_date: z.string().trim().nullable().optional(),
+});
+
+export const createUniversity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => universityBase.parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: existing } = await context.supabase
+      .from("universities")
+      .select("id")
+      .ilike("name", data.name)
+      .maybeSingle();
+    if (existing) throw new Error("Ya existe una universidad con ese nombre.");
+
+    let slug = slugify(data.name);
+    if (!slug) slug = `universidad-${Date.now()}`;
+    const { data: bySlug } = await context.supabase
+      .from("universities")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (bySlug) slug = `${slug}-${Date.now().toString(36)}`;
+
+    const { data: row, error } = await context.supabase
+      .from("universities")
+      .insert({
+        name: data.name,
+        short_name: data.short_name,
+        slug,
+        description: data.description ?? null,
+        logo_path: data.logo_path ?? null,
+        exam_date: data.exam_date || null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id as string };
+  });
+
+export const updateUniversity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => universityBase.extend({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: existing } = await context.supabase
+      .from("universities")
+      .select("id")
+      .ilike("name", data.name)
+      .neq("id", data.id)
+      .maybeSingle();
+    if (existing) throw new Error("Ya existe otra universidad con ese nombre.");
+
+    const { error } = await context.supabase
+      .from("universities")
+      .update({
+        name: data.name,
+        short_name: data.short_name,
+        description: data.description ?? null,
+        logo_path: data.logo_path ?? null,
+        exam_date: data.exam_date || null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setUniversityActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase
+      .from("universities")
+      .update({ active: data.active })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteUniversity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const [{ count: exerciseCount }, { count: examCount }, { count: sessionCount }, { count: studentCount }] =
+      await Promise.all([
+        context.supabase.from("exercises").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
+        context.supabase.from("exams").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
+        context.supabase.from("exam_sessions").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
+        context.supabase.from("student_universities").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
+      ]);
+    const total = (exerciseCount ?? 0) + (examCount ?? 0) + (sessionCount ?? 0) + (studentCount ?? 0);
+    if (total > 0) {
+      throw new Error(
+        `No se puede eliminar: tiene ${studentCount ?? 0} estudiante(s), ${examCount ?? 0} examen(es)/simulacro(s), ${exerciseCount ?? 0} ejercicio(s) y ${sessionCount ?? 0} sesión(es) asociadas. Desactívala en su lugar.`,
+      );
+    }
+
+    const { data: uni } = await context.supabase
+      .from("universities")
+      .select("logo_path")
+      .eq("id", data.id)
+      .maybeSingle();
+    const { error } = await context.supabase.from("universities").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    if (uni?.logo_path) {
+      await context.supabase.storage.from("exercise-images").remove([uni.logo_path]);
+    }
     return { ok: true };
   });
 

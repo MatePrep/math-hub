@@ -125,8 +125,9 @@ function AdminImportExercises() {
       const universityMatch = p.frontmatter.universidad
         ? meta.data.universities.find(
             (u: any) =>
-              normalizeForMatch(u.name) === normalizeForMatch(p.frontmatter.universidad!) ||
-              normalizeForMatch(u.short_name) === normalizeForMatch(p.frontmatter.universidad!),
+              u.active &&
+              (normalizeForMatch(u.name) === normalizeForMatch(p.frontmatter.universidad!) ||
+                normalizeForMatch(u.short_name) === normalizeForMatch(p.frontmatter.universidad!)),
           ) ?? null
         : null;
       const universityId =
@@ -417,8 +418,11 @@ function ImportRowCard({
             <SelectTrigger><SelectValue placeholder="Genérico (todas)" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">Genérico — todas las universidades</SelectItem>
-              {universities.map((u) => (
-                <SelectItem key={u.id} value={u.id}>{u.short_name}</SelectItem>
+              {universities.map((u: any) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.short_name}
+                  {u.active === false ? " (inactiva)" : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

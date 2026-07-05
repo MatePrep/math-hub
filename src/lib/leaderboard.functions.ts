@@ -48,6 +48,7 @@ export const listUniversitiesWithExams = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("universities")
       .select("id, slug, short_name, name")
+      .eq("active", true)
       .order("short_name");
     if (error) throw new Error(error.message);
     return data ?? [];

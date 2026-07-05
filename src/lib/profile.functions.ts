@@ -16,7 +16,7 @@ export const getFullProfile = createServerFn({ method: "GET" })
         .maybeSingle(),
       supabase
         .from("student_universities")
-        .select("id, university_id, exam_date, university:universities(id, slug, short_name, name)")
+        .select("id, university_id, exam_date, university:universities(id, slug, short_name, name, exam_date)")
         .eq("user_id", userId),
     ]);
     if (pErr) throw new Error(pErr.message);
@@ -29,7 +29,7 @@ export const listAllUniversities = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("universities")
-      .select("id, slug, short_name, name")
+      .select("id, slug, short_name, name, active")
       .order("short_name");
     if (error) throw new Error(error.message);
     return data ?? [];
