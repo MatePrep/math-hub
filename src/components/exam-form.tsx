@@ -23,6 +23,7 @@ import {
   listExerciseBank,
   listAdminMeta,
   getTopicQuestionCounts,
+  getScoringDefaults,
 } from "@/lib/admin.functions";
 
 
@@ -51,6 +52,9 @@ export interface ExamFormValues {
   allow_multiple_attempts: boolean;
   exercise_ids: string[];
   template_rules: TemplateRule[];
+  points_correct: number;
+  points_incorrect: number;
+  points_empty: number;
 }
 
 const empty: ExamFormValues = {
@@ -66,6 +70,9 @@ const empty: ExamFormValues = {
   allow_multiple_attempts: false,
   exercise_ids: [],
   template_rules: [],
+  points_correct: 20,
+  points_incorrect: -2,
+  points_empty: 0,
 };
 
 export function ExamForm({ initial }: { initial?: ExamFormValues }) {
@@ -75,9 +82,17 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const bankFn = useServerFn(listExerciseBank);
   const metaFn = useServerFn(listAdminMeta);
   const countsFn = useServerFn(getTopicQuestionCounts);
+  const scoringDefaultsFn = useServerFn(getScoringDefaults);
   const bank = useQuery({ queryKey: ["exercise-bank"], queryFn: () => bankFn() });
   const meta = useQuery({ queryKey: ["admin-meta"], queryFn: () => metaFn() });
-
+  // Only fetched for brand-new exams — an existing exam already has its own
+  // saved points config, which must never be overwritten by later changes to
+  // the app-wide defaults.
+  const scoringDefaults = useQuery({
+    queryKey: ["scoring-defaults"],
+    queryFn: () => scoringDefaultsFn(),
+    enabled: !initial,
+  });
 
   const [v, setV] = useState<ExamFormValues>(initial ?? empty);
   const [saving, setSaving] = useState(false);
@@ -88,6 +103,13 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     if (initial) setV({ ...empty, ...initial });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial?.id]);
+
+  useEffect(() => {
+    if (!initial && scoringDefaults.data) {
+      setV((s) => ({ ...s, ...scoringDefaults.data }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scoringDefaults.data]);
 
   const bankTopics = useMemo(() => {
     const map = new Map<string, string>();
@@ -227,6 +249,9 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         allow_multiple_attempts: v.allow_multiple_attempts,
         exercise_ids: v.exam_type === "standard" ? v.exercise_ids : [],
         template_rules: v.exam_type === "template" ? v.template_rules : [],
+        points_correct: Number(v.points_correct),
+        points_incorrect: Number(v.points_incorrect),
+        points_empty: Number(v.points_empty),
       };
       if (initial?.id) {
         await update({ data: { id: initial.id, ...payload } });
@@ -280,8 +305,8 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
           <Input type="number" min={1} max={600} value={v.time_limit_min} onChange={(e) => setV((s) => ({ ...s, time_limit_min: Number(e.target.value) }))} required />
         </div>
         <div>
-          <Label>Puntaje aprobatorio (%) *</Label>
-          <Input type="number" min={0} max={100} value={v.passing_score} onChange={(e) => setV((s) => ({ ...s, passing_score: Number(e.target.value) }))} required />
+          <Label>Puntaje mínimo aprobatorio (puntos) *</Label>
+          <Input type="number" min={0} max={100000} value={v.passing_score} onChange={(e) => setV((s) => ({ ...s, passing_score: Number(e.target.value) }))} required />
         </div>
         <div>
           <Label>Máx. intentos (opcional)</Label>
@@ -311,6 +336,29 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         <div className="sm:col-span-2 flex items-center gap-3 rounded-md border border-border bg-card p-3">
           <Switch checked={v.allow_multiple_attempts} onCheckedChange={(c) => setV((s) => ({ ...s, allow_multiple_attempts: c }))} id="allow-multi" />
           <Label htmlFor="allow-multi" className="cursor-pointer">Permitir múltiples intentos (respeta "Máx. intentos" si lo defines)</Label>
+        </div>
+
+        <div className="sm:col-span-2 rounded-md border border-border bg-card p-3">
+          <Label className="text-base">Puntaje por pregunta</Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {initial
+              ? "Propio de este examen — cambiar los valores por defecto generales no afecta lo ya guardado aquí."
+              : "Prellenado con los valores por defecto generales (Configuración → Puntaje); puedes ajustarlos solo para este examen."}
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Correcta</Label>
+              <Input type="number" step="0.5" value={v.points_correct} onChange={(e) => setV((s) => ({ ...s, points_correct: Number(e.target.value) }))} required />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Incorrecta</Label>
+              <Input type="number" step="0.5" value={v.points_incorrect} onChange={(e) => setV((s) => ({ ...s, points_incorrect: Number(e.target.value) }))} required />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Vacía / sin responder</Label>
+              <Input type="number" step="0.5" value={v.points_empty} onChange={(e) => setV((s) => ({ ...s, points_empty: Number(e.target.value) }))} required />
+            </div>
+          </div>
         </div>
       </div>
 

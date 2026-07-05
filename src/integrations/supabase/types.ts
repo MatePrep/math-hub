@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          default_points_correct: number
+          default_points_empty: number
+          default_points_incorrect: number
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          default_points_correct?: number
+          default_points_empty?: number
+          default_points_incorrect?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          default_points_correct?: number
+          default_points_empty?: number
+          default_points_incorrect?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attempts: {
         Row: {
           created_at: string
@@ -97,10 +121,14 @@ export type Database = {
       exam_sessions: {
         Row: {
           answers: Json
+          correct_count: number | null
+          empty_count: number | null
           exam_id: string | null
           finished_at: string | null
           flagged: Json
           id: string
+          incorrect_count: number | null
+          max_score: number | null
           question_ids: string[]
           score: number | null
           started_at: string
@@ -112,10 +140,14 @@ export type Database = {
         }
         Insert: {
           answers?: Json
+          correct_count?: number | null
+          empty_count?: number | null
           exam_id?: string | null
           finished_at?: string | null
           flagged?: Json
           id?: string
+          incorrect_count?: number | null
+          max_score?: number | null
           question_ids?: string[]
           score?: number | null
           started_at?: string
@@ -127,10 +159,14 @@ export type Database = {
         }
         Update: {
           answers?: Json
+          correct_count?: number | null
+          empty_count?: number | null
           exam_id?: string | null
           finished_at?: string | null
           flagged?: Json
           id?: string
+          incorrect_count?: number | null
+          max_score?: number | null
           question_ids?: string[]
           score?: number | null
           started_at?: string
@@ -212,6 +248,9 @@ export type Database = {
           id: string
           max_attempts: number | null
           passing_score: number
+          points_correct: number
+          points_empty: number
+          points_incorrect: number
           question_order: string
           status: string
           time_limit_min: number
@@ -228,6 +267,9 @@ export type Database = {
           id?: string
           max_attempts?: number | null
           passing_score?: number
+          points_correct?: number
+          points_empty?: number
+          points_incorrect?: number
           question_order?: string
           status?: string
           time_limit_min?: number
@@ -244,6 +286,9 @@ export type Database = {
           id?: string
           max_attempts?: number | null
           passing_score?: number
+          points_correct?: number
+          points_empty?: number
+          points_incorrect?: number
           question_order?: string
           status?: string
           time_limit_min?: number

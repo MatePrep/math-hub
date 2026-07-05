@@ -99,7 +99,7 @@ export const getTemplatePreview = createServerFn({ method: "GET" })
     const { data: exam, error } = await sb
       .from("exams")
       .select(
-        "id, title, description, time_limit_min, passing_score, allow_multiple_attempts, status, exam_type, university:universities(id, slug, short_name), exam_template_rules(question_count, position, topic:topics(name))",
+        "id, title, description, time_limit_min, passing_score, allow_multiple_attempts, status, exam_type, points_correct, points_incorrect, points_empty, university:universities(id, slug, short_name), exam_template_rules(question_count, position, topic:topics(name))",
       )
       .eq("id", data.id)
       .eq("status", "published")
@@ -125,8 +125,12 @@ export const getTemplatePreview = createServerFn({ method: "GET" })
       passing_score: exam.passing_score,
       allow_multiple_attempts: exam.allow_multiple_attempts,
       university: (exam as any).university,
+      points_correct: exam.points_correct,
+      points_incorrect: exam.points_incorrect,
+      points_empty: exam.points_empty,
       topicBreakdown,
       totalQuestions,
+      maxScore: totalQuestions * exam.points_correct,
     };
   });
 
@@ -136,7 +140,7 @@ export const getExamPreview = createServerFn({ method: "GET" })
     const sb = publicClient();
     const { data: exam, error } = await sb
       .from("exams")
-      .select("id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, exam_questions(count)")
+      .select("id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, points_correct, points_incorrect, points_empty, exam_questions(count)")
       .eq("id", data.id)
       .eq("status", "published")
       .maybeSingle();
@@ -153,11 +157,13 @@ export const getExamPreview = createServerFn({ method: "GET" })
       counts.set(name, (counts.get(name) ?? 0) + 1);
     });
     const topicBreakdown = Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+    const questionCount = (exam as any).exam_questions?.[0]?.count ?? 0;
 
     return {
       ...exam,
-      questionCount: (exam as any).exam_questions?.[0]?.count ?? 0,
+      questionCount,
       topicBreakdown,
+      maxScore: questionCount * exam.points_correct,
     };
   });
 
@@ -168,7 +174,7 @@ export const getMyExamAttempts = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: rows, error } = await supabase
       .from("exam_sessions")
-      .select("id, status, started_at, finished_at, score, total")
+      .select("id, status, started_at, finished_at, score, total, max_score")
       .eq("user_id", userId)
       .eq("exam_id", data.examId)
       .order("started_at", { ascending: false });
@@ -191,7 +197,7 @@ export const listMyUniversityExamSessions = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await supabase
       .from("exam_sessions")
-      .select("id, status, started_at, finished_at, score, total")
+      .select("id, status, started_at, finished_at, score, total, max_score")
       .eq("user_id", userId)
       .eq("university_id", university.id)
       .order("started_at", { ascending: false })
@@ -228,7 +234,7 @@ export const startExamSession = createServerFn({ method: "POST" })
     // Load exam metadata
     const { data: exam, error: examErr } = await supabase
       .from("exams")
-      .select("id, status, time_limit_min, max_attempts, allow_multiple_attempts, question_order, exam_type")
+      .select("id, status, time_limit_min, max_attempts, allow_multiple_attempts, question_order, exam_type, university_id")
       .eq("id", data.examId)
       .maybeSingle();
     if (examErr) throw new Error(examErr.message);
@@ -277,6 +283,12 @@ export const startExamSession = createServerFn({ method: "POST" })
 
       for (const rule of rules) {
         let q = supabase.from("exercises").select("id, topic:topics(name)").eq("topic_id", rule.topic_id);
+        // Pool must combine the exam's own university with generic (university-less)
+        // exercises — never every university's exercises unfiltered (see
+        // plan-importar-ejercicios-markdown_update.md §5).
+        q = exam.university_id
+          ? q.or(`university_id.eq.${exam.university_id},university_id.is.null`)
+          : q.is("university_id", null);
         if (rule.difficulty_filter) q = q.eq("difficulty", rule.difficulty_filter);
         const { data: pool, error: pErr } = await q;
         if (pErr) throw new Error(pErr.message);
@@ -423,6 +435,26 @@ export const saveExamAnswers = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Points-per-question scoring (see plan-sistema-puntajes.md). The three point
+// values are always parameters, never hardcoded here — they come from the
+// specific exam/template's own points_correct/incorrect/empty config (or, for
+// the rare exam_id-less session, the app-wide default config). This is the
+// only formula in the codebase that turns a correct/incorrect/empty count
+// into a score; the result is clamped to 0 (a student's score is never shown
+// as negative, even though the raw formula can go below zero internally).
+const FALLBACK_SCORING = { correct: 20, incorrect: -2, empty: 0 };
+
+function computeExamScore(
+  counts: { correct: number; incorrect: number; empty: number },
+  points: { correct: number; incorrect: number; empty: number },
+): number {
+  const raw =
+    counts.correct * points.correct +
+    counts.incorrect * points.incorrect +
+    counts.empty * points.empty;
+  return Math.max(0, raw);
+}
+
 export const submitExamSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -449,18 +481,45 @@ export const submitExamSession = createServerFn({ method: "POST" })
     const finalAnswers: Record<string, number> = data.answers ?? (session.answers as any) ?? {};
     const ids: string[] = (session.question_ids ?? []) as any;
 
-    const { data: exs } = await supabase
-      .from("exercises")
-      .select("id, correct_choice")
-      .in("id", ids);
+    const [{ data: exs }, examPoints] = await Promise.all([
+      supabase.from("exercises").select("id, correct_choice").in("id", ids),
+      (async () => {
+        if (session.exam_id) {
+          const { data: exam } = await supabase
+            .from("exams")
+            .select("points_correct, points_incorrect, points_empty")
+            .eq("id", session.exam_id)
+            .maybeSingle();
+          if (exam) {
+            return { correct: exam.points_correct, incorrect: exam.points_incorrect, empty: exam.points_empty };
+          }
+        }
+        const { data: settings } = await supabase
+          .from("app_settings")
+          .select("default_points_correct, default_points_incorrect, default_points_empty")
+          .eq("id", true)
+          .maybeSingle();
+        return settings
+          ? {
+              correct: settings.default_points_correct,
+              incorrect: settings.default_points_incorrect,
+              empty: settings.default_points_empty,
+            }
+          : FALLBACK_SCORING;
+      })(),
+    ]);
     const correctMap = new Map((exs ?? []).map((e: any) => [e.id, e.correct_choice]));
 
     let correctCount = 0;
+    let incorrectCount = 0;
+    let emptyCount = 0;
     const attemptInserts = ids.map((id) => {
       const selected = finalAnswers[id];
       const correct = correctMap.get(id);
       const isCorrect = selected !== undefined && selected === correct;
-      if (isCorrect) correctCount += 1;
+      if (selected === undefined) emptyCount += 1;
+      else if (isCorrect) correctCount += 1;
+      else incorrectCount += 1;
       return {
         user_id: userId,
         exercise_id: id,
@@ -476,7 +535,8 @@ export const submitExamSession = createServerFn({ method: "POST" })
     }
 
     const total = ids.length;
-    const scorePct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+    const maxScore = total * examPoints.correct;
+    const score = computeExamScore({ correct: correctCount, incorrect: incorrectCount, empty: emptyCount }, examPoints);
 
     await supabase
       .from("exam_sessions")
@@ -484,12 +544,16 @@ export const submitExamSession = createServerFn({ method: "POST" })
         status: "graded",
         finished_at: new Date().toISOString(),
         answers: finalAnswers,
-        score: scorePct,
+        score,
         total,
+        correct_count: correctCount,
+        incorrect_count: incorrectCount,
+        empty_count: emptyCount,
+        max_score: maxScore,
       })
       .eq("id", session.id);
 
-    return { score: scorePct, total, correctCount };
+    return { score, total, correctCount, incorrectCount, emptyCount, maxScore };
   });
 
 export const listMyTemplateSessions = createServerFn({ method: "GET" })
@@ -498,7 +562,7 @@ export const listMyTemplateSessions = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: rows, error } = await supabase
       .from("exam_sessions")
-      .select("id, exam_id, status, started_at, finished_at, score, total, exam:exams(id, title, exam_type)")
+      .select("id, exam_id, status, started_at, finished_at, score, total, max_score, exam:exams(id, title, exam_type)")
       .eq("user_id", userId)
       .in("status", ["submitted", "graded"])
       .not("exam_id", "is", null)
@@ -514,7 +578,7 @@ export const getExamResult = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: session, error } = await supabase
       .from("exam_sessions")
-      .select("*, exam:exams(id, title, passing_score)")
+      .select("*, exam:exams(id, title, passing_score, points_correct, points_incorrect, points_empty)")
       .eq("id", data.sessionId)
       .eq("user_id", userId)
       .maybeSingle();

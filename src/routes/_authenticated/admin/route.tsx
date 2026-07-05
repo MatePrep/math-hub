@@ -36,6 +36,9 @@ function AdminLayout() {
           <Link to="/admin/universidades" activeProps={{ className: "text-primary font-semibold" }} className="text-muted-foreground hover:text-foreground">
             Universidades
           </Link>
+          <Link to="/admin/configuracion" activeProps={{ className: "text-primary font-semibold" }} className="text-muted-foreground hover:text-foreground">
+            Configuración
+          </Link>
         </nav>
       </div>
       <Outlet />

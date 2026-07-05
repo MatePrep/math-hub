@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, MinusCircle, Clock, Users } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { getExamResult } from "@/lib/exams.functions";
 import { getExamStats } from "@/lib/goals.functions";
+import { InfoTooltip } from "@/components/info-tooltip";
 
 export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/resultado")({
   component: ResultPage,
@@ -79,19 +80,27 @@ function ResultPage() {
   const s: any = q.data.session;
   const questions: any[] = q.data.questions;
   const answers = (s.answers as Record<string, number>) ?? {};
-  const passing = s.exam?.passing_score ?? 60;
+  const passing = s.exam?.passing_score ?? 0;
   const passed = score >= passing;
-  const correctCount = questions.filter((ex) => answers[ex.id] === ex.correct_choice).length;
+  // Correct/incorrect/empty counts and the max possible score are snapshotted
+  // at grading time (submitExamSession) using that exam's own points config —
+  // read them back directly rather than re-deriving from questions/answers,
+  // so a later edit to the exam's scoring config or an exercise's
+  // correct_choice never silently rewrites an already-graded result.
+  const correctCount = s.correct_count ?? questions.filter((ex) => answers[ex.id] === ex.correct_choice).length;
   const totalQuestions = questions.length;
-  const incorrectCount = totalQuestions - correctCount;
+  const emptyCount = s.empty_count ?? questions.filter((ex) => answers[ex.id] === undefined).length;
+  const incorrectCount = s.incorrect_count ?? (totalQuestions - correctCount - emptyCount);
+  const maxScore: number = s.max_score ?? totalQuestions * (s.exam?.points_correct ?? 1);
   const timeLimitMin = s.time_limit_min ?? s.exam?.time_limit_min ?? null;
   const timeTakenSeconds = s.finished_at && s.started_at ? (new Date(s.finished_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null;
   const selectedQuestion = questions[selectedQuestionIndex];
   const selectedAnswer = answers[selectedQuestion.id];
   const selectedCorrect = selectedQuestion.correct_choice;
   const selectedUnanswered = selectedAnswer === undefined;
-  const scoreStyle = score >= 75 ? "text-success" : score >= 20 ? "text-amber-500" : "text-destructive";
-  const scorePanelStyle = score >= 75 ? "border-success/40 bg-success/5" : score >= 20 ? "border-amber-400/40 bg-amber-400/10" : "border-destructive/40 bg-destructive/5";
+  const scoreRatio = maxScore > 0 ? score / maxScore : 0;
+  const scoreStyle = scoreRatio >= 0.75 ? "text-success" : scoreRatio >= 0.2 ? "text-amber-500" : "text-destructive";
+  const scorePanelStyle = scoreRatio >= 0.75 ? "border-success/40 bg-success/5" : scoreRatio >= 0.2 ? "border-amber-400/40 bg-amber-400/10" : "border-destructive/40 bg-destructive/5";
   function formatDuration(sec: number | null) {
     if (sec === null || sec === undefined) return "-";
     const s = Math.max(0, Math.round(sec));
@@ -111,15 +120,25 @@ function ResultPage() {
       <p className="text-muted-foreground">{s.exam?.title}</p>
 
       <div className={`animate-score-in mt-4 rounded-xl border p-6 ${scorePanelStyle}`}>
-        <p className="text-sm text-muted-foreground">Puntaje</p>
-        <p className={`mt-1 font-display text-5xl font-bold tabular-nums ${scoreStyle}`}>{displayScore}%</p>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          Puntaje
+          <InfoTooltip>
+            Sumas puntos por cada respuesta correcta y pierdes puntos por cada incorrecta; las que
+            dejaste sin responder no suman ni restan. El máximo posible ({maxScore} pts) es lo que
+            obtendrías si todas fueran correctas.
+          </InfoTooltip>
+        </p>
+        <p className={`mt-1 font-display text-5xl font-bold tabular-nums ${scoreStyle}`}>
+          {displayScore} <span className="text-2xl text-muted-foreground">/ {maxScore} pts</span>
+        </p>
         <p className="mt-1 text-sm">
-          {correctCount} de {totalQuestions} correctas · {passed ? "Aprobado" : `Aprobación: ${passing}%`}
+          {correctCount} de {totalQuestions} correctas · {passed ? "Aprobado" : `Aprobación: ${passing} pts`}
         </p>
         <div className="mt-2 text-sm text-muted-foreground grid grid-cols-2 gap-4">
           <div>
             <div>Correctas: <strong className="text-success">{correctCount}</strong></div>
             <div>Incorrectas: <strong className="text-destructive">{incorrectCount}</strong></div>
+            <div>Sin responder: <strong>{emptyCount}</strong></div>
           </div>
           <div>
             <div>Tiempo límite: <strong>{timeLimitMin ? `${timeLimitMin} min` : "-"}</strong></div>
@@ -137,15 +156,28 @@ function ResultPage() {
           <div className="mt-2 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
             <div>
               <p className="text-muted-foreground">Tu puntaje</p>
-              <p className="font-display text-xl font-bold">{score}%</p>
+              <p className="font-display text-xl font-bold">{score} pts</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Promedio general</p>
-              <p className="font-display text-xl font-bold">{statsQ.data.avg_score}%</p>
+              <p className="flex items-center gap-1 text-muted-foreground">
+                Promedio general
+                <InfoTooltip>
+                  Es el puntaje promedio entre todos los estudiantes que ya rindieron este mismo
+                  examen. Te sirve para ver si tu resultado quedó por encima o por debajo del resto.
+                </InfoTooltip>
+              </p>
+              <p className="font-display text-xl font-bold">{statsQ.data.avg_score} pts</p>
             </div>
             {statsQ.data.my_percentile !== null && (
               <div>
-                <p className="text-muted-foreground">Tu percentil</p>
+                <p className="flex items-center gap-1 text-muted-foreground">
+                  Tu percentil
+                  <InfoTooltip>
+                    Indica qué porcentaje de estudiantes obtuvo un puntaje igual o menor al tuyo. Por
+                    ejemplo, un percentil de 80 significa que superaste al 80% de quienes rindieron
+                    este examen.
+                  </InfoTooltip>
+                </p>
                 <p className="font-display text-xl font-bold">{statsQ.data.my_percentile}</p>
               </div>
             )}
@@ -206,21 +238,25 @@ function ResultPage() {
                   {selectedUnanswered ? "Sin responder" : selectedAnswer === selectedCorrect ? "Correcta" : "Incorrecta"}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                {selectedQuestion.time_spent_ms !== null && selectedQuestion.time_spent_ms !== undefined && (
-                  <Badge
-                    variant="outline"
-                    className={
-                      selectedQuestion.avg_time_ms && selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5
-                        ? "border-amber-500/40 text-amber-600"
-                        : ""
-                    }
-                  >
-                    <Clock className="mr-1 h-3 w-3" />
-                    {formatDuration(selectedQuestion.time_spent_ms / 1000)}
-                    {selectedQuestion.avg_time_ms && selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5 ? " · Lento" : ""}
-                  </Badge>
-                )}
+              <div className="flex items-center gap-1">
+                {selectedQuestion.time_spent_ms !== null && selectedQuestion.time_spent_ms !== undefined && (() => {
+                  const isSlow = !!selectedQuestion.avg_time_ms && selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5;
+                  return (
+                    <>
+                      <Badge variant="outline" className={isSlow ? "border-amber-500/40 text-amber-600" : ""}>
+                        <Clock className="mr-1 h-3 w-3" />
+                        {formatDuration(selectedQuestion.time_spent_ms / 1000)}
+                        {isSlow ? " · Lento" : ""}
+                      </Badge>
+                      {isSlow && (
+                        <InfoTooltip>
+                          Te demoraste más de lo esperado en esta pregunta, comparado con el tiempo
+                          promedio de otros estudiantes para el nivel de dificultad de esta pregunta.
+                        </InfoTooltip>
+                      )}
+                    </>
+                  );
+                })()}
                 <Badge
                   variant="outline"
                   className={selectedUnanswered ? "border-muted-foreground text-muted-foreground" : selectedAnswer === selectedCorrect ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}

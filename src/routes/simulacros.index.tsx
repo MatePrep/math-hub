@@ -195,7 +195,7 @@ function SimulacrosPage() {
                         >
                           <div>
                             <p className="font-medium">{new Date(a.started_at).toLocaleString("es-PE")}</p>
-                            <p className="text-xs text-muted-foreground">{a.score ?? 0}% · {a.total} preguntas</p>
+                            <p className="text-xs text-muted-foreground">{a.score ?? 0}{a.max_score != null ? ` / ${a.max_score}` : ""} pts · {a.total} preguntas</p>
                           </div>
                           <span className="text-primary">Ver resultado →</span>
                         </Link>

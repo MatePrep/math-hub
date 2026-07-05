@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -13,9 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FolderUp, FileUp, CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
+import {
+  FolderUp,
+  FileUp,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Loader2,
+  Plus,
+  Trash2,
+  Pencil,
+} from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
-import { listAdminMeta, bulkImportExercises } from "@/lib/admin.functions";
+import { listAdminMeta, bulkImportExercises, createTopic, createSubtopic } from "@/lib/admin.functions";
 import { uploadExerciseImage, validateImageFile } from "@/lib/storage";
 import {
   parseExerciseMarkdown,
@@ -33,6 +45,16 @@ type Override = {
   subtopicId?: string | null;
   universityId?: string | null;
   difficulty?: ParsedDifficulty | null;
+  statementMd?: string;
+  choices?: string[];
+  correctChoiceIndex?: number | null;
+  solutionMd?: string;
+  examYear?: number | null;
+  tags?: string[];
+  // `undefined` = use the file auto-matched from the selected folder (if any);
+  // `null` = admin explicitly removed it; a File = admin explicitly replaced it.
+  statementImageOverride?: File | null;
+  solutionImageOverride?: File | null;
 };
 
 interface ImportResult {
@@ -45,6 +67,13 @@ interface ResolvedRow extends ParsedExercise {
   subtopicId: string | null;
   universityId: string | null;
   difficulty: ParsedDifficulty | null;
+  statement_md: string | null;
+  choices: string[];
+  choiceLetters: string[];
+  correctChoiceIndex: number | null;
+  solution_md: string | null;
+  examYear: number | null;
+  tags: string[];
   statementImageFile: File | null;
   solutionImageFile: File | null;
   subtopicsForTopic: any[];
@@ -52,6 +81,18 @@ interface ResolvedRow extends ParsedExercise {
   warnings: string[];
   isValid: boolean;
 }
+
+// Messages produced by parseExerciseMarkdown for content that IS editable in
+// this screen (enunciado/alternativas/solución/respuesta_correcta) — filtered
+// out of the frozen parse-time errors so edits get fresh validation instead of
+// being stuck on the original file's mistake forever.
+const EDITABLE_CONTENT_ERROR_MARKERS = [
+  "Enunciado",
+  "Alternativas",
+  "alternativas",
+  "Solución",
+  "respuesta_correcta",
+];
 
 function findImageFile(files: File[], refPath: string | null): File | null {
   if (!refPath) return null;
@@ -73,14 +114,63 @@ function AdminImportExercises() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
 
+  const createTopicFn = useServerFn(createTopic);
+  const createSubtopicFn = useServerFn(createSubtopic);
+
   const [rawFiles, setRawFiles] = useState<File[]>([]);
   const [parsedRows, setParsedRows] = useState<ParsedExercise[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  // Tracks in-flight quick-create requests (keyed by normalized name) so
+  // clicking the same "Crear tema" button from several rows at once doesn't
+  // fire duplicate creates while waiting for the first one to finish.
+  const [creatingNames, setCreatingNames] = useState<Set<string>>(new Set());
 
   function setOverride(filename: string, patch: Override) {
     setOverrides((o) => ({ ...o, [filename]: { ...o[filename], ...patch } }));
+  }
+
+  async function quickCreateTopic(name: string) {
+    const key = `topic:${normalizeForMatch(name)}`;
+    if (creatingNames.has(key)) return;
+    setCreatingNames((s) => new Set(s).add(key));
+    try {
+      const res = await createTopicFn({ data: { name } });
+      toast[res.duplicated ? "info" : "success"](
+        res.duplicated ? `El tema "${name}" ya existía — aplicado.` : `Tema "${name}" creado.`,
+      );
+      await meta.refetch();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo crear el tema");
+    } finally {
+      setCreatingNames((s) => {
+        const n = new Set(s);
+        n.delete(key);
+        return n;
+      });
+    }
+  }
+
+  async function quickCreateSubtopic(topicId: string, name: string) {
+    const key = `subtopic:${topicId}:${normalizeForMatch(name)}`;
+    if (creatingNames.has(key)) return;
+    setCreatingNames((s) => new Set(s).add(key));
+    try {
+      const res = await createSubtopicFn({ data: { topic_id: topicId, name } });
+      toast[res.duplicated ? "info" : "success"](
+        res.duplicated ? `El subtema "${name}" ya existía — aplicado.` : `Subtema "${name}" creado.`,
+      );
+      await meta.refetch();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo crear el subtema");
+    } finally {
+      setCreatingNames((s) => {
+        const n = new Set(s);
+        n.delete(key);
+        return n;
+      });
+    }
   }
 
   async function handleFilesSelected(fileList: FileList | null) {
@@ -135,13 +225,47 @@ function AdminImportExercises() {
 
       const difficulty = o.difficulty !== undefined ? o.difficulty : p.difficulty;
 
-      const statementImageFile = findImageFile(rawFiles, p.frontmatter.imagen_enunciado);
-      const solutionImageFile = findImageFile(rawFiles, p.frontmatter.imagen_solucion);
+      // Content fields — editable in-session via the "Editar ejercicio" panel.
+      // Falls back to what the parser extracted from the .md file when there's
+      // no override yet.
+      const statement_md = o.statementMd !== undefined ? o.statementMd : p.statement_md;
+      const choices = o.choices !== undefined ? o.choices : p.choices;
+      const choiceLetters =
+        o.choices !== undefined ? o.choices.map((_, i) => String.fromCharCode(65 + i)) : p.choiceLetters;
+      const correctChoiceIndex =
+        o.correctChoiceIndex !== undefined ? o.correctChoiceIndex : p.correctChoiceIndex;
+      const solution_md = o.solutionMd !== undefined ? o.solutionMd : p.solution_md;
+      const examYear = o.examYear !== undefined ? o.examYear : p.frontmatter.anio_examen;
+      const tags = o.tags !== undefined ? o.tags : p.frontmatter.etiquetas;
 
-      const blockingErrors = [...p.errors];
+      const statementImageFile =
+        o.statementImageOverride !== undefined
+          ? o.statementImageOverride
+          : findImageFile(rawFiles, p.frontmatter.imagen_enunciado);
+      const solutionImageFile =
+        o.solutionImageOverride !== undefined
+          ? o.solutionImageOverride
+          : findImageFile(rawFiles, p.frontmatter.imagen_solucion);
+
+      // Structural parse errors (bad frontmatter, missing tema/dificultad,
+      // unsupported formato_version...) can't be fixed by editing the content
+      // fields below, so they stay frozen from parse time. Content errors are
+      // re-derived fresh from the current (possibly edited) values instead —
+      // otherwise a fix made in the edit panel could never clear the original
+      // error.
+      const structuralErrors = p.errors.filter(
+        (e) => !EDITABLE_CONTENT_ERROR_MARKERS.some((marker) => e.includes(marker)),
+      );
+      const blockingErrors = [...structuralErrors];
+      if (!statement_md || !statement_md.trim()) blockingErrors.push("Falta el enunciado.");
+      if (choices.length < 2) blockingErrors.push("Se necesitan al menos 2 alternativas.");
+      if (correctChoiceIndex === null || correctChoiceIndex < 0 || correctChoiceIndex >= choices.length) {
+        blockingErrors.push("Selecciona cuál alternativa es la correcta.");
+      }
+      if (!solution_md || !solution_md.trim()) blockingErrors.push("Falta la solución paso a paso.");
       if (!topicId) {
         blockingErrors.push(
-          `El tema "${p.frontmatter.tema ?? "(vacío)"}" no existe en el catálogo. Selecciónalo manualmente o créalo en Materias.`,
+          `El tema "${p.frontmatter.tema ?? "(vacío)"}" no existe en el catálogo. Créalo abajo o selecciona uno existente.`,
         );
       }
       if (!difficulty) blockingErrors.push("Selecciona una dificultad válida.");
@@ -154,7 +278,7 @@ function AdminImportExercises() {
 
       const warnings: string[] = [];
       if (p.frontmatter.subtema && !subtopicMatch && o.subtopicId === undefined) {
-        warnings.push(`Subtema "${p.frontmatter.subtema}" no reconocido — se importará sin subtema.`);
+        warnings.push(`Subtema "${p.frontmatter.subtema}" no reconocido — créalo abajo o se importará sin subtema.`);
       }
       if (p.frontmatter.universidad && !universityMatch && o.universityId === undefined) {
         warnings.push(`Universidad "${p.frontmatter.universidad}" no reconocida — se importará sin universidad.`);
@@ -166,6 +290,13 @@ function AdminImportExercises() {
         subtopicId,
         universityId,
         difficulty,
+        statement_md,
+        choices,
+        choiceLetters,
+        correctChoiceIndex,
+        solution_md,
+        examYear,
+        tags,
         statementImageFile,
         solutionImageFile,
         subtopicsForTopic,
@@ -204,7 +335,7 @@ function AdminImportExercises() {
           topic_id: r.topicId,
           subtopic_id: r.subtopicId,
           university_id: r.universityId,
-          exam_year: r.frontmatter.anio_examen,
+          exam_year: r.examYear,
           difficulty: r.difficulty,
           statement_md: r.statement_md,
           statement_image_path,
@@ -212,7 +343,7 @@ function AdminImportExercises() {
           choices: r.choices,
           correct_choice: r.correctChoiceIndex,
           solution_md: r.solution_md,
-          tags: r.frontmatter.etiquetas,
+          tags: r.tags,
         });
       }
       const result = await importFn({ data: payload });
@@ -337,6 +468,13 @@ function AdminImportExercises() {
                 topics={meta.data?.topics ?? []}
                 universities={meta.data?.universities ?? []}
                 onOverride={(patch) => setOverride(r.filename, patch)}
+                onQuickCreateTopic={() => quickCreateTopic(r.frontmatter.tema!)}
+                onQuickCreateSubtopic={() => quickCreateSubtopic(r.topicId!, r.frontmatter.subtema!)}
+                creatingTopic={creatingNames.has(`topic:${normalizeForMatch(r.frontmatter.tema ?? "")}`)}
+                creatingSubtopic={
+                  r.topicId != null &&
+                  creatingNames.has(`subtopic:${r.topicId}:${normalizeForMatch(r.frontmatter.subtema ?? "")}`)
+                }
               />
             ))}
           </div>
@@ -351,13 +489,25 @@ function ImportRowCard({
   topics,
   universities,
   onOverride,
+  onQuickCreateTopic,
+  onQuickCreateSubtopic,
+  creatingTopic,
+  creatingSubtopic,
 }: {
   row: ResolvedRow;
   topics: any[];
   universities: any[];
   onOverride: (patch: Override) => void;
+  onQuickCreateTopic: () => void;
+  onQuickCreateSubtopic: () => void;
+  creatingTopic: boolean;
+  creatingSubtopic: boolean;
 }) {
   const [showPreview, setShowPreview] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  const topicUnresolved = !row.topicId && !!row.frontmatter.tema;
+  const subtopicUnresolved = !row.subtopicId && !!row.frontmatter.subtema && !!row.topicId;
 
   return (
     <div className={`rounded-xl border p-4 ${row.isValid ? "border-border bg-card" : "border-destructive/40 bg-destructive/5"}`}>
@@ -371,7 +521,7 @@ function ImportRowCard({
           <span className="font-mono text-sm">{row.filename}</span>
         </div>
         <div className="flex flex-wrap gap-1">
-          {row.frontmatter.etiquetas.map((t) => (
+          {row.tags.map((t) => (
             <Badge key={t} variant="secondary">{t}</Badge>
           ))}
         </div>
@@ -392,6 +542,19 @@ function ImportRowCard({
               ))}
             </SelectContent>
           </Select>
+          {topicUnresolved && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-1.5 w-full"
+              onClick={onQuickCreateTopic}
+              disabled={creatingTopic}
+            >
+              {creatingTopic ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+              Crear tema "{row.frontmatter.tema}"
+            </Button>
+          )}
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Subtema</Label>
@@ -408,6 +571,19 @@ function ImportRowCard({
               ))}
             </SelectContent>
           </Select>
+          {subtopicUnresolved && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-1.5 w-full"
+              onClick={onQuickCreateSubtopic}
+              disabled={creatingSubtopic}
+            >
+              {creatingSubtopic ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+              Crear subtema "{row.frontmatter.subtema}"
+            </Button>
+          )}
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Universidad</Label>
@@ -459,15 +635,26 @@ function ImportRowCard({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setShowPreview((v) => !v)}
-        className="mt-3 text-sm font-medium text-primary hover:underline"
-      >
-        {showPreview ? "Ocultar vista previa" : "Ver vista previa"}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-4">
+        <button
+          type="button"
+          onClick={() => setShowPreview((v) => !v)}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {showPreview ? "Ocultar vista previa" : "Ver vista previa"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing((v) => !v)}
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        >
+          <Pencil className="h-3.5 w-3.5" /> {editing ? "Cerrar edición" : "Editar ejercicio"}
+        </button>
+      </div>
 
-      {showPreview && (
+      {editing && <ExerciseEditPanel row={row} onOverride={onOverride} />}
+
+      {!editing && showPreview && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           <div>
             <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Enunciado</p>
@@ -489,6 +676,167 @@ function ImportRowCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ExerciseEditPanel({
+  row,
+  onOverride,
+}: {
+  row: ResolvedRow;
+  onOverride: (patch: Override) => void;
+}) {
+  const [tagsInput, setTagsInput] = useState(row.tags.join(", "));
+
+  function setChoice(i: number, val: string) {
+    onOverride({ choices: row.choices.map((c, j) => (j === i ? val : c)) });
+  }
+  function addChoice() {
+    onOverride({ choices: [...row.choices, ""] });
+  }
+  function removeChoice(i: number) {
+    const choices = row.choices.filter((_, j) => j !== i);
+    const correctChoiceIndex =
+      row.correctChoiceIndex !== null && row.correctChoiceIndex >= choices.length
+        ? Math.max(0, choices.length - 1)
+        : row.correctChoiceIndex;
+    onOverride({ choices, correctChoiceIndex });
+  }
+  function commitTags() {
+    onOverride({ tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean) });
+  }
+
+  return (
+    <div className="mt-3 space-y-4 border-t border-border pt-3">
+      <div>
+        <Label className="text-xs text-muted-foreground">Enunciado</Label>
+        <Textarea
+          value={row.statement_md ?? ""}
+          onChange={(e) => onOverride({ statementMd: e.target.value })}
+          rows={4}
+        />
+        <LocalImagePicker
+          label="Imagen del enunciado"
+          file={row.statementImageFile}
+          onChange={(f) => onOverride({ statementImageOverride: f })}
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground">Alternativas</Label>
+          <Button type="button" size="sm" variant="ghost" onClick={addChoice}>
+            <Plus className="mr-1 h-3 w-3" /> Añadir
+          </Button>
+        </div>
+        <div className="mt-2 space-y-2">
+          {row.choices.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={row.correctChoiceIndex === i}
+                onChange={() => onOverride({ correctChoiceIndex: i })}
+                aria-label={`Marcar alternativa ${row.choiceLetters[i] ?? i + 1} como correcta`}
+              />
+              <span className="w-5 text-sm font-semibold">{row.choiceLetters[i] ?? String.fromCharCode(65 + i)}.</span>
+              <Input value={c} onChange={(e) => setChoice(i, e.target.value)} />
+              {row.choices.length > 2 && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeChoice(i)} aria-label="Quitar">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">Marca con el radio la alternativa correcta.</p>
+      </div>
+
+      <div>
+        <Label className="text-xs text-muted-foreground">Solución paso a paso</Label>
+        <Textarea
+          value={row.solution_md ?? ""}
+          onChange={(e) => onOverride({ solutionMd: e.target.value })}
+          rows={4}
+        />
+        <LocalImagePicker
+          label="Imagen de la solución"
+          file={row.solutionImageFile}
+          onChange={(f) => onOverride({ solutionImageOverride: f })}
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label className="text-xs text-muted-foreground">Año del examen (opcional)</Label>
+          <Input
+            type="number"
+            value={row.examYear ?? ""}
+            onChange={(e) => onOverride({ examYear: e.target.value ? Number(e.target.value) : null })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Etiquetas (separadas por coma)</Label>
+          <Input
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            onBlur={commitTags}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LocalImagePicker({
+  label,
+  file,
+  onChange,
+}: {
+  label: string;
+  file: File | null;
+  onChange: (file: File | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return (
+    <div className="mt-2">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="mt-1 flex items-center gap-2">
+        {previewUrl && (
+          <img src={previewUrl} alt="" className="h-14 w-14 rounded-md border border-border object-cover" />
+        )}
+        <Button type="button" size="sm" variant="outline" onClick={() => inputRef.current?.click()}>
+          {file ? "Reemplazar" : "Seleccionar imagen"}
+        </Button>
+        {file && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => onChange(null)}>
+            Quitar
+          </Button>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onChange(f);
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 }

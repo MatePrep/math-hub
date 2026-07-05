@@ -77,16 +77,21 @@ function RankingPage() {
               ))}
             </SelectContent>
           </Select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Precisión promedio (% de aciertos) entre todos los exámenes y simulacros rendidos en
+            esta universidad — no mezcla puntajes en puntos, ya que cada examen puede tener su
+            propio esquema de puntos.
+          </p>
           <BoardTable
             loading={uniBoardQ.isLoading && !!uniId}
             rows={(uniBoardQ.data ?? []).map((r: any, i: number) => ({
               rank: i + 1,
               pseudonym: r.pseudonym,
-              score: r.avg_score,
+              scoreText: `${r.avg_accuracy}%`,
               subtitle: `${r.sessions_count} exámenes`,
               is_me: r.is_me,
             }))}
-            scoreLabel="Promedio"
+            scoreLabel="Precisión promedio"
           />
         </TabsContent>
 
@@ -108,7 +113,7 @@ function RankingPage() {
             rows={(examBoardQ.data ?? []).map((r: any, i: number) => ({
               rank: i + 1,
               pseudonym: r.pseudonym,
-              score: r.best_score,
+              scoreText: `${r.best_score}${r.max_score != null ? ` / ${r.max_score}` : ""} pts`,
               subtitle: `${r.attempts_count} intentos`,
               is_me: r.is_me,
             }))}
@@ -125,7 +130,7 @@ function BoardTable({
   loading,
   scoreLabel,
 }: {
-  rows: Array<{ rank: number; pseudonym: string; score: number; subtitle: string; is_me: boolean }>;
+  rows: Array<{ rank: number; pseudonym: string; scoreText: string; subtitle: string; is_me: boolean }>;
   loading: boolean;
   scoreLabel: string;
 }) {
@@ -158,7 +163,7 @@ function BoardTable({
                 {r.pseudonym}
                 {r.is_me && <Badge className="ml-2" variant="secondary">Tú</Badge>}
               </td>
-              <td className="px-4 py-2 text-right">{r.score}%<span className="ml-2 text-xs font-normal text-muted-foreground">{r.subtitle}</span></td>
+              <td className="px-4 py-2 text-right">{r.scoreText}<span className="ml-2 text-xs font-normal text-muted-foreground">{r.subtitle}</span></td>
             </tr>
           ))}
         </tbody>

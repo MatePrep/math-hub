@@ -553,6 +553,52 @@ export const deleteUniversity = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ========== APP SETTINGS (scoring defaults) ==========
+// Prefills new exams/templates only at creation time (see exam-form.tsx) —
+// editing these later never retroactively touches already-created exams,
+// since each exam stores its own points_correct/incorrect/empty.
+
+export const getScoringDefaults = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data, error } = await context.supabase
+      .from("app_settings")
+      .select("default_points_correct, default_points_incorrect, default_points_empty")
+      .eq("id", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return {
+      points_correct: data?.default_points_correct ?? 20,
+      points_incorrect: data?.default_points_incorrect ?? -2,
+      points_empty: data?.default_points_empty ?? 0,
+    };
+  });
+
+export const updateScoringDefaults = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      points_correct: z.number().min(-1000).max(1000),
+      points_incorrect: z.number().min(-1000).max(1000),
+      points_empty: z.number().min(-1000).max(1000),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase
+      .from("app_settings")
+      .update({
+        default_points_correct: data.points_correct,
+        default_points_incorrect: data.points_incorrect,
+        default_points_empty: data.points_empty,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", true);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // ========== EXAMS management ==========
 
 const templateRuleSchema = z.object({
@@ -561,13 +607,23 @@ const templateRuleSchema = z.object({
   question_count: z.number().int().min(1).max(100),
 });
 
+// Points-per-question scoring config (see plan-sistema-puntajes.md): every
+// exam/template carries its own points_correct/incorrect/empty, defaulted
+// from app_settings only at creation time in the client form — never a fixed
+// global value read at grading time.
+const scoringFields = {
+  points_correct: z.number().min(-1000).max(1000),
+  points_incorrect: z.number().min(-1000).max(1000),
+  points_empty: z.number().min(-1000).max(1000),
+};
+
 const examSchema = z
   .object({
     title: z.string().trim().min(3).max(120),
     description: z.string().trim().max(1000).nullable().optional(),
     university_id: z.string().uuid(),
     time_limit_min: z.number().int().min(1).max(600),
-    passing_score: z.number().int().min(0).max(100),
+    passing_score: z.number().int().min(0).max(100000),
     max_attempts: z.number().int().min(1).max(50).nullable().optional(),
     status: z.enum(["draft", "published", "archived"]),
     question_order: z.enum(["fixed", "random"]),
@@ -575,6 +631,7 @@ const examSchema = z
     allow_multiple_attempts: z.boolean().default(false),
     exercise_ids: z.array(z.string().uuid()).max(200).default([]),
     template_rules: z.array(templateRuleSchema).max(50).default([]),
+    ...scoringFields,
   })
   .refine(
     (d) =>
@@ -589,7 +646,7 @@ const examUpdateSchema = z
     description: z.string().trim().max(1000).nullable().optional(),
     university_id: z.string().uuid(),
     time_limit_min: z.number().int().min(1).max(600),
-    passing_score: z.number().int().min(0).max(100),
+    passing_score: z.number().int().min(0).max(100000),
     max_attempts: z.number().int().min(1).max(50).nullable().optional(),
     status: z.enum(["draft", "published", "archived"]),
     question_order: z.enum(["fixed", "random"]),
@@ -597,6 +654,7 @@ const examUpdateSchema = z
     allow_multiple_attempts: z.boolean().default(false),
     exercise_ids: z.array(z.string().uuid()).max(200).default([]),
     template_rules: z.array(templateRuleSchema).max(50).default([]),
+    ...scoringFields,
   })
   .refine(
     (d) =>
@@ -704,6 +762,9 @@ export const createExam = createServerFn({ method: "POST" })
         question_order: data.question_order,
         exam_type: data.exam_type,
         allow_multiple_attempts: data.allow_multiple_attempts,
+        points_correct: data.points_correct,
+        points_incorrect: data.points_incorrect,
+        points_empty: data.points_empty,
         created_by: context.userId,
       })
       .select("id")
@@ -755,6 +816,9 @@ export const updateExam = createServerFn({ method: "POST" })
         question_order: data.question_order,
         exam_type: data.exam_type,
         allow_multiple_attempts: data.allow_multiple_attempts,
+        points_correct: data.points_correct,
+        points_incorrect: data.points_incorrect,
+        points_empty: data.points_empty,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);

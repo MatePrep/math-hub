@@ -35,6 +35,9 @@ function EditExam() {
           allow_multiple_attempts: !!e.allow_multiple_attempts,
           exercise_ids: e.exercise_ids ?? [],
           template_rules: e.template_rules ?? [],
+          points_correct: e.points_correct,
+          points_incorrect: e.points_incorrect,
+          points_empty: e.points_empty,
         }}
       />
     </div>

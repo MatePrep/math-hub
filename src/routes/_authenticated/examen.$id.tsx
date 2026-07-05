@@ -53,7 +53,8 @@ function ExamPreview() {
       <div className="mt-4 flex flex-wrap gap-2">
         <Badge variant="outline"><Timer className="mr-1 h-3 w-3" /> {e.time_limit_min} min</Badge>
         <Badge variant="outline">{e.questionCount} preguntas</Badge>
-        <Badge variant="outline">Aprobación: {e.passing_score}%</Badge>
+        <Badge variant="outline">Aprobación: {e.passing_score} pts</Badge>
+        <Badge variant="outline">Máx: {e.maxScore} pts</Badge>
         {e.max_attempts && <Badge variant="outline">Intentos: {done.length}/{e.max_attempts}</Badge>}
         <Badge variant="outline" className="capitalize">Orden: {e.question_order === "random" ? "aleatorio" : "fijo"}</Badge>
       </div>
@@ -78,6 +79,12 @@ function ExamPreview() {
             Tus respuestas se guardan automáticamente.
           </li>
         </ul>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-sm">
+          <Badge variant="outline" className="border-success/40 text-success">Correcta: {e.points_correct >= 0 ? "+" : ""}{e.points_correct} pts</Badge>
+          <Badge variant="outline" className="border-destructive/40 text-destructive">Incorrecta: {e.points_incorrect >= 0 ? "+" : ""}{e.points_incorrect} pts</Badge>
+          <Badge variant="outline">Vacía: {e.points_empty >= 0 ? "+" : ""}{e.points_empty} pts</Badge>
+        </div>
 
         {e.topicBreakdown?.length > 0 && (
           <div className="mt-5">
@@ -119,7 +126,7 @@ function ExamPreview() {
                 <Link key={a.id} to="/examen-sesion/$sessionId/resultado" params={{ sessionId: a.id }} className="flex items-center justify-between rounded-md border border-border bg-card p-3 hover:border-primary/40">
                 <div>
                   <p className="text-sm font-medium">{new Date(a.started_at).toLocaleString("es-PE")}</p>
-                  <p className="text-xs text-muted-foreground">{a.score ?? 0}% · {a.total} preguntas</p>
+                  <p className="text-xs text-muted-foreground">{a.score ?? 0}{a.max_score != null ? ` / ${a.max_score}` : ""} pts · {a.total} preguntas</p>
                 </div>
                 <span className="text-sm text-primary">Ver resultado →</span>
               </Link>

@@ -60,7 +60,8 @@ function SimulacroPreview() {
         {t.university && <Badge variant="secondary">{t.university.short_name}</Badge>}
         <Badge variant="outline"><Timer className="mr-1 h-3 w-3" /> {t.time_limit_min} min</Badge>
         <Badge variant="outline"><ListChecks className="mr-1 h-3 w-3" /> {t.totalQuestions} preguntas</Badge>
-        {t.passing_score != null && <Badge variant="outline">Aprobación: {t.passing_score}%</Badge>}
+        {t.passing_score != null && <Badge variant="outline">Aprobación: {t.passing_score} pts</Badge>}
+        <Badge variant="outline">Máx: {t.maxScore} pts</Badge>
       </div>
 
       <div className="mt-6 rounded-xl border border-border bg-card p-5">
@@ -83,6 +84,12 @@ function SimulacroPreview() {
             Puedes marcar preguntas para revisarlas después; tus respuestas se guardan automáticamente.
           </li>
         </ul>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-sm">
+          <Badge variant="outline" className="border-success/40 text-success">Correcta: {t.points_correct >= 0 ? "+" : ""}{t.points_correct} pts</Badge>
+          <Badge variant="outline" className="border-destructive/40 text-destructive">Incorrecta: {t.points_incorrect >= 0 ? "+" : ""}{t.points_incorrect} pts</Badge>
+          <Badge variant="outline">Vacía: {t.points_empty >= 0 ? "+" : ""}{t.points_empty} pts</Badge>
+        </div>
 
         <div className="mt-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preguntas por tema</p>
@@ -127,7 +134,7 @@ function SimulacroPreview() {
               >
                 <div>
                   <p className="text-sm font-medium">{new Date(a.started_at).toLocaleString("es-PE")}</p>
-                  <p className="text-xs text-muted-foreground">{a.score ?? 0}% · {a.total} preguntas</p>
+                  <p className="text-xs text-muted-foreground">{a.score ?? 0}{a.max_score != null ? ` / ${a.max_score}` : ""} pts · {a.total} preguntas</p>
                 </div>
                 <span className="text-sm text-primary">Ver resultado →</span>
               </Link>

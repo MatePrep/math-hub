@@ -16,7 +16,7 @@ export const getUniversityLeaderboard = createServerFn({ method: "POST" })
     return (rows ?? []) as Array<{
       user_id: string;
       pseudonym: string;
-      avg_score: number;
+      avg_accuracy: number;
       sessions_count: number;
       is_me: boolean;
     }>;
@@ -37,6 +37,7 @@ export const getExamLeaderboard = createServerFn({ method: "POST" })
       user_id: string;
       pseudonym: string;
       best_score: number;
+      max_score: number;
       attempts_count: number;
       is_me: boolean;
     }>;
