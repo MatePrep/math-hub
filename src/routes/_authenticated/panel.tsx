@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { getUserStats } from "@/lib/attempts.functions";
 import { getFullProfile } from "@/lib/profile.functions";
 import { getWeeklyProgress } from "@/lib/goals.functions";
+import { MathText } from "@/lib/math-render";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,9 @@ function PanelPage() {
                   aria-hidden
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm">{r.statement || "(ejercicio)"}</p>
+                  <div className="line-clamp-1 text-sm">
+                    <MathText text={r.statement || "(ejercicio)"} />
+                  </div>
                   <p className="text-xs text-muted-foreground">{r.topicName}</p>
                 </div>
                 {r.exerciseId && (
