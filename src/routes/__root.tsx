@@ -12,7 +12,6 @@ import { useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/ui/sonner";
@@ -44,9 +43,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
@@ -102,8 +98,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Andes Math Hub is a web platform for Peruvian pre-university students to learn and practice math." },
       { property: "og:description", content: "Andes Math Hub is a web platform for Peruvian pre-university students to learn and practice math." },
       { name: "twitter:description", content: "Andes Math Hub is a web platform for Peruvian pre-university students to learn and practice math." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/66ba82f4-2685-48ca-bf8e-436bc685f31c/id-preview-a9e685e5--e0b57b65-b961-494b-8fa7-6464a0969574.lovable.app-1782653026125.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/66ba82f4-2685-48ca-bf8e-436bc685f31c/id-preview-a9e685e5--e0b57b65-b961-494b-8fa7-6464a0969574.lovable.app-1782653026125.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

@@ -20,7 +20,7 @@ There is no test suite/framework configured in this repo (no vitest/jest/playwri
 
 ## Architecture
 
-This is **MatePre**, a TanStack Start (React 19 + Vite + TanStack Router/Query) + Supabase app for Peruvian preuniversitario students practicing math for admission exams (UNI, San Marcos/UNMSM, PUCP, UNALM, UNFV). It's a **Lovable Cloud** project — commits on the connected branch sync back to the Lovable editor, so never rewrite published history (force-push, rebase/amend already-pushed commits) per `AGENTS.md`.
+This is **MatePre**, a TanStack Start (React 19 + Vite + TanStack Router/Query) + Supabase app for Peruvian preuniversitario students practicing math for admission exams (UNI, San Marcos/UNMSM, PUCP, UNALM, UNFV). It is no longer connected to Lovable Cloud (no live sync to the Lovable editor); the build still depends on the `@lovable.dev/vite-tanstack-config` Vite plugin bundle (see Build config below).
 
 ### Routing
 
