@@ -171,9 +171,9 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   );
 
   const availability = useQuery({
-    queryKey: ["topic-question-counts", availabilityPairs],
-    queryFn: () => countsFn({ data: { pairs: availabilityPairs } }),
-    enabled: availabilityPairs.length > 0,
+    queryKey: ["topic-question-counts", v.university_id, availabilityPairs],
+    queryFn: () => countsFn({ data: { university_id: v.university_id, pairs: availabilityPairs } }),
+    enabled: availabilityPairs.length > 0 && !!v.university_id,
   });
 
   function availableFor(topicId: string, diff: Difficulty | null): number | null {

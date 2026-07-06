@@ -870,6 +870,7 @@ export const getTopicQuestionCounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
+      university_id: z.string().uuid(),
       pairs: z.array(
         z.object({
           topic_id: z.string().uuid(),
@@ -885,7 +886,8 @@ export const getTopicQuestionCounts = createServerFn({ method: "POST" })
       let q = context.supabase
         .from("exercises")
         .select("id", { head: true, count: "exact" })
-        .eq("topic_id", p.topic_id);
+        .eq("topic_id", p.topic_id)
+        .or(`university_id.eq.${data.university_id},university_id.is.null`);
       if (p.difficulty_filter) q = q.eq("difficulty", p.difficulty_filter);
       const { count } = await q;
       out.push({ topic_id: p.topic_id, difficulty_filter: p.difficulty_filter ?? null, count: count ?? 0 });
