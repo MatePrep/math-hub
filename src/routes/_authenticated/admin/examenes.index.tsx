@@ -101,24 +101,26 @@ function AdminExamsList() {
                   <TableCell>{e.time_limit_min} min</TableCell>
                   <TableCell>{e.attemptCount ?? 0}</TableCell>
                   <TableCell className="text-right">
-                    <Button asChild size="icon" variant="ghost">
-                      <Link to="/admin/examenes/$id" params={{ id: e.id }} aria-label="Editar"><Pencil className="h-4 w-4" /></Link>
-                    </Button>
-                    {e.status !== "archived" && (
-                      <Button size="icon" variant="ghost" onClick={() => onArchive(e.id)} aria-label="Archivar" title="Archivar">
-                        <Archive className="h-4 w-4" />
+                    <div className="flex items-center justify-end gap-1">
+                      <Button asChild size="icon" variant="ghost">
+                        <Link to="/admin/examenes/$id" params={{ id: e.id }} aria-label="Editar"><Pencil className="h-4 w-4" /></Link>
                       </Button>
-                    )}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => onDelete(e.id)}
-                      aria-label="Eliminar"
-                      disabled={hasAttempts}
-                      title={hasAttempts ? "Archivar en su lugar: hay intentos generados" : "Eliminar"}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      {e.status !== "archived" && (
+                        <Button size="icon" variant="ghost" onClick={() => onArchive(e.id)} aria-label="Archivar" title="Archivar">
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => onDelete(e.id)}
+                        aria-label="Eliminar"
+                        disabled={hasAttempts}
+                        title={hasAttempts ? "Archivar en su lugar: hay intentos generados" : "Eliminar"}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

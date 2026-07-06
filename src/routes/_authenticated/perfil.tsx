@@ -23,9 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, User, Eye, EyeOff } from "lucide-react";
+import { Trash2, Plus, User, Eye, EyeOff, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
 
 const PREP_TIME_OPTIONS: Array<{ value: (typeof PREP_TIME_VALUES)[number]; label: string }> = [
   { value: "recien_empiezo", label: "Recién empiezo" },
@@ -84,6 +85,7 @@ function PerfilPage() {
   const [weeklyStudyHours, setWeeklyStudyHours] = useState<string>("");
   const [weakTopicIds, setWeakTopicIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
 
   // Password change: only offered to accounts that actually have an email/password
   // identity — an account created purely via "Continuar con Google" has none.
@@ -95,6 +97,7 @@ function PerfilPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordFeedback, flashPasswordFeedback] = useSaveFeedback();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: userData }) => {
@@ -110,14 +113,17 @@ function PerfilPage() {
     setPasswordError(null);
     if (newPassword.length < 8) {
       setPasswordError("La nueva contraseña debe tener al menos 8 caracteres.");
+      flashPasswordFeedback("refused");
       return;
     }
     if (newPassword !== confirmNewPassword) {
       setPasswordError("Las contraseñas nuevas no coinciden.");
+      flashPasswordFeedback("refused");
       return;
     }
     if (!accountEmail) {
       setPasswordError("No se pudo verificar tu cuenta. Recarga la página e inténtalo de nuevo.");
+      flashPasswordFeedback("refused");
       return;
     }
     setPasswordBusy(true);
@@ -130,6 +136,7 @@ function PerfilPage() {
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       if (updateError) throw updateError;
       toast.success("Contraseña actualizada.");
+      flashPasswordFeedback("accepted");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
@@ -137,6 +144,7 @@ function PerfilPage() {
       const friendly = err?.message ?? "No se pudo cambiar la contraseña.";
       setPasswordError(friendly);
       toast.error(friendly);
+      flashPasswordFeedback("refused");
     } finally {
       setPasswordBusy(false);
     }
@@ -188,12 +196,14 @@ function PerfilPage() {
     e.preventDefault();
     if (pseudonym && !/^[a-zA-Z0-9_-]{3,30}$/.test(pseudonym)) {
       toast.error("El pseudónimo debe tener 3-30 caracteres (letras, números, - o _)");
+      flashSaveFeedback("refused");
       return;
     }
     const seen = new Set<string>();
     for (const u of universities) {
       if (seen.has(u.universityId)) {
         toast.error("No puedes repetir la misma universidad");
+        flashSaveFeedback("refused");
         return;
       }
       seen.add(u.universityId);
@@ -219,8 +229,10 @@ function PerfilPage() {
         },
       });
       toast.success("Perfil actualizado");
+      flashSaveFeedback("accepted");
     } catch (err: any) {
       toast.error(err.message ?? "Error al guardar");
+      flashSaveFeedback("refused");
     } finally {
       setBusy(false);
     }
@@ -449,8 +461,20 @@ function PerfilPage() {
           </div>
         </div>
 
-        <Button type="submit" className="press min-h-11" disabled={busy}>
-          {busy ? "Guardando…" : "Guardar cambios"}
+        <Button
+          type="submit"
+          className={`press min-h-11 ${saveFeedback === "refused" ? "animate-shake" : ""}`}
+          disabled={busy}
+        >
+          {busy ? (
+            "Guardando…"
+          ) : saveFeedback === "accepted" ? (
+            <span className="inline-flex items-center gap-2 animate-icon-pop">
+              <Check className="h-4 w-4" /> Guardado
+            </span>
+          ) : (
+            "Guardar cambios"
+          )}
         </Button>
       </form>
 
@@ -520,8 +544,20 @@ function PerfilPage() {
                     {passwordError}
                   </p>
                 )}
-                <Button type="submit" className="press min-h-11" disabled={passwordBusy}>
-                  {passwordBusy ? "Guardando…" : "Cambiar contraseña"}
+                <Button
+                  type="submit"
+                  className={`press min-h-11 ${passwordFeedback === "refused" ? "animate-shake" : ""}`}
+                  disabled={passwordBusy}
+                >
+                  {passwordBusy ? (
+                    "Guardando…"
+                  ) : passwordFeedback === "accepted" ? (
+                    <span className="inline-flex items-center gap-2 animate-icon-pop">
+                      <Check className="h-4 w-4" /> Actualizada
+                    </span>
+                  ) : (
+                    "Cambiar contraseña"
+                  )}
                 </Button>
               </form>
             </>

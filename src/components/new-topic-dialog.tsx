@@ -14,7 +14,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Check } from "lucide-react";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import { createSubtopic, createTopic } from "@/lib/admin.functions";
 
 interface Props {
@@ -44,6 +45,7 @@ export function NewTopicDialog({
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#3B82F6");
   const [saving, setSaving] = useState(false);
+  const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
   const createTopicFn = useServerFn(createTopic);
   const createSubtopicFn = useServerFn(createSubtopic);
   const qc = useQueryClient();
@@ -57,10 +59,12 @@ export function NewTopicDialog({
     e.preventDefault();
     if (name.trim().length < 2) {
       toast.error("Nombre demasiado corto");
+      flashSaveFeedback("refused");
       return;
     }
     if (isSubtopic && !topicId) {
       toast.error("Selecciona primero una materia");
+      flashSaveFeedback("refused");
       return;
     }
     setSaving(true);
@@ -74,13 +78,15 @@ export function NewTopicDialog({
       } else {
         toast.success(isSubtopic ? "Subtema creado" : "Materia creada");
       }
+      flashSaveFeedback("accepted");
       await qc.invalidateQueries({ queryKey: ["admin-meta"] });
       onCreated(res.id);
-      actualOnOpenChange(false);
+      setTimeout(() => actualOnOpenChange(false), 550);
       setName("");
       setDescription("");
     } catch (e: any) {
       toast.error(e?.message ?? "Error al crear");
+      flashSaveFeedback("refused");
     } finally {
       setSaving(false);
     }
@@ -125,8 +131,20 @@ export function NewTopicDialog({
             <Button type="button" variant="ghost" onClick={() => actualOnOpenChange(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando…" : submitLabel}
+            <Button
+              type="submit"
+              className={`press ${saveFeedback === "refused" ? "animate-shake" : ""}`}
+              disabled={saving}
+            >
+              {saveFeedback === "accepted" ? (
+                <span className="inline-flex items-center gap-2 animate-icon-pop">
+                  <Check className="h-4 w-4" /> Creado
+                </span>
+              ) : saving ? (
+                "Guardando…"
+              ) : (
+                submitLabel
+              )}
             </Button>
           </DialogFooter>
         </form>

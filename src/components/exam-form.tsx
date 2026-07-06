@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, Plus, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Plus, Trash2, Check } from "lucide-react";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import {
   createExam,
   updateExam,
@@ -86,6 +87,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
 
   const [v, setV] = useState<ExamFormValues>(initial ?? empty);
   const [saving, setSaving] = useState(false);
+  const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
   const [filter, setFilter] = useState("");
   const [topicFilter, setTopicFilter] = useState<string>("all");
 
@@ -187,18 +189,22 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     e.preventDefault();
     if (!v.university_id) {
       toast.error("Selecciona una universidad");
+      flashSaveFeedback("refused");
       return;
     }
     if (v.exam_type === "standard" && v.exercise_ids.length === 0) {
       toast.error("Añade al menos una pregunta");
+      flashSaveFeedback("refused");
       return;
     }
     if (v.exam_type === "template" && v.template_rules.length === 0) {
       toast.error("Añade al menos una regla");
+      flashSaveFeedback("refused");
       return;
     }
     if (v.exam_type === "template" && v.template_rules.some((r) => !r.topic_id || r.question_count < 1)) {
       toast.error("Cada regla necesita materia y cantidad ≥ 1");
+      flashSaveFeedback("refused");
       return;
     }
     if (v.exam_type === "template") {
@@ -208,6 +214,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       if (shortages.length > 0) {
         if (v.status === "published") {
           toast.error("No puedes publicar: algunas reglas piden más preguntas de las que existen en el banco.");
+          flashSaveFeedback("refused");
           return;
         }
         const ok = confirm(
@@ -243,9 +250,11 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         await create({ data: payload });
         toast.success("Examen creado");
       }
-      navigate({ to: "/admin/examenes" });
+      flashSaveFeedback("accepted");
+      setTimeout(() => navigate({ to: "/admin/examenes" }), 550);
     } catch (err: any) {
       toast.error(err?.message ?? "Error al guardar");
+      flashSaveFeedback("refused");
     } finally {
       setSaving(false);
     }
@@ -495,7 +504,23 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={saving}>{saving ? "Guardando…" : initial?.id ? "Actualizar" : "Crear examen"}</Button>
+        <Button
+          type="submit"
+          className={`press ${saveFeedback === "refused" ? "animate-shake" : ""}`}
+          disabled={saving}
+        >
+          {saveFeedback === "accepted" ? (
+            <span className="inline-flex items-center gap-2 animate-icon-pop">
+              <Check className="h-4 w-4" /> Guardado
+            </span>
+          ) : saving ? (
+            "Guardando…"
+          ) : initial?.id ? (
+            "Actualizar"
+          ) : (
+            "Crear examen"
+          )}
+        </Button>
         <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/examenes" })}>Cancelar</Button>
       </div>
     </form>

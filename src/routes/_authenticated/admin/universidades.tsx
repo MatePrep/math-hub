@@ -25,7 +25,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Search } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, Check } from "lucide-react";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import {
   listAdminUniversities,
   createUniversity,
@@ -74,6 +75,7 @@ function UniversidadesPage() {
   const [examDate, setExamDate] = useState("");
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -99,8 +101,16 @@ function UniversidadesPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (name.trim().length < 2) { toast.error("Nombre muy corto"); return; }
-    if (!shortName.trim()) { toast.error("Falta el nombre corto"); return; }
+    if (name.trim().length < 2) {
+      toast.error("Nombre muy corto");
+      flashSaveFeedback("refused");
+      return;
+    }
+    if (!shortName.trim()) {
+      toast.error("Falta el nombre corto");
+      flashSaveFeedback("refused");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -117,10 +127,12 @@ function UniversidadesPage() {
         await createFn({ data: payload });
         toast.success("Universidad creada");
       }
-      setDialogOpen(false);
+      flashSaveFeedback("accepted");
       q.refetch();
+      setTimeout(() => setDialogOpen(false), 550);
     } catch (err: any) {
       toast.error(err?.message ?? "Error");
+      flashSaveFeedback("refused");
     } finally {
       setSaving(false);
     }
@@ -170,7 +182,7 @@ function UniversidadesPage() {
           <DialogTrigger asChild>
             <Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Nueva universidad</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar universidad" : "Nueva universidad"}</DialogTitle></DialogHeader>
             <form onSubmit={onSubmit} className="space-y-3">
               <div><Label>Nombre *</Label><Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={150} /></div>
@@ -191,7 +203,21 @@ function UniversidadesPage() {
               />
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
-                <Button type="submit" disabled={saving}>{saving ? "Guardando…" : "Guardar"}</Button>
+                <Button
+                  type="submit"
+                  className={`press ${saveFeedback === "refused" ? "animate-shake" : ""}`}
+                  disabled={saving}
+                >
+                  {saveFeedback === "accepted" ? (
+                    <span className="inline-flex items-center gap-2 animate-icon-pop">
+                      <Check className="h-4 w-4" /> Guardado
+                    </span>
+                  ) : saving ? (
+                    "Guardando…"
+                  ) : (
+                    "Guardar"
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -232,17 +258,19 @@ function UniversidadesPage() {
                 <TableCell><Badge variant="secondary">{u.exerciseCount}</Badge></TableCell>
                 <TableCell><Switch checked={u.active} onCheckedChange={() => onToggle(u)} /></TableCell>
                 <TableCell className="text-right">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(u)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => onDelete(u)}
-                    aria-label="Eliminar"
-                    disabled={hasReferences(u)}
-                    title={hasReferences(u) ? "Tiene referencias asociadas — desactívala en su lugar" : undefined}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(u)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onDelete(u)}
+                      aria-label="Eliminar"
+                      disabled={hasReferences(u)}
+                      title={hasReferences(u) ? "Tiene referencias asociadas — desactívala en su lugar" : undefined}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

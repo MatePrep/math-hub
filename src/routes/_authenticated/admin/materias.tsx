@@ -18,7 +18,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Check } from "lucide-react";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import {
   listAdminTopics,
   createTopic,
@@ -54,6 +55,7 @@ function MateriasPage() {
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#3B82F6");
   const [saving, setSaving] = useState(false);
+  const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
 
   function openNew() {
     setEditing(null);
@@ -68,7 +70,11 @@ function MateriasPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (name.trim().length < 2) { toast.error("Nombre muy corto"); return; }
+    if (name.trim().length < 2) {
+      toast.error("Nombre muy corto");
+      flashSaveFeedback("refused");
+      return;
+    }
     setSaving(true);
     try {
       if (editing) {
@@ -78,10 +84,12 @@ function MateriasPage() {
         const res = await createFn({ data: { name: name.trim(), description: description.trim() || null, color } });
         toast[res.duplicated ? "info" : "success"](res.duplicated ? "Ya existía" : "Materia creada");
       }
-      setDialogOpen(false);
+      flashSaveFeedback("accepted");
       q.refetch();
+      setTimeout(() => setDialogOpen(false), 550);
     } catch (e: any) {
       toast.error(e?.message ?? "Error");
+      flashSaveFeedback("refused");
     } finally {
       setSaving(false);
     }
@@ -109,7 +117,7 @@ function MateriasPage() {
           <DialogTrigger asChild>
             <Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Nueva materia</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar materia" : "Nueva materia"}</DialogTitle></DialogHeader>
             <form onSubmit={onSubmit} className="space-y-3">
               <div><Label>Nombre *</Label><Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} /></div>
@@ -117,7 +125,21 @@ function MateriasPage() {
               <div><Label>Color</Label><Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20" /></div>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
-                <Button type="submit" disabled={saving}>{saving ? "Guardando…" : "Guardar"}</Button>
+                <Button
+                  type="submit"
+                  className={`press ${saveFeedback === "refused" ? "animate-shake" : ""}`}
+                  disabled={saving}
+                >
+                  {saveFeedback === "accepted" ? (
+                    <span className="inline-flex items-center gap-2 animate-icon-pop">
+                      <Check className="h-4 w-4" /> Guardado
+                    </span>
+                  ) : saving ? (
+                    "Guardando…"
+                  ) : (
+                    "Guardar"
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -147,10 +169,12 @@ function MateriasPage() {
                 <TableCell><Badge variant="secondary">{t.exerciseCount}</Badge></TableCell>
                 <TableCell><Switch checked={t.active} onCheckedChange={() => onToggle(t)} /></TableCell>
                 <TableCell className="text-right">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(t)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => onDelete(t)} aria-label="Eliminar" disabled={t.exerciseCount > 0}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(t)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => onDelete(t)} aria-label="Eliminar" disabled={t.exerciseCount > 0}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

@@ -15,10 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Check } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { ImageUpload } from "@/components/image-upload";
 import { NewTopicDialog } from "@/components/new-topic-dialog";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import {
   listAdminMeta,
   createExercise,
@@ -68,6 +69,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
   const [v, setV] = useState<ExerciseFormValues>(initial ?? empty);
   const [tagsInput, setTagsInput] = useState((initial?.tags ?? []).join(", "));
   const [saving, setSaving] = useState(false);
+  const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
   const [uploading, setUploading] = useState({ stmt: false, sol: false });
 
   const handleStatementUploadingChange = useCallback((stmt: boolean) => {
@@ -114,10 +116,12 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
     e.preventDefault();
     if (!v.topic_id) {
       toast.error("Selecciona un tema");
+      flashSaveFeedback("refused");
       return;
     }
     if (v.choices.some((c) => !c.trim())) {
       toast.error("Completa todas las alternativas o elimina las vacías");
+      flashSaveFeedback("refused");
       return;
     }
     const tags = tagsInput
@@ -134,9 +138,11 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
         await createFn({ data: payload });
         toast.success("Ejercicio creado");
       }
-      navigate({ to: "/admin/ejercicios" });
+      flashSaveFeedback("accepted");
+      setTimeout(() => navigate({ to: "/admin/ejercicios" }), 550);
     } catch (err: any) {
       toast.error(err?.message ?? "Error al guardar");
+      flashSaveFeedback("refused");
     } finally {
       setSaving(false);
     }
@@ -329,8 +335,24 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
         </div>
 
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving || uploading.stmt || uploading.sol}>
-            {saving ? "Guardando…" : uploading.stmt || uploading.sol ? "Subiendo imagen…" : initial?.id ? "Actualizar" : "Crear ejercicio"}
+          <Button
+            type="submit"
+            className={`press ${saveFeedback === "refused" ? "animate-shake" : ""}`}
+            disabled={saving || uploading.stmt || uploading.sol}
+          >
+            {saveFeedback === "accepted" ? (
+              <span className="inline-flex items-center gap-2 animate-icon-pop">
+                <Check className="h-4 w-4" /> Guardado
+              </span>
+            ) : saving ? (
+              "Guardando…"
+            ) : uploading.stmt || uploading.sol ? (
+              "Subiendo imagen…"
+            ) : initial?.id ? (
+              "Actualizar"
+            ) : (
+              "Crear ejercicio"
+            )}
           </Button>
           <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/ejercicios" })}>
             Cancelar

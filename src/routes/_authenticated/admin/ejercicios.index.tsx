@@ -61,14 +61,16 @@ function AdminExercisesList() {
                 <TableCell className="capitalize">{ex.difficulty}</TableCell>
                 <TableCell>{ex.exam_year ?? "—"}</TableCell>
                 <TableCell className="text-right">
-                  <Button asChild size="icon" variant="ghost">
-                    <Link to="/admin/ejercicios/$id" params={{ id: ex.id }} aria-label="Editar">
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => onDelete(ex.id)} aria-label="Eliminar">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button asChild size="icon" variant="ghost">
+                      <Link to="/admin/ejercicios/$id" params={{ id: ex.id }} aria-label="Editar">
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => onDelete(ex.id)} aria-label="Eliminar">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
