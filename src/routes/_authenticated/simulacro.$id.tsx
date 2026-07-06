@@ -37,6 +37,18 @@ function SimulacroPreview() {
   }
 
   if (preview.isLoading) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>;
+  if (preview.isError) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <p className="text-destructive">No se pudo cargar este simulacro.</p>
+        <p className="mt-1 text-sm text-muted-foreground">{(preview.error as any)?.message}</p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button variant="outline" onClick={() => preview.refetch()}>Reintentar</Button>
+          <Button asChild variant="outline"><Link to="/simulacros">Volver</Link></Button>
+        </div>
+      </div>
+    );
+  }
   if (!preview.data) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">

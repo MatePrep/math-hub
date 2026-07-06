@@ -282,6 +282,85 @@ export type Database = {
           },
         ]
       }
+      exercise_ratings: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          stars: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id?: string
+          stars: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          stars?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_ratings_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_reports: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          note: string | null
+          reason: Database["public"]["Enums"]["exercise_report_reason"]
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["exercise_report_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id?: string
+          note?: string | null
+          reason: Database["public"]["Enums"]["exercise_report_reason"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["exercise_report_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          note?: string | null
+          reason?: Database["public"]["Enums"]["exercise_report_reason"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["exercise_report_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_reports_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           choices: Json
@@ -633,6 +712,7 @@ export type Database = {
           attempts_count: number
           best_score: number
           is_me: boolean
+          max_score: number
           pseudonym: string
           user_id: string
         }[]
@@ -653,10 +733,23 @@ export type Database = {
           samples: number
         }[]
       }
+      get_exercise_review_queue: {
+        Args: { _low_rating_threshold?: number }
+        Returns: {
+          avg_rating: number
+          exercise_id: string
+          flag_reason: string
+          pending_report_count: number
+          rating_count: number
+          statement_md: string
+          subtopic_name: string
+          topic_name: string
+        }[]
+      }
       get_university_leaderboard: {
         Args: { _limit?: number; _university_id: string }
         Returns: {
-          avg_score: number
+          avg_accuracy: number
           is_me: boolean
           pseudonym: string
           sessions_count: number
@@ -674,6 +767,13 @@ export type Database = {
     Enums: {
       app_role: "student" | "admin"
       difficulty: "facil" | "medio" | "dificil"
+      exercise_report_reason:
+        | "respuesta_incorrecta"
+        | "enunciado_confuso"
+        | "falta_informacion"
+        | "imagen_problema"
+        | "otro"
+      exercise_report_status: "pendiente" | "resuelto" | "descartado"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -9,6 +9,8 @@ import { MathText, ChoiceText } from "@/lib/math-render";
 import { getExamResult } from "@/lib/exams.functions";
 import { getExamStats } from "@/lib/goals.functions";
 import { InfoTooltip } from "@/components/info-tooltip";
+import { ExerciseRating } from "@/components/exercise-rating";
+import { ReportProblemDialog } from "@/components/report-problem-dialog";
 
 export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/resultado")({
   component: ResultPage,
@@ -299,6 +301,11 @@ function ResultPage() {
                 )}
               </div>
             </details>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+              <ExerciseRating exerciseId={selectedQuestion.id} />
+              <ReportProblemDialog exerciseId={selectedQuestion.id} />
+            </div>
           </div>
         </section>
       </div>

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, ChevronRight, Shuffle } from "lucide-react";
 import { FavoriteButton } from "@/components/favorite-button";
+import { ExerciseRating } from "@/components/exercise-rating";
+import { ReportProblemDialog } from "@/components/report-problem-dialog";
 
 export const Route = createFileRoute("/_authenticated/practica/$topicSlug")({
   loader: async ({ params }) => {
@@ -186,6 +188,10 @@ function PracticePage() {
               </details>
             )}
 
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+              <ExerciseRating exerciseId={current.id} />
+              <ReportProblemDialog exerciseId={current.id} />
+            </div>
           </div>
         )}
 

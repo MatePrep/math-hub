@@ -16,6 +16,8 @@ import {
 import { CheckCircle2, XCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ExerciseRating } from "@/components/exercise-rating";
+import { ReportProblemDialog } from "@/components/report-problem-dialog";
 
 const exQO = (id: string) =>
   queryOptions({ queryKey: ["exercise", id], queryFn: () => getExercise({ data: { id } }) });
@@ -212,6 +214,13 @@ function ExercisePage() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+
+        {submitted && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-4">
+            <ExerciseRating exerciseId={ex.id} />
+            <ReportProblemDialog exerciseId={ex.id} />
+          </div>
+        )}
       </article>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
