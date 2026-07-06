@@ -140,8 +140,14 @@ function RootComponent() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Only actual identity changes (login/logout) warrant refetching every
+    // active query app-wide. USER_UPDATED fires on routine metadata syncs
+    // (e.g. Google avatar sync) unrelated to most of the cache, and firing a
+    // blanket invalidateQueries() for it was forcing unrelated public data
+    // (topics, universities, etc.) to refetch on top of whatever the route
+    // loader already re-runs via router.invalidate().
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
         router.invalidate();
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       }

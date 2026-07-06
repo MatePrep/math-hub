@@ -49,6 +49,11 @@ ALTER TABLE public.exam_sessions
 -- meaningfully across exams with different configs, so it's repurposed to
 -- average accuracy (% correct) instead — a scale-independent measure that
 -- stays comparable across different exams.
+-- (Both functions' RETURN TABLE columns changed, and CREATE OR REPLACE cannot
+-- alter a function's output row type — drop first.)
+DROP FUNCTION IF EXISTS public.get_university_leaderboard(uuid, int);
+DROP FUNCTION IF EXISTS public.get_exam_leaderboard(uuid, int);
+
 CREATE OR REPLACE FUNCTION public.get_university_leaderboard(_university_id uuid, _limit int DEFAULT 100)
 RETURNS TABLE (
   user_id uuid,

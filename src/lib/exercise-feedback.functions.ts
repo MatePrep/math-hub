@@ -68,13 +68,25 @@ const reportInput = z
     path: ["note"],
   });
 
-// A student can report the same exercise more than once (distinct problems
-// at distinct times) — always inserts, never upserts, unlike ratings.
+// A student can report the same exercise more than once over time, but not
+// while a prior report on it is still "pendiente" — once that one is
+// resuelto/descartado, a new report is allowed again.
 export const reportExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => reportInput.parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    const { data: pending, error: pendingErr } = await supabase
+      .from("exercise_reports")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("exercise_id", data.exerciseId)
+      .eq("status", "pendiente")
+      .maybeSingle();
+    if (pendingErr) throw new Error(pendingErr.message);
+    if (pending) {
+      throw new Error("Ya reportaste un problema en este ejercicio, está pendiente de revisión.");
+    }
     const { error } = await supabase.from("exercise_reports").insert({
       user_id: userId,
       exercise_id: data.exerciseId,

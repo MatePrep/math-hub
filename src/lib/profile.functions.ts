@@ -131,13 +131,19 @@ export const updateFullProfile = createServerFn({ method: "POST" })
     }
 
     if (Object.keys(patch).length > 0) {
-      const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+      const { data: rows, error } = await supabase.from("profiles").update(patch).eq("id", userId).select("id");
       if (error) throw new Error(error.message);
+      if (!rows || rows.length === 0) {
+        throw new Error("No se pudo guardar tu perfil: no se encontró tu cuenta.");
+      }
     }
 
     if (data.universities) {
-      // Replace strategy: delete then insert
-      await supabase.from("student_universities").delete().eq("user_id", userId);
+      // Replace strategy: delete then insert. Must check the delete's error —
+      // a silent failure here followed by a successful insert would leave
+      // stale rows alongside the new ones (duplicate universities in the UI).
+      const { error: delErr } = await supabase.from("student_universities").delete().eq("user_id", userId);
+      if (delErr) throw new Error(delErr.message);
       if (data.universities.length > 0) {
         const rows = data.universities.map((u) => ({
           user_id: userId,

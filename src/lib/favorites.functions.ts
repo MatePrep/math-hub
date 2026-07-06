@@ -14,7 +14,8 @@ export const toggleFavorite = createServerFn({ method: "POST" })
       .eq("exercise_id", data.exerciseId)
       .maybeSingle();
     if (existing) {
-      await supabase.from("favorite_exercises").delete().eq("id", existing.id);
+      const { error } = await supabase.from("favorite_exercises").delete().eq("id", existing.id);
+      if (error) throw new Error(error.message);
       return { favorited: false };
     }
     const { error } = await supabase
