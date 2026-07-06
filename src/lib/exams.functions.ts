@@ -43,16 +43,7 @@ export const listPublishedExams = createServerFn({ method: "GET" })
     if (uniError) throw new Error(uniError.message);
     if (!university) return [];
 
-    const { data: examQuestionRows, error: eqError } = await sb
-      .from("exam_questions")
-      .select("exam_id, exercise:exercises!inner(university_id)")
-      .eq("exercise.university_id", university.id);
-    if (eqError) throw new Error(eqError.message);
-
-    const examIds = Array.from(new Set((examQuestionRows ?? []).map((row: any) => row.exam_id)));
-    if (examIds.length === 0) return [];
-
-    const { data: exams, error: examError } = await baseQuery.in("id", examIds);
+    const { data: exams, error: examError } = await baseQuery.eq("university_id", university.id);
     if (examError) throw new Error(examError.message);
     return (exams ?? []).map((e: any) => ({
       ...e,
