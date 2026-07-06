@@ -70,11 +70,15 @@ export const resolveExerciseReport = createServerFn({ method: "POST" })
     if (!report) throw new Error("Reporte no encontrado");
 
     const nextStatus = data.action === "resolve" ? "resuelto" : "descartado";
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("exercise_reports")
       .update({ status: nextStatus, resolved_at: new Date().toISOString(), resolved_by: context.userId })
-      .eq("id", data.reportId);
+      .eq("id", data.reportId)
+      .select("id");
     if (error) throw new Error(error.message);
+    if (!rows || rows.length === 0) {
+      throw new Error("No se pudo actualizar el reporte: no se encontró o no tienes permiso.");
+    }
 
     // Resolving (not dismissing) notifies the reporting student — this writes
     // to a DIFFERENT user's row, which the self-only notifications RLS policy

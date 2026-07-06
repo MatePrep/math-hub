@@ -11,6 +11,17 @@ async function assertAdmin(context: { supabase: any; userId: string }) {
   if (!data) throw new Error("Forbidden");
 }
 
+// Postgres RLS silently matches zero rows instead of raising an error when a
+// row exists but isn't visible/writable under the current policy — an
+// `.update()`/`.delete()` can "succeed" (no `error`) while touching nothing.
+// Every write below chains `.select(...)` and checks this so a no-op is
+// surfaced to the admin instead of a false "guardado" toast.
+function assertRowsAffected(rows: any[] | null | undefined, entity: string) {
+  if (!rows || rows.length === 0) {
+    throw new Error(`No se pudo guardar ${entity}: no se encontró el registro o no tienes permiso.`);
+  }
+}
+
 export const checkIsAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -196,11 +207,13 @@ export const updateExercise = createServerFn({ method: "POST" })
       solution_image_path: rest.solution_image_path ?? null,
       tags: rest.tags ?? [],
     };
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("exercises")
       .update(payload)
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el ejercicio");
     return { id };
   });
 
@@ -209,8 +222,9 @@ export const deleteExercise = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase.from("exercises").delete().eq("id", data.id);
+    const { data: rows, error } = await context.supabase.from("exercises").delete().eq("id", data.id).select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el ejercicio");
     return { ok: true };
   });
 
@@ -354,15 +368,17 @@ export const renameTopic = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("topics")
       .update({
         name: data.name,
         description: data.description ?? null,
         color: data.color ?? null,
       })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la materia");
     return { ok: true };
   });
 
@@ -373,11 +389,13 @@ export const setTopicActive = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("topics")
       .update({ active: data.active })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la materia");
     return { ok: true };
   });
 
@@ -393,8 +411,9 @@ export const deleteTopic = createServerFn({ method: "POST" })
     if ((count ?? 0) > 0) {
       throw new Error(`No se puede eliminar: la materia tiene ${count} ejercicios. Desactívala en su lugar.`);
     }
-    const { error } = await context.supabase.from("topics").delete().eq("id", data.id);
+    const { data: rows, error } = await context.supabase.from("topics").delete().eq("id", data.id).select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la materia");
     return { ok: true };
   });
 
@@ -494,7 +513,7 @@ export const updateUniversity = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing) throw new Error("Ya existe otra universidad con ese nombre.");
 
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("universities")
       .update({
         name: data.name,
@@ -503,8 +522,10 @@ export const updateUniversity = createServerFn({ method: "POST" })
         logo_path: data.logo_path ?? null,
         exam_date: data.exam_date || null,
       })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la universidad");
     return { ok: true };
   });
 
@@ -513,11 +534,13 @@ export const setUniversityActive = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("universities")
       .update({ active: data.active })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la universidad");
     return { ok: true };
   });
 
@@ -545,8 +568,9 @@ export const deleteUniversity = createServerFn({ method: "POST" })
       .select("logo_path")
       .eq("id", data.id)
       .maybeSingle();
-    const { error } = await context.supabase.from("universities").delete().eq("id", data.id);
+    const { data: rows, error } = await context.supabase.from("universities").delete().eq("id", data.id).select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la universidad");
     if (uni?.logo_path) {
       await context.supabase.storage.from("exercise-images").remove([uni.logo_path]);
     }
@@ -756,7 +780,7 @@ export const updateExam = createServerFn({ method: "POST" })
       await validateTemplateRules(context.supabase, data.template_rules);
     }
     const { id } = data;
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("exams")
       .update({
         title: data.title,
@@ -773,8 +797,10 @@ export const updateExam = createServerFn({ method: "POST" })
         points_incorrect: data.points_incorrect,
         points_empty: data.points_empty,
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el examen");
 
     await context.supabase.from("exam_questions").delete().eq("exam_id", id);
     await context.supabase.from("exam_template_rules").delete().eq("exam_id", id);
@@ -816,8 +842,9 @@ export const deleteExam = createServerFn({ method: "POST" })
         `No se puede eliminar: hay ${count} intento(s) generado(s). Archívalo en su lugar para conservar el historial.`,
       );
     }
-    const { error } = await context.supabase.from("exams").delete().eq("id", data.id);
+    const { data: rows, error } = await context.supabase.from("exams").delete().eq("id", data.id).select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el examen");
     return { ok: true };
   });
 
@@ -826,11 +853,13 @@ export const archiveExam = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("exams")
       .update({ status: "archived" })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el examen");
     return { ok: true };
   });
 

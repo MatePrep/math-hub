@@ -33,11 +33,13 @@ export const rateExercise = createServerFn({ method: "POST" })
       .eq("exercise_id", data.exerciseId)
       .maybeSingle();
     if (existing) {
-      const { error } = await supabase
+      const { data: rows, error } = await supabase
         .from("exercise_ratings")
         .update({ stars: data.stars, updated_at: new Date().toISOString() })
-        .eq("id", existing.id);
+        .eq("id", existing.id)
+        .select("id");
       if (error) throw new Error(error.message);
+      if (!rows || rows.length === 0) throw new Error("No se pudo guardar tu calificación.");
     } else {
       const { error } = await supabase
         .from("exercise_ratings")
