@@ -642,19 +642,21 @@ const examUpdateSchema = z
 async function validateTemplateRules(
   supabase: any,
   rules: Array<{ topic_id: string; difficulty_filter?: string | null; question_count: number }>,
+  universityId: string,
 ) {
   for (const rule of rules) {
     let q = supabase
       .from("exercises")
       .select("id", { head: true, count: "exact" })
-      .eq("topic_id", rule.topic_id);
+      .eq("topic_id", rule.topic_id)
+      .or(`university_id.eq.${universityId},university_id.is.null`);
     if (rule.difficulty_filter) q = q.eq("difficulty", rule.difficulty_filter);
     const { count, error } = await q;
     if (error) throw new Error(error.message);
     if ((count ?? 0) < rule.question_count) {
       const { data: topic } = await supabase.from("topics").select("name").eq("id", rule.topic_id).maybeSingle();
       throw new Error(
-        `La materia "${topic?.name ?? rule.topic_id}" solo tiene ${count ?? 0} ejercicios${rule.difficulty_filter ? ` (${rule.difficulty_filter})` : ""}, pero pediste ${rule.question_count}.`,
+        `La materia "${topic?.name ?? rule.topic_id}" solo tiene ${count ?? 0} ejercicios disponibles para esta universidad (propios o genéricos)${rule.difficulty_filter ? ` (${rule.difficulty_filter})` : ""}, pero pediste ${rule.question_count}.`,
       );
     }
   }
@@ -724,7 +726,7 @@ export const createExam = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     if (data.exam_type === "template") {
-      await validateTemplateRules(context.supabase, data.template_rules);
+      await validateTemplateRules(context.supabase, data.template_rules, data.university_id);
     }
     const { data: row, error } = await context.supabase
       .from("exams")
@@ -777,7 +779,7 @@ export const updateExam = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     if (data.exam_type === "template") {
-      await validateTemplateRules(context.supabase, data.template_rules);
+      await validateTemplateRules(context.supabase, data.template_rules, data.university_id);
     }
     const { id } = data;
     const { data: rows, error } = await context.supabase
