@@ -68,7 +68,7 @@ export const listAdminExercises = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("exercises")
       .select(
-        "id, statement_md, difficulty, exam_year, created_at, topic:topics(name,slug), university:universities(short_name), subtopic:subtopics(name)",
+        "id, statement_md, difficulty, exam_year, created_at, topic:topics(id,name,slug), university:universities(id,short_name), subtopic:subtopics(name)",
       )
       .order("created_at", { ascending: false })
       .limit(500);

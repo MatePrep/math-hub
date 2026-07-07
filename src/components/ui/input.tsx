@@ -1,9 +1,10 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { handleNativeInvalid, clearNativeValidity } from "@/lib/native-validation-messages";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onInvalid, onInput, ...props }, ref) => {
     return (
       <input
         type={type}
@@ -12,6 +13,14 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onInvalid={(e) => {
+          handleNativeInvalid(e);
+          onInvalid?.(e);
+        }}
+        onInput={(e) => {
+          clearNativeValidity(e);
+          onInput?.(e);
+        }}
         {...props}
       />
     );

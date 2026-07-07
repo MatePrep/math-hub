@@ -36,7 +36,7 @@ type Difficulty = "facil" | "medio" | "dificil";
 export interface TemplateRule {
   topic_id: string;
   difficulty_filter: Difficulty | null;
-  question_count: number;
+  question_count: number | "";
 }
 
 export interface ExamFormValues {
@@ -44,8 +44,8 @@ export interface ExamFormValues {
   title: string;
   description: string | null;
   university_id: string;
-  time_limit_min: number;
-  passing_score: number;
+  time_limit_min: number | "";
+  passing_score: number | "";
   max_attempts: number | null;
   status: Status;
   question_order: Order;
@@ -53,9 +53,9 @@ export interface ExamFormValues {
   allow_multiple_attempts: boolean;
   exercise_ids: string[];
   template_rules: TemplateRule[];
-  points_correct: number;
-  points_incorrect: number;
-  points_empty: number;
+  points_correct: number | "";
+  points_incorrect: number | "";
+  points_empty: number | "";
 }
 
 const empty: ExamFormValues = {
@@ -223,7 +223,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       flashSaveFeedback("refused");
       return;
     }
-    if (v.exam_type === "template" && v.template_rules.some((r) => !r.topic_id || r.question_count < 1)) {
+    if (v.exam_type === "template" && v.template_rules.some((r) => !r.topic_id || Number(r.question_count) < 1)) {
       toast.error("Cada regla necesita materia y cantidad ≥ 1");
       flashSaveFeedback("refused");
       return;
@@ -231,7 +231,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     if (v.exam_type === "template") {
       const shortages = v.template_rules
         .map((r) => ({ r, avail: availableFor(r.topic_id, r.difficulty_filter) }))
-        .filter((x) => x.avail !== null && x.r.question_count > (x.avail as number));
+        .filter((x) => x.avail !== null && Number(x.r.question_count) > (x.avail as number));
       if (shortages.length > 0) {
         if (v.status === "published") {
           toast.error("No puedes publicar: algunas reglas piden más preguntas de las que existen en el banco.");
@@ -315,11 +315,29 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         </div>
         <div>
           <Label>Tiempo (min) *</Label>
-          <Input type="number" min={1} max={600} value={v.time_limit_min} onChange={(e) => setV((s) => ({ ...s, time_limit_min: Number(e.target.value) }))} required />
+          <Input
+            type="number"
+            min={1}
+            max={600}
+            value={v.time_limit_min}
+            onChange={(e) =>
+              setV((s) => ({ ...s, time_limit_min: e.target.value === "" ? "" : Number(e.target.value) }))
+            }
+            required
+          />
         </div>
         <div>
           <Label>Puntaje mínimo aprobatorio (puntos) *</Label>
-          <Input type="number" min={0} max={100000} value={v.passing_score} onChange={(e) => setV((s) => ({ ...s, passing_score: Number(e.target.value) }))} required />
+          <Input
+            type="number"
+            min={0}
+            max={100000}
+            value={v.passing_score}
+            onChange={(e) =>
+              setV((s) => ({ ...s, passing_score: e.target.value === "" ? "" : Number(e.target.value) }))
+            }
+            required
+          />
         </div>
         <div>
           <Label>Máx. intentos (opcional)</Label>
@@ -359,15 +377,39 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
           <div className="mt-2 grid grid-cols-3 gap-2">
             <div>
               <Label className="text-xs text-muted-foreground">Correcta</Label>
-              <Input type="number" step="0.5" value={v.points_correct} onChange={(e) => setV((s) => ({ ...s, points_correct: Number(e.target.value) }))} required />
+              <Input
+                type="number"
+                step="0.5"
+                value={v.points_correct}
+                onChange={(e) =>
+                  setV((s) => ({ ...s, points_correct: e.target.value === "" ? "" : Number(e.target.value) }))
+                }
+                required
+              />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Incorrecta</Label>
-              <Input type="number" step="0.5" value={v.points_incorrect} onChange={(e) => setV((s) => ({ ...s, points_incorrect: Number(e.target.value) }))} required />
+              <Input
+                type="number"
+                step="0.5"
+                value={v.points_incorrect}
+                onChange={(e) =>
+                  setV((s) => ({ ...s, points_incorrect: e.target.value === "" ? "" : Number(e.target.value) }))
+                }
+                required
+              />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Vacía / sin responder</Label>
-              <Input type="number" step="0.5" value={v.points_empty} onChange={(e) => setV((s) => ({ ...s, points_empty: Number(e.target.value) }))} required />
+              <Input
+                type="number"
+                step="0.5"
+                value={v.points_empty}
+                onChange={(e) =>
+                  setV((s) => ({ ...s, points_empty: e.target.value === "" ? "" : Number(e.target.value) }))
+                }
+                required
+              />
             </div>
           </div>
         </div>
@@ -397,7 +439,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             )}
             {v.template_rules.map((r, i) => {
               const avail = r.topic_id ? availableFor(r.topic_id, r.difficulty_filter) : null;
-              const insufficient = avail !== null && r.question_count > avail;
+              const insufficient = avail !== null && Number(r.question_count) > avail;
               return (
                 <div
                   key={i}
@@ -429,7 +471,9 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                       min={1}
                       max={100}
                       value={r.question_count}
-                      onChange={(e) => updateRule(i, { question_count: Number(e.target.value) })}
+                      onChange={(e) =>
+                        updateRule(i, { question_count: e.target.value === "" ? "" : Number(e.target.value) })
+                      }
                       aria-label="Cantidad"
                     />
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeRule(i)} aria-label="Quitar regla">

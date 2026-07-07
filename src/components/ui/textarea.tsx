@@ -1,9 +1,10 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { handleNativeInvalid, clearNativeValidity } from "@/lib/native-validation-messages";
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
-  ({ className, ...props }, ref) => {
+  ({ className, onInvalid, onInput, ...props }, ref) => {
     return (
       <textarea
         className={cn(
@@ -11,6 +12,14 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"tex
           className,
         )}
         ref={ref}
+        onInvalid={(e) => {
+          handleNativeInvalid(e);
+          onInvalid?.(e);
+        }}
+        onInput={(e) => {
+          clearNativeValidity(e);
+          onInput?.(e);
+        }}
         {...props}
       />
     );

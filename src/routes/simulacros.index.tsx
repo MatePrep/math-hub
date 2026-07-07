@@ -37,7 +37,7 @@ function SimulacrosPage() {
   const profileFn = useServerFn(getFullProfile);
   const universitiesFn = useServerFn(listAllUniversities);
 
-  const [universityId, setUniversityId] = useState<string | "all" | null>(null);
+  const [universityId, setUniversityId] = useState<string | "all" | "">("");
 
   const profileQ = useQuery({
     queryKey: ["full-profile-mini"],
@@ -48,7 +48,7 @@ function SimulacrosPage() {
   const q = useQuery({
     queryKey: ["published-templates", universityId],
     queryFn: () => listFn({ data: { universityId: universityId && universityId !== "all" ? universityId : undefined } }),
-    enabled: universityId !== null,
+    enabled: universityId !== "",
   });
   const sessionsQ = useQuery({
     queryKey: ["my-template-sessions"],
@@ -58,7 +58,7 @@ function SimulacrosPage() {
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (universityId === null && signedIn !== null) {
+    if (universityId === "" && signedIn !== null) {
       setUniversityId(profileQ.data?.universities[0]?.university_id ?? "all");
     }
   }, [profileQ.data, universityId, signedIn]);
@@ -103,7 +103,7 @@ function SimulacrosPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="max-w-xs flex-1">
-          <Select value={universityId ?? undefined} onValueChange={(v) => setUniversityId(v)}>
+          <Select value={universityId} onValueChange={(v) => setUniversityId(v)}>
             <SelectTrigger>
               <SelectValue placeholder="Universidad" />
             </SelectTrigger>

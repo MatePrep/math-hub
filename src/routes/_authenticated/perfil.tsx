@@ -92,8 +92,8 @@ function PerfilPage() {
   const [fullName, setFullName] = useState("");
   const [pseudonym, setPseudonym] = useState("");
   const [leaderboardOptIn, setLeaderboardOptIn] = useState(true);
-  const [weeklyGoalQuestions, setWeeklyGoalQuestions] = useState(50);
-  const [weeklyGoalExams, setWeeklyGoalExams] = useState(2);
+  const [weeklyGoalQuestions, setWeeklyGoalQuestions] = useState<number | "">(50);
+  const [weeklyGoalExams, setWeeklyGoalExams] = useState<number | "">(2);
   const [prepTime, setPrepTime] = useState<string | null>(null);
   const [prepMethod, setPrepMethod] = useState<string | null>(null);
   const [weeklyStudyHours, setWeeklyStudyHours] = useState<string>("");
@@ -229,8 +229,8 @@ function PerfilPage() {
           fullName,
           pseudonym: pseudonym.trim() || null,
           leaderboardOptIn,
-          weeklyGoalQuestions,
-          weeklyGoalExams,
+          weeklyGoalQuestions: weeklyGoalQuestions === "" ? 50 : weeklyGoalQuestions,
+          weeklyGoalExams: weeklyGoalExams === "" ? 2 : weeklyGoalExams,
           prepTime: prepTime as any,
           prepMethod: prepMethod as any,
           weeklyStudyHours: weeklyStudyHours ? Number(weeklyStudyHours) : null,
@@ -315,7 +315,9 @@ function PerfilPage() {
                 min={1}
                 max={1000}
                 value={weeklyGoalQuestions}
-                onChange={(e) => setWeeklyGoalQuestions(Number(e.target.value))}
+                onChange={(e) =>
+                  setWeeklyGoalQuestions(e.target.value === "" ? "" : Number(e.target.value))
+                }
               />
             </div>
             <div>
@@ -328,7 +330,9 @@ function PerfilPage() {
                 min={0}
                 max={50}
                 value={weeklyGoalExams}
-                onChange={(e) => setWeeklyGoalExams(Number(e.target.value))}
+                onChange={(e) =>
+                  setWeeklyGoalExams(e.target.value === "" ? "" : Number(e.target.value))
+                }
               />
             </div>
           </div>
@@ -423,11 +427,15 @@ function PerfilPage() {
               <Label htmlFor="prep-time" className="text-xs text-muted-foreground">
                 ¿Cuánto tiempo llevas preparándote?
               </Label>
-              <Select value={prepTime ?? undefined} onValueChange={setPrepTime}>
+              <Select
+                value={prepTime ?? "__none"}
+                onValueChange={(v) => setPrepTime(v === "__none" ? null : v)}
+              >
                 <SelectTrigger id="prep-time">
                   <SelectValue placeholder="Sin definir" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none">Sin definir</SelectItem>
                   {PREP_TIME_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                   ))}
@@ -439,11 +447,15 @@ function PerfilPage() {
               <Label htmlFor="prep-method" className="text-xs text-muted-foreground">
                 ¿Cómo te has preparado hasta ahora?
               </Label>
-              <Select value={prepMethod ?? undefined} onValueChange={setPrepMethod}>
+              <Select
+                value={prepMethod ?? "__none"}
+                onValueChange={(v) => setPrepMethod(v === "__none" ? null : v)}
+              >
                 <SelectTrigger id="prep-method">
                   <SelectValue placeholder="Sin definir" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none">Sin definir</SelectItem>
                   {PREP_METHOD_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                   ))}
