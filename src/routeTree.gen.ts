@@ -9,28 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RestablecerPasswordRouteImport } from './routes/restablecer-password'
 import { Route as ExamenesOficialesRouteImport } from './routes/examenes-oficiales'
 import { Route as BuscarRouteImport } from './routes/buscar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TemasIndexRouteImport } from './routes/temas.index'
+import { Route as SimulacrosIndexRouteImport } from './routes/simulacros.index'
 import { Route as ExamenesIndexRouteImport } from './routes/examenes.index'
 import { Route as EjercicioIdRouteImport } from './routes/ejercicio.$id'
 import { Route as AuthenticatedRankingRouteImport } from './routes/_authenticated/ranking'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedFavoritasRouteImport } from './routes/_authenticated/favoritas'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as TemasSlugIndexRouteImport } from './routes/temas.$slug.index'
 import { Route as ExamenesSlugIndexRouteImport } from './routes/examenes.$slug.index'
-import { Route as AuthenticatedSimulacrosIndexRouteImport } from './routes/_authenticated/simulacros.index'
 import { Route as TemasSlugSubtopicRouteImport } from './routes/temas.$slug.$subtopic'
 import { Route as ExamenesSlugSimulacroRouteImport } from './routes/examenes.$slug.simulacro'
+import { Route as AuthenticatedSimulacroIdRouteImport } from './routes/_authenticated/simulacro.$id'
 import { Route as AuthenticatedPracticaTopicSlugRouteImport } from './routes/_authenticated/practica.$topicSlug'
 import { Route as AuthenticatedExamenIdRouteImport } from './routes/_authenticated/examen.$id'
 import { Route as AuthenticatedExamenSesionSessionIdRouteImport } from './routes/_authenticated/examen-sesion.$sessionId'
+import { Route as AuthenticatedAdminUniversidadesRouteImport } from './routes/_authenticated/admin/universidades'
+import { Route as AuthenticatedAdminRevisarRouteImport } from './routes/_authenticated/admin/revisar'
+import { Route as AuthenticatedAdminPuntajesMinimosRouteImport } from './routes/_authenticated/admin/puntajes-minimos'
 import { Route as AuthenticatedAdminMateriasRouteImport } from './routes/_authenticated/admin/materias'
+import { Route as AuthenticatedAdminImportarRouteImport } from './routes/_authenticated/admin/importar'
+import { Route as AuthenticatedAdminCarrerasRouteImport } from './routes/_authenticated/admin/carreras'
 import { Route as AuthenticatedExamenSesionSessionIdIndexRouteImport } from './routes/_authenticated/examen-sesion.$sessionId.index'
 import { Route as AuthenticatedAdminExamenesIndexRouteImport } from './routes/_authenticated/admin/examenes.index'
 import { Route as AuthenticatedAdminEjerciciosIndexRouteImport } from './routes/_authenticated/admin/ejercicios.index'
@@ -40,6 +48,11 @@ import { Route as AuthenticatedAdminExamenesIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminEjerciciosNuevoRouteImport } from './routes/_authenticated/admin/ejercicios.nuevo'
 import { Route as AuthenticatedAdminEjerciciosIdRouteImport } from './routes/_authenticated/admin/ejercicios.$id'
 
+const RestablecerPasswordRoute = RestablecerPasswordRouteImport.update({
+  id: '/restablecer-password',
+  path: '/restablecer-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExamenesOficialesRoute = ExamenesOficialesRouteImport.update({
   id: '/examenes-oficiales',
   path: '/examenes-oficiales',
@@ -69,6 +82,11 @@ const TemasIndexRoute = TemasIndexRouteImport.update({
   path: '/temas/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SimulacrosIndexRoute = SimulacrosIndexRouteImport.update({
+  id: '/simulacros/',
+  path: '/simulacros/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExamenesIndexRoute = ExamenesIndexRouteImport.update({
   id: '/examenes/',
   path: '/examenes/',
@@ -94,6 +112,11 @@ const AuthenticatedPanelRoute = AuthenticatedPanelRouteImport.update({
   path: '/panel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedFavoritasRoute = AuthenticatedFavoritasRouteImport.update({
   id: '/favoritas',
   path: '/favoritas',
@@ -114,12 +137,6 @@ const ExamenesSlugIndexRoute = ExamenesSlugIndexRouteImport.update({
   path: '/examenes/$slug/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedSimulacrosIndexRoute =
-  AuthenticatedSimulacrosIndexRouteImport.update({
-    id: '/simulacros/',
-    path: '/simulacros/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const TemasSlugSubtopicRoute = TemasSlugSubtopicRouteImport.update({
   id: '/temas/$slug/$subtopic',
   path: '/temas/$slug/$subtopic',
@@ -130,6 +147,12 @@ const ExamenesSlugSimulacroRoute = ExamenesSlugSimulacroRouteImport.update({
   path: '/examenes/$slug/simulacro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSimulacroIdRoute =
+  AuthenticatedSimulacroIdRouteImport.update({
+    id: '/simulacro/$id',
+    path: '/simulacro/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPracticaTopicSlugRoute =
   AuthenticatedPracticaTopicSlugRouteImport.update({
     id: '/practica/$topicSlug',
@@ -147,10 +170,40 @@ const AuthenticatedExamenSesionSessionIdRoute =
     path: '/examen-sesion/$sessionId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminUniversidadesRoute =
+  AuthenticatedAdminUniversidadesRouteImport.update({
+    id: '/universidades',
+    path: '/universidades',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminRevisarRoute =
+  AuthenticatedAdminRevisarRouteImport.update({
+    id: '/revisar',
+    path: '/revisar',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminPuntajesMinimosRoute =
+  AuthenticatedAdminPuntajesMinimosRouteImport.update({
+    id: '/puntajes-minimos',
+    path: '/puntajes-minimos',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminMateriasRoute =
   AuthenticatedAdminMateriasRouteImport.update({
     id: '/materias',
     path: '/materias',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminImportarRoute =
+  AuthenticatedAdminImportarRouteImport.update({
+    id: '/importar',
+    path: '/importar',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminCarrerasRoute =
+  AuthenticatedAdminCarrerasRouteImport.update({
+    id: '/carreras',
+    path: '/carreras',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedExamenSesionSessionIdIndexRoute =
@@ -207,21 +260,29 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/restablecer-password': typeof RestablecerPasswordRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/favoritas': typeof AuthenticatedFavoritasRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/ranking': typeof AuthenticatedRankingRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
   '/examenes/': typeof ExamenesIndexRoute
+  '/simulacros/': typeof SimulacrosIndexRoute
   '/temas/': typeof TemasIndexRoute
+  '/admin/carreras': typeof AuthenticatedAdminCarrerasRoute
+  '/admin/importar': typeof AuthenticatedAdminImportarRoute
   '/admin/materias': typeof AuthenticatedAdminMateriasRoute
+  '/admin/puntajes-minimos': typeof AuthenticatedAdminPuntajesMinimosRoute
+  '/admin/revisar': typeof AuthenticatedAdminRevisarRoute
+  '/admin/universidades': typeof AuthenticatedAdminUniversidadesRoute
   '/examen-sesion/$sessionId': typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
   '/examen/$id': typeof AuthenticatedExamenIdRoute
   '/practica/$topicSlug': typeof AuthenticatedPracticaTopicSlugRoute
+  '/simulacro/$id': typeof AuthenticatedSimulacroIdRoute
   '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
-  '/simulacros/': typeof AuthenticatedSimulacrosIndexRoute
   '/examenes/$slug/': typeof ExamenesSlugIndexRoute
   '/temas/$slug/': typeof TemasSlugIndexRoute
   '/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
@@ -238,20 +299,28 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/restablecer-password': typeof RestablecerPasswordRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/favoritas': typeof AuthenticatedFavoritasRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/ranking': typeof AuthenticatedRankingRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
   '/examenes': typeof ExamenesIndexRoute
+  '/simulacros': typeof SimulacrosIndexRoute
   '/temas': typeof TemasIndexRoute
+  '/admin/carreras': typeof AuthenticatedAdminCarrerasRoute
+  '/admin/importar': typeof AuthenticatedAdminImportarRoute
   '/admin/materias': typeof AuthenticatedAdminMateriasRoute
+  '/admin/puntajes-minimos': typeof AuthenticatedAdminPuntajesMinimosRoute
+  '/admin/revisar': typeof AuthenticatedAdminRevisarRoute
+  '/admin/universidades': typeof AuthenticatedAdminUniversidadesRoute
   '/examen/$id': typeof AuthenticatedExamenIdRoute
   '/practica/$topicSlug': typeof AuthenticatedPracticaTopicSlugRoute
+  '/simulacro/$id': typeof AuthenticatedSimulacroIdRoute
   '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
-  '/simulacros': typeof AuthenticatedSimulacrosIndexRoute
   '/examenes/$slug': typeof ExamenesSlugIndexRoute
   '/temas/$slug': typeof TemasSlugIndexRoute
   '/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
@@ -270,21 +339,29 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/restablecer-password': typeof RestablecerPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/favoritas': typeof AuthenticatedFavoritasRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/panel': typeof AuthenticatedPanelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/ranking': typeof AuthenticatedRankingRoute
   '/ejercicio/$id': typeof EjercicioIdRoute
   '/examenes/': typeof ExamenesIndexRoute
+  '/simulacros/': typeof SimulacrosIndexRoute
   '/temas/': typeof TemasIndexRoute
+  '/_authenticated/admin/carreras': typeof AuthenticatedAdminCarrerasRoute
+  '/_authenticated/admin/importar': typeof AuthenticatedAdminImportarRoute
   '/_authenticated/admin/materias': typeof AuthenticatedAdminMateriasRoute
+  '/_authenticated/admin/puntajes-minimos': typeof AuthenticatedAdminPuntajesMinimosRoute
+  '/_authenticated/admin/revisar': typeof AuthenticatedAdminRevisarRoute
+  '/_authenticated/admin/universidades': typeof AuthenticatedAdminUniversidadesRoute
   '/_authenticated/examen-sesion/$sessionId': typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
   '/_authenticated/examen/$id': typeof AuthenticatedExamenIdRoute
   '/_authenticated/practica/$topicSlug': typeof AuthenticatedPracticaTopicSlugRoute
+  '/_authenticated/simulacro/$id': typeof AuthenticatedSimulacroIdRoute
   '/examenes/$slug/simulacro': typeof ExamenesSlugSimulacroRoute
   '/temas/$slug/$subtopic': typeof TemasSlugSubtopicRoute
-  '/_authenticated/simulacros/': typeof AuthenticatedSimulacrosIndexRoute
   '/examenes/$slug/': typeof ExamenesSlugIndexRoute
   '/temas/$slug/': typeof TemasSlugIndexRoute
   '/_authenticated/admin/ejercicios/$id': typeof AuthenticatedAdminEjerciciosIdRoute
@@ -303,21 +380,29 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/restablecer-password'
     | '/admin'
     | '/favoritas'
+    | '/onboarding'
     | '/panel'
     | '/perfil'
     | '/ranking'
     | '/ejercicio/$id'
     | '/examenes/'
+    | '/simulacros/'
     | '/temas/'
+    | '/admin/carreras'
+    | '/admin/importar'
     | '/admin/materias'
+    | '/admin/puntajes-minimos'
+    | '/admin/revisar'
+    | '/admin/universidades'
     | '/examen-sesion/$sessionId'
     | '/examen/$id'
     | '/practica/$topicSlug'
+    | '/simulacro/$id'
     | '/examenes/$slug/simulacro'
     | '/temas/$slug/$subtopic'
-    | '/simulacros/'
     | '/examenes/$slug/'
     | '/temas/$slug/'
     | '/admin/ejercicios/$id'
@@ -334,20 +419,28 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/restablecer-password'
     | '/admin'
     | '/favoritas'
+    | '/onboarding'
     | '/panel'
     | '/perfil'
     | '/ranking'
     | '/ejercicio/$id'
     | '/examenes'
+    | '/simulacros'
     | '/temas'
+    | '/admin/carreras'
+    | '/admin/importar'
     | '/admin/materias'
+    | '/admin/puntajes-minimos'
+    | '/admin/revisar'
+    | '/admin/universidades'
     | '/examen/$id'
     | '/practica/$topicSlug'
+    | '/simulacro/$id'
     | '/examenes/$slug/simulacro'
     | '/temas/$slug/$subtopic'
-    | '/simulacros'
     | '/examenes/$slug'
     | '/temas/$slug'
     | '/admin/ejercicios/$id'
@@ -365,21 +458,29 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/restablecer-password'
     | '/_authenticated/admin'
     | '/_authenticated/favoritas'
+    | '/_authenticated/onboarding'
     | '/_authenticated/panel'
     | '/_authenticated/perfil'
     | '/_authenticated/ranking'
     | '/ejercicio/$id'
     | '/examenes/'
+    | '/simulacros/'
     | '/temas/'
+    | '/_authenticated/admin/carreras'
+    | '/_authenticated/admin/importar'
     | '/_authenticated/admin/materias'
+    | '/_authenticated/admin/puntajes-minimos'
+    | '/_authenticated/admin/revisar'
+    | '/_authenticated/admin/universidades'
     | '/_authenticated/examen-sesion/$sessionId'
     | '/_authenticated/examen/$id'
     | '/_authenticated/practica/$topicSlug'
+    | '/_authenticated/simulacro/$id'
     | '/examenes/$slug/simulacro'
     | '/temas/$slug/$subtopic'
-    | '/_authenticated/simulacros/'
     | '/examenes/$slug/'
     | '/temas/$slug/'
     | '/_authenticated/admin/ejercicios/$id'
@@ -398,8 +499,10 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BuscarRoute: typeof BuscarRoute
   ExamenesOficialesRoute: typeof ExamenesOficialesRoute
+  RestablecerPasswordRoute: typeof RestablecerPasswordRoute
   EjercicioIdRoute: typeof EjercicioIdRoute
   ExamenesIndexRoute: typeof ExamenesIndexRoute
+  SimulacrosIndexRoute: typeof SimulacrosIndexRoute
   TemasIndexRoute: typeof TemasIndexRoute
   ExamenesSlugSimulacroRoute: typeof ExamenesSlugSimulacroRoute
   TemasSlugSubtopicRoute: typeof TemasSlugSubtopicRoute
@@ -409,6 +512,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/restablecer-password': {
+      id: '/restablecer-password'
+      path: '/restablecer-password'
+      fullPath: '/restablecer-password'
+      preLoaderRoute: typeof RestablecerPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/examenes-oficiales': {
       id: '/examenes-oficiales'
       path: '/examenes-oficiales'
@@ -451,6 +561,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemasIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/simulacros/': {
+      id: '/simulacros/'
+      path: '/simulacros'
+      fullPath: '/simulacros/'
+      preLoaderRoute: typeof SimulacrosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/examenes/': {
       id: '/examenes/'
       path: '/examenes'
@@ -486,6 +603,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPanelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/favoritas': {
       id: '/_authenticated/favoritas'
       path: '/favoritas'
@@ -514,13 +638,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamenesSlugIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/simulacros/': {
-      id: '/_authenticated/simulacros/'
-      path: '/simulacros'
-      fullPath: '/simulacros/'
-      preLoaderRoute: typeof AuthenticatedSimulacrosIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/temas/$slug/$subtopic': {
       id: '/temas/$slug/$subtopic'
       path: '/temas/$slug/$subtopic'
@@ -534,6 +651,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/examenes/$slug/simulacro'
       preLoaderRoute: typeof ExamenesSlugSimulacroRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/simulacro/$id': {
+      id: '/_authenticated/simulacro/$id'
+      path: '/simulacro/$id'
+      fullPath: '/simulacro/$id'
+      preLoaderRoute: typeof AuthenticatedSimulacroIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/practica/$topicSlug': {
       id: '/_authenticated/practica/$topicSlug'
@@ -556,11 +680,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedExamenSesionSessionIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/universidades': {
+      id: '/_authenticated/admin/universidades'
+      path: '/universidades'
+      fullPath: '/admin/universidades'
+      preLoaderRoute: typeof AuthenticatedAdminUniversidadesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/revisar': {
+      id: '/_authenticated/admin/revisar'
+      path: '/revisar'
+      fullPath: '/admin/revisar'
+      preLoaderRoute: typeof AuthenticatedAdminRevisarRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/puntajes-minimos': {
+      id: '/_authenticated/admin/puntajes-minimos'
+      path: '/puntajes-minimos'
+      fullPath: '/admin/puntajes-minimos'
+      preLoaderRoute: typeof AuthenticatedAdminPuntajesMinimosRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/materias': {
       id: '/_authenticated/admin/materias'
       path: '/materias'
       fullPath: '/admin/materias'
       preLoaderRoute: typeof AuthenticatedAdminMateriasRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/importar': {
+      id: '/_authenticated/admin/importar'
+      path: '/importar'
+      fullPath: '/admin/importar'
+      preLoaderRoute: typeof AuthenticatedAdminImportarRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/carreras': {
+      id: '/_authenticated/admin/carreras'
+      path: '/carreras'
+      fullPath: '/admin/carreras'
+      preLoaderRoute: typeof AuthenticatedAdminCarrerasRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/examen-sesion/$sessionId/': {
@@ -623,7 +782,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminCarrerasRoute: typeof AuthenticatedAdminCarrerasRoute
+  AuthenticatedAdminImportarRoute: typeof AuthenticatedAdminImportarRoute
   AuthenticatedAdminMateriasRoute: typeof AuthenticatedAdminMateriasRoute
+  AuthenticatedAdminPuntajesMinimosRoute: typeof AuthenticatedAdminPuntajesMinimosRoute
+  AuthenticatedAdminRevisarRoute: typeof AuthenticatedAdminRevisarRoute
+  AuthenticatedAdminUniversidadesRoute: typeof AuthenticatedAdminUniversidadesRoute
   AuthenticatedAdminEjerciciosIdRoute: typeof AuthenticatedAdminEjerciciosIdRoute
   AuthenticatedAdminEjerciciosNuevoRoute: typeof AuthenticatedAdminEjerciciosNuevoRoute
   AuthenticatedAdminExamenesIdRoute: typeof AuthenticatedAdminExamenesIdRoute
@@ -634,7 +798,13 @@ interface AuthenticatedAdminRouteRouteChildren {
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminCarrerasRoute: AuthenticatedAdminCarrerasRoute,
+    AuthenticatedAdminImportarRoute: AuthenticatedAdminImportarRoute,
     AuthenticatedAdminMateriasRoute: AuthenticatedAdminMateriasRoute,
+    AuthenticatedAdminPuntajesMinimosRoute:
+      AuthenticatedAdminPuntajesMinimosRoute,
+    AuthenticatedAdminRevisarRoute: AuthenticatedAdminRevisarRoute,
+    AuthenticatedAdminUniversidadesRoute: AuthenticatedAdminUniversidadesRoute,
     AuthenticatedAdminEjerciciosIdRoute: AuthenticatedAdminEjerciciosIdRoute,
     AuthenticatedAdminEjerciciosNuevoRoute:
       AuthenticatedAdminEjerciciosNuevoRoute,
@@ -671,18 +841,20 @@ const AuthenticatedExamenSesionSessionIdRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedFavoritasRoute: typeof AuthenticatedFavoritasRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedRankingRoute: typeof AuthenticatedRankingRoute
   AuthenticatedExamenSesionSessionIdRoute: typeof AuthenticatedExamenSesionSessionIdRouteWithChildren
   AuthenticatedExamenIdRoute: typeof AuthenticatedExamenIdRoute
   AuthenticatedPracticaTopicSlugRoute: typeof AuthenticatedPracticaTopicSlugRoute
-  AuthenticatedSimulacrosIndexRoute: typeof AuthenticatedSimulacrosIndexRoute
+  AuthenticatedSimulacroIdRoute: typeof AuthenticatedSimulacroIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedFavoritasRoute: AuthenticatedFavoritasRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPanelRoute: AuthenticatedPanelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedRankingRoute: AuthenticatedRankingRoute,
@@ -690,7 +862,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedExamenSesionSessionIdRouteWithChildren,
   AuthenticatedExamenIdRoute: AuthenticatedExamenIdRoute,
   AuthenticatedPracticaTopicSlugRoute: AuthenticatedPracticaTopicSlugRoute,
-  AuthenticatedSimulacrosIndexRoute: AuthenticatedSimulacrosIndexRoute,
+  AuthenticatedSimulacroIdRoute: AuthenticatedSimulacroIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -702,8 +874,10 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BuscarRoute: BuscarRoute,
   ExamenesOficialesRoute: ExamenesOficialesRoute,
+  RestablecerPasswordRoute: RestablecerPasswordRoute,
   EjercicioIdRoute: EjercicioIdRoute,
   ExamenesIndexRoute: ExamenesIndexRoute,
+  SimulacrosIndexRoute: SimulacrosIndexRoute,
   TemasIndexRoute: TemasIndexRoute,
   ExamenesSlugSimulacroRoute: ExamenesSlugSimulacroRoute,
   TemasSlugSubtopicRoute: TemasSlugSubtopicRoute,
@@ -713,3 +887,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

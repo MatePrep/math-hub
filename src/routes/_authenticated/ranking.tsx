@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -17,7 +17,10 @@ import {
   getExamLeaderboard,
   listUniversitiesWithExams,
   listPublishedExamsForRanking,
+  getMinScoreForRanking,
+  getMyBestScoreForUniversity,
 } from "@/lib/leaderboard.functions";
+import { getUserStats } from "@/lib/attempts.functions";
 
 export const Route = createFileRoute("/_authenticated/ranking")({
   head: () => ({ meta: [{ title: "Ranking · MatePre" }] }),
@@ -47,6 +50,14 @@ function RankingPage() {
     queryFn: () => examBoardFn({ data: { examId, limit: 100 } }),
     enabled: !!examId,
   });
+
+  const uniRows = uniBoardQ.data ?? [];
+  const uniMe = uniRows.find((r: any) => r.is_me);
+  const uniTotal = uniRows[0]?.total_count ?? 0;
+
+  const examRows = examBoardQ.data ?? [];
+  const examMe = examRows.find((r: any) => r.is_me);
+  const examTotal = examRows[0]?.total_count ?? 0;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -78,21 +89,31 @@ function RankingPage() {
             </SelectContent>
           </Select>
           <p className="mt-2 text-xs text-muted-foreground">
-            Precisión promedio (% de aciertos) entre todos los exámenes y simulacros rendidos en
-            esta universidad — no mezcla puntajes en puntos, ya que cada examen puede tener su
-            propio esquema de puntos.
+            Precisión promedio (% de aciertos) entre los exámenes y simulacros rendidos en esta
+            universidad durante los últimos 3 meses — no mezcla puntajes en puntos, ya que cada
+            examen puede tener su propio esquema de puntos. Se muestran los 100 mejores puestos.
           </p>
           <BoardTable
             loading={uniBoardQ.isLoading && !!uniId}
-            rows={(uniBoardQ.data ?? []).map((r: any, i: number) => ({
-              rank: i + 1,
-              pseudonym: r.pseudonym,
-              scoreText: `${r.avg_accuracy}%`,
-              subtitle: `${r.sessions_count} exámenes`,
-              is_me: r.is_me,
-            }))}
+            rows={uniRows
+              .filter((r: any) => r.rank <= 100)
+              .map((r: any) => ({
+                rank: r.rank,
+                pseudonym: r.pseudonym,
+                scoreText: `${r.avg_accuracy}%`,
+                subtitle: `${r.sessions_count} exámenes`,
+                is_me: r.is_me,
+              }))}
             scoreLabel="Precisión promedio"
           />
+          {uniMe && uniMe.rank > 100 && (
+            <p className="mt-3 rounded-lg border border-border bg-secondary/40 px-4 py-3 text-sm">
+              Estás en el puesto <span className="font-semibold">#{uniMe.rank}</span> de{" "}
+              <span className="font-semibold">{uniTotal}</span> estudiantes en los últimos 3 meses.
+            </p>
+          )}
+
+          {uniId && <MinScoreCard universityId={uniId} />}
         </TabsContent>
 
         <TabsContent value="exam" className="mt-4">
@@ -108,17 +129,28 @@ function RankingPage() {
               ))}
             </SelectContent>
           </Select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Mejor puntaje obtenido en los últimos 3 meses. Se muestran los 100 mejores puestos.
+          </p>
           <BoardTable
             loading={examBoardQ.isLoading && !!examId}
-            rows={(examBoardQ.data ?? []).map((r: any, i: number) => ({
-              rank: i + 1,
-              pseudonym: r.pseudonym,
-              scoreText: `${r.best_score}${r.max_score != null ? ` / ${r.max_score}` : ""} pts`,
-              subtitle: `${r.attempts_count} intentos`,
-              is_me: r.is_me,
-            }))}
+            rows={examRows
+              .filter((r: any) => r.rank <= 100)
+              .map((r: any) => ({
+                rank: r.rank,
+                pseudonym: r.pseudonym,
+                scoreText: `${r.best_score}${r.max_score != null ? ` / ${r.max_score}` : ""} pts`,
+                subtitle: `${r.attempts_count} intentos`,
+                is_me: r.is_me,
+              }))}
             scoreLabel="Mejor puntaje"
           />
+          {examMe && examMe.rank > 100 && (
+            <p className="mt-3 rounded-lg border border-border bg-secondary/40 px-4 py-3 text-sm">
+              Estás en el puesto <span className="font-semibold">#{examMe.rank}</span> de{" "}
+              <span className="font-semibold">{examTotal}</span> estudiantes en los últimos 3 meses.
+            </p>
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -168,6 +200,98 @@ function BoardTable({
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// Minimum admission score reference for the university currently selected on
+// the "Por universidad" tab — motivational only, never affects the ranking
+// itself. See plan-ranking-mensual-puntaje-minimo.md §3.
+function MinScoreCard({ universityId }: { universityId: string }) {
+  const minScoreFn = useServerFn(getMinScoreForRanking);
+  const bestScoreFn = useServerFn(getMyBestScoreForUniversity);
+  const statsFn = useServerFn(getUserStats);
+
+  const minScoreQ = useQuery({
+    queryKey: ["rank-min-score", universityId],
+    queryFn: () => minScoreFn({ data: { universityId } }),
+  });
+
+  const hasMinScore = !!minScoreQ.data?.minScore;
+
+  const bestScoreQ = useQuery({
+    queryKey: ["rank-my-best-score", universityId],
+    queryFn: () => bestScoreFn({ data: { universityId } }),
+    enabled: hasMinScore,
+  });
+
+  const minScore = minScoreQ.data?.minScore;
+  const bestScore = bestScoreQ.data?.bestScore ?? null;
+  const isBehind = !!(hasMinScore && minScore && (bestScore == null || bestScore < minScore.minScore));
+
+  const statsQ = useQuery({
+    queryKey: ["user-stats-for-ranking"],
+    queryFn: () => statsFn(),
+    enabled: isBehind,
+  });
+  const weakTopics = [...(statsQ.data?.topicStats ?? [])]
+    .filter((t) => t.total >= 3)
+    .sort((a, b) => a.accuracy - b.accuracy)
+    .slice(0, 2);
+
+  if (minScoreQ.isLoading) return null;
+
+  if (!minScoreQ.data?.hasCareer) {
+    return (
+      <p className="mt-4 rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+        Completa tu carrera en{" "}
+        <Link to="/perfil" className="text-primary hover:underline">
+          tu perfil
+        </Link>{" "}
+        para ver el puntaje mínimo de ingreso de esta universidad.
+      </p>
+    );
+  }
+
+  if (!minScore) return null;
+
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-card p-4">
+      <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
+        <Target className="h-4 w-4 text-primary" /> Puntaje mínimo de ingreso
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {minScoreQ.data.careerName} · {minScore.year}: <span className="font-semibold text-foreground">{minScore.minScore}</span>
+      </p>
+      {bestScore == null ? (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Aún no tienes puntajes en los últimos 3 meses para comparar.
+        </p>
+      ) : isBehind ? (
+        <>
+          <p className="mt-2 text-sm">
+            Te faltan <span className="font-semibold">{Math.round(minScore.minScore - bestScore)} puntos</span> para
+            alcanzar el puntaje mínimo de ingreso de {minScore.year}. ¡Sigue practicando!
+          </p>
+          {weakTopics.length > 0 && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Practicar {weakTopics.map((t) => t.name).join(" y ")}, tus temas con más margen de mejora,
+              te puede ayudar a cerrar esa brecha.{" "}
+              <Link
+                to="/temas/$slug"
+                params={{ slug: weakTopics[0].slug }}
+                className="font-medium text-primary hover:underline"
+              >
+                Practicar {weakTopics[0].name} →
+              </Link>
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-success">
+          ¡Vas muy bien! Tu mejor puntaje de los últimos 3 meses ya supera el puntaje mínimo de ingreso.
+        </p>
+      )}
     </div>
   );
 }

@@ -16,7 +16,9 @@ export const getFullProfile = createServerFn({ method: "GET" })
         .maybeSingle(),
       supabase
         .from("student_universities")
-        .select("id, university_id, exam_date, university:universities(id, slug, short_name, name, exam_date)")
+        .select(
+          "id, university_id, exam_date, career_id, university:universities(id, slug, short_name, name, exam_date)",
+        )
         .eq("user_id", userId),
     ]);
     if (pErr) throw new Error(pErr.message);
@@ -74,6 +76,7 @@ const updateSchema = z.object({
       z.object({
         universityId: z.string().uuid(),
         examDate: z.string().nullable().optional(),
+        careerId: z.string().uuid().nullable().optional(),
       }),
     )
     .max(10)
@@ -149,6 +152,7 @@ export const updateFullProfile = createServerFn({ method: "POST" })
           user_id: userId,
           university_id: u.universityId,
           exam_date: u.examDate || null,
+          career_id: u.careerId || null,
         }));
         const { error } = await supabase.from("student_universities").insert(rows);
         if (error) throw new Error(error.message);

@@ -24,6 +24,8 @@ const NAV_ITEMS = [
   { to: "/admin/examenes", label: "Exámenes" },
   { to: "/admin/materias", label: "Materias" },
   { to: "/admin/universidades", label: "Universidades" },
+  { to: "/admin/carreras", label: "Carreras" },
+  { to: "/admin/puntajes-minimos", label: "Puntajes mínimos" },
   { to: "/admin/revisar", label: "Revisar" },
 ] as const;
 

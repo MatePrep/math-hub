@@ -10,6 +10,7 @@ import {
   PREP_METHOD_VALUES,
 } from "@/lib/profile.functions";
 import { listTopics } from "@/lib/exercises.functions";
+import { listCareersForUniversities } from "@/lib/careers.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,13 +53,14 @@ export const Route = createFileRoute("/_authenticated/perfil")({
   ),
 });
 
-type UniRow = { universityId: string; examDate: string };
+type UniRow = { universityId: string; examDate: string; careerId: string | null };
 
 function PerfilPage() {
   const fetchProfile = useServerFn(getFullProfile);
   const save = useServerFn(updateFullProfile);
   const universitiesFn = useServerFn(listAllUniversities);
   const topicsFn = useServerFn(listTopics);
+  const careersFn = useServerFn(listCareersForUniversities);
 
   const qo = useMemo(
     () => queryOptions({ queryKey: ["full-profile"], queryFn: () => fetchProfile() }),
@@ -73,13 +75,25 @@ function PerfilPage() {
   const allUniversities = universitiesQ.data ?? [];
   const allTopics = topicsQ.data ?? [];
 
+  const [universities, setUniversities] = useState<UniRow[]>([]);
+  const universityIds = universities.map((u) => u.universityId);
+  const careersQ = useQuery({
+    queryKey: ["careers-for-universities", universityIds],
+    queryFn: () => careersFn({ data: { universityIds } }),
+    enabled: universityIds.length > 0,
+  });
+  const careersByUniversity = new Map<string, any[]>();
+  (careersQ.data ?? []).forEach((c: any) => {
+    const list = careersByUniversity.get(c.university_id) ?? [];
+    list.push(c);
+    careersByUniversity.set(c.university_id, list);
+  });
+
   const [fullName, setFullName] = useState("");
   const [pseudonym, setPseudonym] = useState("");
-  const [career, setCareer] = useState("");
   const [leaderboardOptIn, setLeaderboardOptIn] = useState(true);
   const [weeklyGoalQuestions, setWeeklyGoalQuestions] = useState(50);
   const [weeklyGoalExams, setWeeklyGoalExams] = useState(2);
-  const [universities, setUniversities] = useState<UniRow[]>([]);
   const [prepTime, setPrepTime] = useState<string | null>(null);
   const [prepMethod, setPrepMethod] = useState<string | null>(null);
   const [weeklyStudyHours, setWeeklyStudyHours] = useState<string>("");
@@ -154,7 +168,6 @@ function PerfilPage() {
     const p = data?.profile;
     setFullName(p?.full_name ?? "");
     setPseudonym(p?.pseudonym ?? "");
-    setCareer(p?.career ?? "");
     setLeaderboardOptIn(p?.leaderboard_opt_in ?? true);
     setWeeklyGoalQuestions(p?.weekly_goal_questions ?? 50);
     setWeeklyGoalExams(p?.weekly_goal_exams ?? 2);
@@ -166,6 +179,7 @@ function PerfilPage() {
       (data?.universities ?? []).map((u: any) => ({
         universityId: u.university_id,
         examDate: u.exam_date ?? "",
+        careerId: u.career_id ?? null,
       })),
     );
   }, [data]);
@@ -181,7 +195,7 @@ function PerfilPage() {
       toast.error("Ya agregaste todas las universidades disponibles");
       return;
     }
-    setUniversities((rows) => [...rows, { universityId: next.id, examDate: "" }]);
+    setUniversities((rows) => [...rows, { universityId: next.id, examDate: "", careerId: null }]);
   }
 
   function updateUniversityRow(index: number, patch: Partial<UniRow>) {
@@ -214,7 +228,6 @@ function PerfilPage() {
         data: {
           fullName,
           pseudonym: pseudonym.trim() || null,
-          career: career.trim() || null,
           leaderboardOptIn,
           weeklyGoalQuestions,
           weeklyGoalExams,
@@ -225,6 +238,7 @@ function PerfilPage() {
           universities: universities.map((u) => ({
             universityId: u.universityId,
             examDate: u.examDate || null,
+            careerId: u.careerId || null,
           })),
         },
       });
@@ -274,11 +288,6 @@ function PerfilPage() {
           <p className="mt-1 text-xs text-muted-foreground">
             Este nombre es el único que verán otros estudiantes en el ranking. Debe ser único.
           </p>
-        </div>
-
-        <div>
-          <Label htmlFor="career">Carrera (opcional)</Label>
-          <Input id="career" value={career} onChange={(e) => setCareer(e.target.value)} maxLength={120} />
         </div>
 
         <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3">
@@ -347,37 +356,59 @@ function PerfilPage() {
                 Aún no agregaste ninguna universidad.
               </p>
             )}
-            {universities.map((row, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Select
-                  value={row.universityId}
-                  onValueChange={(v) => updateUniversityRow(i, { universityId: v })}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Universidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allUniversities
-                      .filter((u: any) => u.active || u.id === row.universityId)
-                      .map((u: any) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.short_name ?? u.name}
-                          {!u.active ? " (inactiva)" : ""}
+            {universities.map((row, i) => {
+              const rowCareers = (careersByUniversity.get(row.universityId) ?? []).filter(
+                (c: any) => c.active || c.id === row.careerId,
+              );
+              return (
+                <div key={i} className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={row.universityId}
+                    onValueChange={(v) => updateUniversityRow(i, { universityId: v, careerId: null })}
+                  >
+                    <SelectTrigger className="min-w-[160px] flex-1">
+                      <SelectValue placeholder="Universidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allUniversities
+                        .filter((u: any) => u.active || u.id === row.universityId)
+                        .map((u: any) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.short_name ?? u.name}
+                            {!u.active ? " (inactiva)" : ""}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={row.careerId ?? "__none"}
+                    onValueChange={(v) => updateUniversityRow(i, { careerId: v === "__none" ? null : v })}
+                    disabled={rowCareers.length === 0}
+                  >
+                    <SelectTrigger className="min-w-[160px] flex-1">
+                      <SelectValue placeholder={rowCareers.length === 0 ? "Sin carreras registradas" : "Carrera (opcional)"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">— ninguna —</SelectItem>
+                      {rowCareers.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="date"
-                  className="w-40"
-                  value={row.examDate}
-                  onChange={(e) => updateUniversityRow(i, { examDate: e.target.value })}
-                />
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeUniversityRow(i)} aria-label="Quitar">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="date"
+                    className="w-40"
+                    value={row.examDate}
+                    onChange={(e) => updateUniversityRow(i, { examDate: e.target.value })}
+                  />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeUniversityRow(i)} aria-label="Quitar">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </div>
 

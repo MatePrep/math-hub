@@ -24,6 +24,7 @@ import {
   PREP_METHOD_VALUES,
 } from "@/lib/profile.functions";
 import { listTopics } from "@/lib/exercises.functions";
+import { listCareersForUniversities } from "@/lib/careers.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
@@ -47,7 +48,7 @@ const PREP_METHOD_OPTIONS: Array<{ value: (typeof PREP_METHOD_VALUES)[number]; l
   { value: "primera_vez", label: "Esta es mi primera preparación formal" },
 ];
 
-type UniRow = { universityId: string; examDate: string };
+type UniRow = { universityId: string; examDate: string; careerId: string | null };
 
 const profileQO = (fetchProfile: () => Promise<any>) =>
   queryOptions({ queryKey: ["full-profile"], queryFn: () => fetchProfile() });
@@ -58,6 +59,7 @@ function OnboardingPage() {
   const save = useServerFn(updateFullProfile);
   const universitiesFn = useServerFn(listAllUniversities);
   const topicsFn = useServerFn(listTopics);
+  const careersFn = useServerFn(listCareersForUniversities);
 
   const qo = useMemo(() => profileQO(fetchProfile), [fetchProfile]);
   const { data } = useSuspenseQuery(qo);
@@ -70,8 +72,20 @@ function OnboardingPage() {
   const [universities, setUniversities] = useState<UniRow[]>([]);
   const [prepTime, setPrepTime] = useState<string | null>(null);
   const [prepMethod, setPrepMethod] = useState<string | null>(null);
-  const [career, setCareer] = useState("");
   const [weakTopicIds, setWeakTopicIds] = useState<string[]>([]);
+
+  const universityIds = universities.map((u) => u.universityId);
+  const careersQ = useQuery({
+    queryKey: ["careers-for-universities", universityIds],
+    queryFn: () => careersFn({ data: { universityIds } }),
+    enabled: universityIds.length > 0,
+  });
+  const careersByUniversity = new Map<string, any[]>();
+  (careersQ.data ?? []).forEach((c: any) => {
+    const list = careersByUniversity.get(c.university_id) ?? [];
+    list.push(c);
+    careersByUniversity.set(c.university_id, list);
+  });
   const [weeklyStudyHours, setWeeklyStudyHours] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -84,11 +98,11 @@ function OnboardingPage() {
       (data?.universities ?? []).map((u: any) => ({
         universityId: u.university_id,
         examDate: u.exam_date ?? "",
+        careerId: u.career_id ?? null,
       })),
     );
     setPrepTime(data?.profile?.prep_time ?? null);
     setPrepMethod(data?.profile?.prep_method ?? null);
-    setCareer(data?.profile?.career ?? "");
     setWeakTopicIds(data?.profile?.initial_weak_topic_ids ?? []);
     setWeeklyStudyHours(
       data?.profile?.weekly_study_hours != null ? String(data.profile.weekly_study_hours) : "",
@@ -103,7 +117,7 @@ function OnboardingPage() {
       toast.error("Ya agregaste todas las universidades disponibles");
       return;
     }
-    setUniversities((rows) => [...rows, { universityId: next.id, examDate: "" }]);
+    setUniversities((rows) => [...rows, { universityId: next.id, examDate: "", careerId: null }]);
   }
   function updateUniversityRow(index: number, patch: Partial<UniRow>) {
     setUniversities((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
@@ -123,10 +137,10 @@ function OnboardingPage() {
           universities: universities.map((u) => ({
             universityId: u.universityId,
             examDate: u.examDate || null,
+            careerId: u.careerId || null,
           })),
           prepTime: prepTime as any,
           prepMethod: prepMethod as any,
-          career: career.trim() || null,
           weeklyStudyHours: weeklyStudyHours ? Number(weeklyStudyHours) : null,
           initialWeakTopicIds: weakTopicIds,
           onboardingCompleted: true,
@@ -261,16 +275,42 @@ function OnboardingPage() {
         {step === 4 && (
           <div>
             <h2 className="font-display text-lg font-bold">¿A qué carrera te gustaría postular?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Opcional.</p>
-            <div className="mt-4">
-              <Label htmlFor="career">Carrera</Label>
-              <Input
-                id="career"
-                value={career}
-                onChange={(e) => setCareer(e.target.value)}
-                placeholder="ej. Ingeniería Civil"
-                maxLength={120}
-              />
+            <p className="mt-1 text-sm text-muted-foreground">
+              Opcional. Cada universidad tiene sus propias carreras, así que elige una por cada una.
+            </p>
+            <div className="mt-4 space-y-4">
+              {universities.map((row, i) => {
+                const uni = allUniversities.find((u: any) => u.id === row.universityId);
+                const rowCareers = (careersByUniversity.get(row.universityId) ?? []).filter(
+                  (c: any) => c.active || c.id === row.careerId,
+                );
+                return (
+                  <div key={row.universityId}>
+                    <Label>{uni?.short_name ?? uni?.name ?? "Universidad"}</Label>
+                    <Select
+                      value={row.careerId ?? "__none"}
+                      onValueChange={(v) =>
+                        setUniversities((rows) =>
+                          rows.map((r, j) => (j === i ? { ...r, careerId: v === "__none" ? null : v } : r)),
+                        )
+                      }
+                      disabled={rowCareers.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={rowCareers.length === 0 ? "Sin carreras registradas" : "Selecciona…"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">— ninguna —</SelectItem>
+                        {rowCareers.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

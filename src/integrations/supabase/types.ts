@@ -55,6 +55,38 @@ export type Database = {
           },
         ]
       }
+      careers: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          university_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          university_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "careers_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_questions: {
         Row: {
           exam_id: string
@@ -466,6 +498,51 @@ export type Database = {
           },
         ]
       }
+      min_admission_scores: {
+        Row: {
+          career_id: string
+          created_at: string
+          id: string
+          min_score: number
+          university_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          career_id: string
+          created_at?: string
+          id?: string
+          min_score: number
+          university_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          career_id?: string
+          created_at?: string
+          id?: string
+          min_score?: number
+          university_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "min_admission_scores_career_id_fkey"
+            columns: ["career_id"]
+            isOneToOne: false
+            referencedRelation: "careers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "min_admission_scores_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -555,6 +632,7 @@ export type Database = {
       }
       student_universities: {
         Row: {
+          career_id: string | null
           created_at: string
           exam_date: string | null
           id: string
@@ -562,6 +640,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          career_id?: string | null
           created_at?: string
           exam_date?: string | null
           id?: string
@@ -569,6 +648,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          career_id?: string | null
           created_at?: string
           exam_date?: string | null
           id?: string
@@ -576,6 +656,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "student_universities_career_id_fkey"
+            columns: ["career_id"]
+            isOneToOne: false
+            referencedRelation: "careers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "student_universities_university_id_fkey"
             columns: ["university_id"]
@@ -714,6 +801,8 @@ export type Database = {
           is_me: boolean
           max_score: number
           pseudonym: string
+          rank: number
+          total_count: number
           user_id: string
         }[]
       }
@@ -746,13 +835,22 @@ export type Database = {
           topic_name: string
         }[]
       }
+      get_my_best_score_for_university: {
+        Args: { _university_id: string }
+        Returns: {
+          best_score: number
+          sessions_count: number
+        }[]
+      }
       get_university_leaderboard: {
         Args: { _limit?: number; _university_id: string }
         Returns: {
           avg_accuracy: number
           is_me: boolean
           pseudonym: string
+          rank: number
           sessions_count: number
+          total_count: number
           user_id: string
         }[]
       }

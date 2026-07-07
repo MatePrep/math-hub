@@ -577,6 +577,261 @@ export const deleteUniversity = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ========== CAREERS management ("carreras", scoped per university) ==========
+
+export const listAdminCareers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ universityId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: rows, error } = await context.supabase
+      .from("careers")
+      .select("id, name, active, created_at")
+      .eq("university_id", data.universityId)
+      .order("name");
+    if (error) throw new Error(error.message);
+
+    const [{ data: studentRows }, { data: scoreRows }] = await Promise.all([
+      context.supabase.from("student_universities").select("career_id").eq("university_id", data.universityId),
+      context.supabase.from("min_admission_scores").select("career_id").eq("university_id", data.universityId),
+    ]);
+    const bump = (m: Map<string, number>, key: string | null) => {
+      if (!key) return;
+      m.set(key, (m.get(key) ?? 0) + 1);
+    };
+    const studentCounts = new Map<string, number>();
+    (studentRows ?? []).forEach((r: any) => bump(studentCounts, r.career_id));
+    const scoreCounts = new Map<string, number>();
+    (scoreRows ?? []).forEach((r: any) => bump(scoreCounts, r.career_id));
+
+    return (rows ?? []).map((c: any) => ({
+      ...c,
+      studentCount: studentCounts.get(c.id) ?? 0,
+      minScoreCount: scoreCounts.get(c.id) ?? 0,
+    }));
+  });
+
+export const createCareer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ universityId: z.string().uuid(), name: z.string().trim().min(2).max(120) }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: existing } = await context.supabase
+      .from("careers")
+      .select("id")
+      .eq("university_id", data.universityId)
+      .ilike("name", data.name)
+      .maybeSingle();
+    if (existing) {
+      return { id: existing.id as string, duplicated: true };
+    }
+    const { data: row, error } = await context.supabase
+      .from("careers")
+      .insert({ university_id: data.universityId, name: data.name })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id as string, duplicated: false };
+  });
+
+export const renameCareer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid(), name: z.string().trim().min(2).max(120) }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: rows, error } = await context.supabase
+      .from("careers")
+      .update({ name: data.name })
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la carrera");
+    return { ok: true };
+  });
+
+export const setCareerActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: rows, error } = await context.supabase
+      .from("careers")
+      .update({ active: data.active })
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la carrera");
+    return { ok: true };
+  });
+
+export const deleteCareer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const [{ count: studentCount }, { count: scoreCount }] = await Promise.all([
+      context.supabase.from("student_universities").select("id", { head: true, count: "exact" }).eq("career_id", data.id),
+      context.supabase.from("min_admission_scores").select("id", { head: true, count: "exact" }).eq("career_id", data.id),
+    ]);
+    const total = (studentCount ?? 0) + (scoreCount ?? 0);
+    if (total > 0) {
+      throw new Error(
+        `No se puede eliminar: ${studentCount ?? 0} estudiante(s) y ${scoreCount ?? 0} puntaje(s) mínimo(s) la referencian. Desactívala en su lugar.`,
+      );
+    }
+    const { data: rows, error } = await context.supabase.from("careers").delete().eq("id", data.id).select("id");
+    if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "la carrera");
+    return { ok: true };
+  });
+
+// ========== MIN ADMISSION SCORES management ("puntajes mínimos de ingreso") ==========
+
+export const listAdminMinScores = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        universityId: z.string().uuid().optional(),
+        careerId: z.string().uuid().optional(),
+        year: z.number().int().optional(),
+      })
+      .parse(d ?? {}),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    let q = context.supabase
+      .from("min_admission_scores")
+      .select(
+        "id, year, min_score, created_at, updated_at, university:universities(id,short_name), career:careers(id,name)",
+      )
+      .order("year", { ascending: false });
+    if (data.universityId) q = q.eq("university_id", data.universityId);
+    if (data.careerId) q = q.eq("career_id", data.careerId);
+    if (data.year) q = q.eq("year", data.year);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+// Admin saves a min score for a university+career -> every student who has
+// that exact (university, career) pair on their profile gets an in-app
+// notification. Writing another user's notifications row is blocked by the
+// self-only RLS policy, so this needs the service-role client (same pattern
+// as resolveExerciseReport in exercise-review.functions.ts).
+async function notifyMinScoreUpdate(
+  supabase: any,
+  universityId: string,
+  careerId: string,
+  year: number,
+  minScore: number,
+) {
+  const [{ data: uni }, { data: career }, { data: students }] = await Promise.all([
+    supabase.from("universities").select("short_name").eq("id", universityId).maybeSingle(),
+    supabase.from("careers").select("name").eq("id", careerId).maybeSingle(),
+    supabase
+      .from("student_universities")
+      .select("user_id")
+      .eq("university_id", universityId)
+      .eq("career_id", careerId),
+  ]);
+  const affected = students ?? [];
+  if (affected.length === 0) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const title = `Se actualizó el puntaje mínimo de ingreso de ${uni?.short_name ?? "tu universidad"} - ${career?.name ?? "tu carrera"}`;
+  const body = `Para el año ${year}: ahora es ${minScore}.`;
+  await supabaseAdmin.from("notifications").insert(
+    affected.map((s: any) => ({ user_id: s.user_id, kind: "min_score_updated", title, body })),
+  );
+}
+
+const minScoreBase = z.object({
+  universityId: z.string().uuid(),
+  careerId: z.string().uuid(),
+  year: z.number().int().min(2000).max(2100),
+  minScore: z.number().min(0).max(1000000),
+});
+
+export const createMinScore = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => minScoreBase.parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: existing } = await context.supabase
+      .from("min_admission_scores")
+      .select("id")
+      .eq("university_id", data.universityId)
+      .eq("career_id", data.careerId)
+      .eq("year", data.year)
+      .maybeSingle();
+    if (existing) {
+      throw new Error("Ya existe un puntaje mínimo para esa universidad, carrera y año. Edítalo en su lugar.");
+    }
+    const { data: row, error } = await context.supabase
+      .from("min_admission_scores")
+      .insert({
+        university_id: data.universityId,
+        career_id: data.careerId,
+        year: data.year,
+        min_score: data.minScore,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    await notifyMinScoreUpdate(context.supabase, data.universityId, data.careerId, data.year, data.minScore);
+    return { id: row.id as string };
+  });
+
+export const updateMinScore = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => minScoreBase.extend({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: existing } = await context.supabase
+      .from("min_admission_scores")
+      .select("id")
+      .eq("university_id", data.universityId)
+      .eq("career_id", data.careerId)
+      .eq("year", data.year)
+      .neq("id", data.id)
+      .maybeSingle();
+    if (existing) {
+      throw new Error("Ya existe otro puntaje mínimo para esa universidad, carrera y año.");
+    }
+    const { data: rows, error } = await context.supabase
+      .from("min_admission_scores")
+      .update({
+        university_id: data.universityId,
+        career_id: data.careerId,
+        year: data.year,
+        min_score: data.minScore,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el puntaje mínimo");
+    await notifyMinScoreUpdate(context.supabase, data.universityId, data.careerId, data.year, data.minScore);
+    return { ok: true };
+  });
+
+export const deleteMinScore = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: rows, error } = await context.supabase
+      .from("min_admission_scores")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el puntaje mínimo");
+    return { ok: true };
+  });
+
 // ========== EXAMS management ==========
 
 const templateRuleSchema = z.object({
