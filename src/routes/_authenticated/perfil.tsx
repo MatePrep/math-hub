@@ -245,7 +245,8 @@ function PerfilPage() {
       toast.success("Perfil actualizado");
       flashSaveFeedback("accepted");
     } catch (err: any) {
-      toast.error(err.message ?? "Error al guardar");
+      console.error("No se pudo guardar el perfil:", err);
+      toast.error(err?.message || "Error al guardar");
       flashSaveFeedback("refused");
     } finally {
       setBusy(false);

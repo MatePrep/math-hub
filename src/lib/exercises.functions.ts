@@ -62,6 +62,32 @@ export const getTopicBySlug = createServerFn({ method: "GET" })
     return { ...topic, subtopics: subtopics ?? [] };
   });
 
+const subtopicFreqInput = z.object({
+  topicSlug: z.string(),
+  universityId: z.string().uuid(),
+  yearsBack: z.number().int().min(1).max(50).default(10),
+});
+
+export const getSubtopicFrequency = createServerFn({ method: "GET" })
+  .inputValidator((d) => subtopicFreqInput.parse(d))
+  .handler(async ({ data }) => {
+    const sb = publicClient();
+    const cutoffYear = new Date().getFullYear() - data.yearsBack + 1;
+    const { data: rows, error } = await sb
+      .from("exercises")
+      .select("subtopic_id, exam_year, topic:topics!inner(slug)")
+      .eq("topics.slug", data.topicSlug)
+      .eq("university_id", data.universityId)
+      .not("exam_year", "is", null)
+      .gte("exam_year", cutoffYear);
+    if (error) throw new Error(error.message);
+    const map = new Map<string, number>();
+    (rows ?? []).forEach((r) => {
+      if (r.subtopic_id) map.set(r.subtopic_id, (map.get(r.subtopic_id) ?? 0) + 1);
+    });
+    return Object.fromEntries(map);
+  });
+
 const exFilters = z.object({
   topicSlug: z.string().optional(),
   subtopicSlug: z.string().optional(),

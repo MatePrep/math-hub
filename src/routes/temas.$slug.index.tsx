@@ -1,10 +1,31 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { getTopicBySlug, listExercises } from "@/lib/exercises.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { getTopicBySlug, listExercises, getSubtopicFrequency } from "@/lib/exercises.functions";
+import { getFullProfile } from "@/lib/profile.functions";
+import { useSignedIn } from "@/hooks/use-signed-in";
 import { ExerciseCard } from "@/components/exercise-card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, HelpCircle } from "lucide-react";
 
 const searchSchema = z.object({
   difficulty: fallback(z.enum(["all", "facil", "medio", "dificil"]), "all").default("all"),
@@ -68,7 +89,42 @@ function TopicPage() {
     exercisesQO(slug, search.difficulty === "all" ? undefined : search.difficulty),
   );
 
+  const signedIn = useSignedIn();
+  const profileFn = useServerFn(getFullProfile);
+  const profileQ = useQuery({
+    queryKey: ["full-profile"],
+    queryFn: () => profileFn(),
+    enabled: signedIn === true,
+  });
+  const targetUniversities = (profileQ.data?.universities ?? [])
+    .map((u: any) => u.university)
+    .filter(Boolean);
+
+  const [selectedUniversityId, setSelectedUniversityId] = useState<string>("");
+  const effectiveUniversityId = selectedUniversityId || targetUniversities[0]?.id || "";
+
+  const freqFn = useServerFn(getSubtopicFrequency);
+  const freqQ = useQuery({
+    queryKey: ["subtopic-frequency", slug, effectiveUniversityId],
+    queryFn: () => freqFn({ data: { topicSlug: slug, universityId: effectiveUniversityId } }),
+    enabled: !!effectiveUniversityId,
+  });
+
   if (!topic) return null;
+
+  const freqMap = freqQ.data ?? {};
+  const hasTargetUniversity = targetUniversities.length > 0;
+  const subtopicsRanked = hasTargetUniversity
+    ? [...topic.subtopics]
+        .map((s: any) => ({ ...s, count: freqMap[s.id] ?? 0 }))
+        .sort((a, b) => b.count - a.count || a.order - b.order)
+    : topic.subtopics.map((s: any) => ({ ...s, count: 0 }));
+  const highlightedIds = new Set(
+    subtopicsRanked
+      .filter((s) => s.count > 0)
+      .slice(0, 5)
+      .map((s) => s.id),
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -85,34 +141,124 @@ function TopicPage() {
             <p className="mt-2 max-w-2xl text-muted-foreground">{topic.description}</p>
           )}
         </div>
-        <Link
-          to="/practica/$topicSlug"
-          params={{ topicSlug: topic.slug }}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Practicar tema →
-        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            Practicar <ChevronDown className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>¿Qué quieres practicar?</DropdownMenuLabel>
+            <DropdownMenuItem asChild>
+              <Link to="/practica/$topicSlug" params={{ topicSlug: topic.slug }}>
+                Todo el tema
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="font-normal text-muted-foreground">
+              Un subtema en específico
+            </DropdownMenuLabel>
+            {subtopicsRanked.map((s) => (
+              <DropdownMenuItem key={s.id} asChild>
+                <Link
+                  to="/practica/$topicSlug"
+                  params={{ topicSlug: topic.slug }}
+                  search={{ subtopic: s.slug }}
+                  className="justify-between"
+                >
+                  {s.name}
+                  {hasTargetUniversity && s.count > 0 && (
+                    <Badge variant="outline" className="ml-2 shrink-0 text-[10px] font-normal">
+                      {s.count}
+                    </Badge>
+                  )}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
         <aside>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Subtemas
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Subtemas
+            </h2>
+            {hasTargetUniversity && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    type="button"
+                    className="text-muted-foreground/70 hover:text-foreground"
+                    aria-label="¿Qué significa este número?"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-64 text-left">
+                    El número junto a cada subtema indica cuántas preguntas de examen real
+                    (con año conocido) hubo en los últimos 10 años en la universidad
+                    seleccionada. Los subtemas más frecuentes aparecen primero y están
+                    resaltados, como sugerencia de en qué enfocar tu estudio.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+
+          {hasTargetUniversity && targetUniversities.length > 1 && (
+            <Select value={effectiveUniversityId} onValueChange={setSelectedUniversityId}>
+              <SelectTrigger className="mt-3 w-full">
+                <SelectValue placeholder="Universidad" />
+              </SelectTrigger>
+              <SelectContent>
+                {targetUniversities.map((u: any) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    Frecuencia para: {u.short_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <ul className="mt-3 space-y-1">
-            {topic.subtopics.map((s) => (
-              <li key={s.id}>
-                <Link
-                  to="/temas/$slug/$subtopic"
-                  params={{ slug: topic.slug, subtopic: s.slug }}
-                  className="block rounded-md px-3 py-2 text-sm text-foreground/80 hover:bg-secondary hover:text-foreground"
-                >
-                  {s.name}
-                </Link>
-              </li>
-            ))}
+            {subtopicsRanked.map((s) => {
+              const highlighted = highlightedIds.has(s.id);
+              return (
+                <li key={s.id}>
+                  <div
+                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${
+                      highlighted
+                        ? "border border-primary/30 bg-primary/5"
+                        : "border border-transparent"
+                    }`}
+                  >
+                    <Link
+                      to="/temas/$slug/$subtopic"
+                      params={{ slug: topic.slug, subtopic: s.slug }}
+                      className="flex-1 text-foreground/80 hover:text-foreground hover:underline"
+                    >
+                      {s.name}
+                    </Link>
+                    {hasTargetUniversity && s.count > 0 && (
+                      <Badge variant="outline" className="shrink-0 text-[10px] font-normal">
+                        {s.count} en 10 años
+                      </Badge>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
+
+          {!hasTargetUniversity && (
+            <p className="mt-4 rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+              Agrega tu universidad objetivo en{" "}
+              <Link to="/perfil" className="text-primary hover:underline">
+                tu perfil
+              </Link>{" "}
+              para ver qué tan frecuente es cada subtema en sus exámenes reales.
+            </p>
+          )}
         </aside>
 
         <section>

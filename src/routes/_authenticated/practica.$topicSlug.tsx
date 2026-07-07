@@ -1,6 +1,8 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { zodValidator } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useState, useEffect } from "react";
 import { getTopicBySlug, listExercises, getExercise } from "@/lib/exercises.functions";
 import { recordAttempt } from "@/lib/attempts.functions";
@@ -12,7 +14,12 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
 
+const searchSchema = z.object({
+  subtopic: z.string().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/practica/$topicSlug")({
+  validateSearch: zodValidator(searchSchema),
   loader: async ({ params }) => {
     const topic = await getTopicBySlug({ data: { slug: params.topicSlug } });
     if (!topic) throw notFound();
@@ -39,13 +46,14 @@ export const Route = createFileRoute("/_authenticated/practica/$topicSlug")({
 
 function PracticePage() {
   const { topicSlug } = Route.useParams();
+  const { subtopic } = Route.useSearch();
   const { topic } = Route.useLoaderData();
   const listFn = useServerFn(listExercises);
   const recordFn = useServerFn(recordAttempt);
 
   const q = useQuery({
-    queryKey: ["practice-exercises", topicSlug],
-    queryFn: () => listFn({ data: { topicSlug, limit: 100 } }),
+    queryKey: ["practice-exercises", topicSlug, subtopic ?? "all"],
+    queryFn: () => listFn({ data: { topicSlug, subtopicSlug: subtopic, limit: 100 } }),
   });
 
   const [order, setOrder] = useState<string[]>([]);

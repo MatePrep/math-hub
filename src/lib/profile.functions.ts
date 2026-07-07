@@ -105,6 +105,7 @@ export const updateFullProfile = createServerFn({ method: "POST" })
     }
 
     const patch: {
+      id: string;
       full_name?: string;
       pseudonym?: string | null;
       career?: string | null;
@@ -117,7 +118,7 @@ export const updateFullProfile = createServerFn({ method: "POST" })
       initial_weak_topic_ids?: string[] | null;
       onboarding_completed?: boolean;
       onboarding_completed_at?: string;
-    } = {};
+    } = { id: userId };
     if (data.fullName !== undefined) patch.full_name = data.fullName;
     if (data.pseudonym !== undefined) patch.pseudonym = data.pseudonym;
     if (data.career !== undefined) patch.career = data.career;
@@ -133,13 +134,12 @@ export const updateFullProfile = createServerFn({ method: "POST" })
       patch.onboarding_completed_at = new Date().toISOString();
     }
 
-    if (Object.keys(patch).length > 0) {
-      const { data: rows, error } = await supabase.from("profiles").update(patch).eq("id", userId).select("id");
-      if (error) throw new Error(error.message);
-      if (!rows || rows.length === 0) {
-        throw new Error("No se pudo guardar tu perfil: no se encontró tu cuenta.");
-      }
-    }
+    // Upsert instead of a plain update: accounts whose `profiles` row was never
+    // created by the normal signup trigger (e.g. an admin granted the role by
+    // email rather than through signup) would otherwise match zero rows on
+    // UPDATE and silently fail to save.
+    const { error: profileErr } = await supabase.from("profiles").upsert(patch, { onConflict: "id" });
+    if (profileErr) throw new Error(profileErr.message);
 
     if (data.universities) {
       // Replace strategy: delete then insert. Must check the delete's error —
