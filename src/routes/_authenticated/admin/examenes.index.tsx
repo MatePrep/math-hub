@@ -97,7 +97,7 @@ function AdminExamsList() {
                   <TableCell>
                     <Badge variant={e.status === "published" ? "default" : "outline"} className="capitalize">{e.status}</Badge>
                   </TableCell>
-                  <TableCell>{isTemplate ? "—" : e.questionCount}</TableCell>
+                  <TableCell>{e.questionCount}</TableCell>
                   <TableCell>{e.time_limit_min} min</TableCell>
                   <TableCell>{e.attemptCount ?? 0}</TableCell>
                   <TableCell className="text-right">

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -48,7 +48,6 @@ export const Route = createFileRoute("/ejercicio/$id")({
 
 function ExercisePage() {
   const { id } = Route.useParams();
-  const router = useRouter();
   const navigate = useNavigate();
   const { data: ex } = useSuspenseQuery(exQO(id));
   const record = useServerFn(recordAttempt);
@@ -57,7 +56,7 @@ function ExercisePage() {
   const [submitted, setSubmitted] = useState<{ correct: boolean; correctChoice: number } | null>(
     null,
   );
-  const [startedAt] = useState(() => Date.now());
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const [siblings, setSiblings] = useState<string[]>([]);
 
   // Reset on id change
@@ -234,7 +233,11 @@ function ExercisePage() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => router.invalidate()}
+          onClick={() => {
+            setSelected(null);
+            setSubmitted(null);
+            setStartedAt(Date.now());
+          }}
           className="min-h-11"
         >
           Reintentar

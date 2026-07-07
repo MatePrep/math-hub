@@ -19,6 +19,7 @@ import {
   resolveExerciseReport,
 } from "@/lib/exercise-review.functions";
 import { EXERCISE_REPORT_REASONS } from "@/components/report-problem-dialog";
+import { MathText } from "@/lib/math-render";
 
 export const Route = createFileRoute("/_authenticated/admin/revisar")({
   component: RevisarPage,
@@ -118,7 +119,7 @@ function RevisarPage() {
                       <Badge variant="outline" className="capitalize">{r.status}</Badge>
                     )}
                   </div>
-                  <p className="mt-2 truncate text-sm">{r.exercise?.statement_md?.slice(0, 140)}</p>
+                  <MathText text={r.exercise?.statement_md ?? ""} clampLines={2} className="mt-2 text-sm" />
                   {r.note && <p className="mt-1 text-sm text-muted-foreground">"{r.note}"</p>}
                   <p className="mt-1 text-xs text-muted-foreground">
                     {new Date(r.created_at).toLocaleString("es-PE")}
@@ -173,7 +174,7 @@ function RevisarPage() {
                   {r.topic_name && <Badge variant="secondary">{r.topic_name}</Badge>}
                   {r.subtopic_name && <Badge variant="outline">{r.subtopic_name}</Badge>}
                 </div>
-                <p className="mt-2 truncate text-sm">{r.statement_md?.slice(0, 140)}</p>
+                <MathText text={r.statement_md ?? ""} clampLines={2} className="mt-2 text-sm" />
               </div>
               <Button asChild size="sm" variant="outline" className="shrink-0">
                 <Link to="/admin/ejercicios/$id" params={{ id: r.exercise_id }}>

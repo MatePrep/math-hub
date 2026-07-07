@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { listAdminExercises, deleteExercise } from "@/lib/admin.functions";
+import { MathText } from "@/lib/math-render";
 
 export const Route = createFileRoute("/_authenticated/admin/ejercicios/")({
   component: AdminExercisesList,
@@ -55,7 +56,9 @@ function AdminExercisesList() {
             )}
             {q.data?.map((ex: any) => (
               <TableRow key={ex.id}>
-                <TableCell className="max-w-md truncate">{ex.statement_md.slice(0, 80)}</TableCell>
+                <TableCell className="max-w-md">
+                  <MathText text={ex.statement_md} clampLines={1} className="text-sm" />
+                </TableCell>
                 <TableCell>{ex.topic?.name}{ex.subtopic ? ` · ${ex.subtopic.name}` : ""}</TableCell>
                 <TableCell>{ex.university?.short_name ?? "—"}</TableCell>
                 <TableCell className="capitalize">{ex.difficulty}</TableCell>

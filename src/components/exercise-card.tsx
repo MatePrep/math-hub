@@ -40,9 +40,11 @@ export function ExerciseCard({ ex }: { ex: ExerciseRow }) {
           </Badge>
         )}
       </div>
-      <div className="mt-3 line-clamp-3 text-sm text-foreground/90">
-        <MathText text={ex.statement_md} />
-      </div>
+      <MathText
+        text={ex.statement_md}
+        clampLines={3}
+        className="mt-3 text-sm text-foreground/90"
+      />
       <p className="mt-3 text-xs font-medium text-primary group-hover:underline">
         Resolver ejercicio ahora →
       </p>

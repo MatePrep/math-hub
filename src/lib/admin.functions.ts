@@ -668,12 +668,17 @@ export const listAdminExams = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data, error } = await context.supabase
       .from("exams")
-      .select("id, title, status, exam_type, time_limit_min, created_at, exam_questions(count), exam_sessions(count)")
+      .select(
+        "id, title, status, exam_type, time_limit_min, created_at, exam_questions(count), exam_template_rules(question_count), exam_sessions(count)",
+      )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []).map((e: any) => ({
       ...e,
-      questionCount: e.exam_questions?.[0]?.count ?? 0,
+      questionCount:
+        (e.exam_type ?? "standard") === "template"
+          ? (e.exam_template_rules ?? []).reduce((sum: number, r: any) => sum + (r.question_count ?? 0), 0)
+          : (e.exam_questions?.[0]?.count ?? 0),
       attemptCount: e.exam_sessions?.[0]?.count ?? 0,
     }));
   });
@@ -713,7 +718,7 @@ export const listExerciseBank = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data, error } = await context.supabase
       .from("exercises")
-      .select("id, statement_md, difficulty, topic:topics(id,name), university:universities(short_name)")
+      .select("id, statement_md, difficulty, exam_year, topic:topics(id,name), university:universities(id,short_name)")
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) throw new Error(error.message);

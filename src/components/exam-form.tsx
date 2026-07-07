@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown, Plus, Trash2, Check } from "lucide-react";
 import { useSaveFeedback } from "@/hooks/use-save-feedback";
+import { MathText } from "@/lib/math-render";
 import {
   createExam,
   updateExam,
@@ -90,6 +91,8 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
   const [filter, setFilter] = useState("");
   const [topicFilter, setTopicFilter] = useState<string>("all");
+  const [universityFilter, setUniversityFilter] = useState<string>("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
 
   useEffect(() => {
     if (initial) setV({ ...empty, ...initial });
@@ -104,6 +107,22 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [bank.data]);
 
+  const bankUniversities = useMemo(() => {
+    const map = new Map<string, string>();
+    (bank.data ?? []).forEach((e: any) => {
+      if (e.university?.id) map.set(e.university.id, e.university.short_name);
+    });
+    return Array.from(map, ([id, short_name]) => ({ id, short_name }));
+  }, [bank.data]);
+
+  const bankYears = useMemo(() => {
+    const years = new Set<number>();
+    (bank.data ?? []).forEach((e: any) => {
+      if (e.exam_year) years.add(e.exam_year);
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [bank.data]);
+
   const allTopics: Array<{ id: string; name: string }> = (meta.data?.topics ?? []) as any;
   const allUniversities: Array<{ id: string; short_name: string; name: string }> = (meta.data?.universities ?? []) as any;
 
@@ -111,6 +130,8 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const available = (bank.data ?? []).filter((e: any) => {
     if (selectedSet.has(e.id)) return false;
     if (topicFilter !== "all" && e.topic?.id !== topicFilter) return false;
+    if (universityFilter !== "all" && e.university?.id !== universityFilter) return false;
+    if (yearFilter !== "all" && String(e.exam_year) !== yearFilter) return false;
     if (filter && !e.statement_md.toLowerCase().includes(filter.toLowerCase())) return false;
     return true;
   });
@@ -444,7 +465,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                 <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
                   <span className="w-6 text-sm font-semibold text-muted-foreground">{i + 1}.</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm">{e.statement_md.slice(0, 100)}</p>
+                    <MathText text={e.statement_md} clampLines={1} className="text-sm" />
                     <div className="mt-1 flex gap-1 text-xs">
                       {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
                       <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
@@ -478,13 +499,31 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={universityFilter} onValueChange={setUniversityFilter}>
+                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las universidades</SelectItem>
+                  {bankUniversities.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.short_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los años</SelectItem>
+                  {bankYears.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="mt-3 max-h-96 space-y-2 overflow-auto rounded-md border border-border p-2">
               {bank.isLoading && <p className="p-3 text-sm text-muted-foreground">Cargando…</p>}
               {available.map((e: any) => (
                 <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm">{e.statement_md.slice(0, 100)}</p>
+                    <MathText text={e.statement_md} clampLines={1} className="text-sm" />
                     <div className="mt-1 flex gap-1 text-xs">
                       {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
                       <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
