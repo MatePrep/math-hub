@@ -5,11 +5,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 function publicClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 const publishedExamsInput = z.object({ universitySlug: z.string().optional() });
@@ -20,11 +18,12 @@ export const listPublishedExams = createServerFn({ method: "GET" })
     const sb = publicClient();
     const baseQuery = sb
       .from("exams")
-      .select("id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, exam_questions(count)")
+      .select(
+        "id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, exam_questions(count)",
+      )
       .eq("status", "published")
       .eq("exam_type", "standard")
       .order("created_at", { ascending: false });
-
 
     if (!data?.universitySlug) {
       const { data: exams, error } = await baseQuery;
@@ -59,7 +58,9 @@ export const listPublishedTemplates = createServerFn({ method: "GET" })
     const sb = publicClient();
     let query = sb
       .from("exams")
-      .select("id, title, description, time_limit_min, passing_score, allow_multiple_attempts, max_attempts, university:universities(id, slug, short_name), exam_template_rules(question_count)")
+      .select(
+        "id, title, description, time_limit_min, passing_score, allow_multiple_attempts, max_attempts, university:universities(id, slug, short_name), exam_template_rules(question_count)",
+      )
       .eq("status", "published")
       .eq("exam_type", "template")
       .order("created_at", { ascending: false });
@@ -131,7 +132,9 @@ export const getExamPreview = createServerFn({ method: "GET" })
     const sb = publicClient();
     const { data: exam, error } = await sb
       .from("exams")
-      .select("id, title, description, time_limit_min, passing_score, max_attempts, status, question_order, points_correct, points_incorrect, points_empty, exam_questions(count)")
+      .select(
+        "id, title, description, time_limit_min, passing_score, max_attempts, allow_multiple_attempts, status, question_order, points_correct, points_incorrect, points_empty, exam_questions(count)",
+      )
       .eq("id", data.id)
       .eq("status", "published")
       .maybeSingle();
@@ -197,6 +200,33 @@ export const listMyUniversityExamSessions = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+// Lets a student erase one of their own exam/simulacro attempts. Deleting the
+// exam_sessions row also removes it from every ranking/stats RPC (they all read
+// exam_sessions live, see get_university_leaderboard / get_exam_leaderboard /
+// get_exam_stats) and frees up a used slot for single- or max-attempt exams —
+// the UI must warn the student about both effects before calling this.
+export const deleteExamSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ sessionId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    // attempts.exam_session_id has no FK/cascade, so the per-question rows would
+    // otherwise be orphaned and keep counting toward the panel's topic-accuracy stats.
+    const { error: attemptsErr } = await supabase
+      .from("attempts")
+      .delete()
+      .eq("exam_session_id", data.sessionId)
+      .eq("user_id", userId);
+    if (attemptsErr) throw new Error(attemptsErr.message);
+    const { error } = await supabase
+      .from("exam_sessions")
+      .delete()
+      .eq("id", data.sessionId)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const startExamSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ examId: z.string().uuid() }).parse(d))
@@ -225,11 +255,14 @@ export const startExamSession = createServerFn({ method: "POST" })
     // Load exam metadata
     const { data: exam, error: examErr } = await supabase
       .from("exams")
-      .select("id, status, time_limit_min, max_attempts, allow_multiple_attempts, question_order, exam_type, university_id")
+      .select(
+        "id, status, time_limit_min, max_attempts, allow_multiple_attempts, question_order, exam_type, university_id",
+      )
       .eq("id", data.examId)
       .maybeSingle();
     if (examErr) throw new Error(examErr.message);
-    if (!exam || exam.status !== "published") throw new Error("Este examen no está disponible en este momento.");
+    if (!exam || exam.status !== "published")
+      throw new Error("Este examen no está disponible en este momento.");
 
     // Enforce max_attempts / allow_multiple_attempts
     const { count: finishedCount } = await supabase
@@ -245,10 +278,11 @@ export const startExamSession = createServerFn({ method: "POST" })
         throw new Error("Este examen permite un solo intento y ya lo completaste.");
       }
       if (exam.max_attempts && done >= exam.max_attempts) {
-        throw new Error(`Ya alcanzaste el máximo de ${exam.max_attempts} intentos para este examen.`);
+        throw new Error(
+          `Ya alcanzaste el máximo de ${exam.max_attempts} intentos para este examen.`,
+        );
       }
     }
-
 
     // Build question list based on exam_type
     let questionIds: string[] = [];
@@ -259,7 +293,8 @@ export const startExamSession = createServerFn({ method: "POST" })
         .eq("exam_id", exam.id)
         .order("position");
       if (rErr) throw new Error(rErr.message);
-      if (!rules || rules.length === 0) throw new Error("Este examen no tiene reglas configuradas.");
+      if (!rules || rules.length === 0)
+        throw new Error("Este examen no tiene reglas configuradas.");
 
       // Collect questions the student has already seen in prior sessions of this template
       const { data: priorSessions } = await supabase
@@ -273,7 +308,10 @@ export const startExamSession = createServerFn({ method: "POST" })
       });
 
       for (const rule of rules) {
-        let q = supabase.from("exercises").select("id, topic:topics(name)").eq("topic_id", rule.topic_id);
+        let q = supabase
+          .from("exercises")
+          .select("id, topic:topics(name)")
+          .eq("topic_id", rule.topic_id);
         // Pool must combine the exam's own university with generic (university-less)
         // exercises — never every university's exercises unfiltered (see
         // plan-importar-ejercicios-markdown_update.md §5).
@@ -286,11 +324,13 @@ export const startExamSession = createServerFn({ method: "POST" })
         const ids = (pool ?? []).map((e: any) => e.id as string);
         const topicName = (pool ?? [])[0]?.topic?.name ?? "una materia";
         if (ids.length < rule.question_count) {
-          throw new Error(`No hay suficientes preguntas de ${topicName} para generar este simulacro.`);
+          throw new Error(
+            `No hay suficientes preguntas de ${topicName} para generar este simulacro.`,
+          );
         }
         const unseen = ids.filter((id) => !seen.has(id));
         const alreadySeen = ids.filter((id) => seen.has(id));
-        const shuffle = <T,>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
+        const shuffle = <T>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
         const picked: string[] = [];
         picked.push(...shuffle(unseen).slice(0, rule.question_count));
         if (picked.length < rule.question_count) {
@@ -301,7 +341,6 @@ export const startExamSession = createServerFn({ method: "POST" })
       // template exams always shuffle across all rules
       questionIds = questionIds.sort(() => Math.random() - 0.5);
     } else {
-
       const { data: eqs, error: eqErr } = await supabase
         .from("exam_questions")
         .select("exercise_id, position")
@@ -354,7 +393,8 @@ export const startRandomExamSession = createServerFn({ method: "POST" })
       .eq("university_id", university.id);
     if (exError) throw new Error(exError.message);
     const ids = (exercises ?? []).map((ex: any) => ex.id as string);
-    if (ids.length === 0) throw new Error("No hay ejercicios disponibles para generar el simulacro.");
+    if (ids.length === 0)
+      throw new Error("No hay ejercicios disponibles para generar el simulacro.");
 
     const questionIds = [...ids].sort(() => Math.random() - 0.5);
     const timeLimitMin = Math.max(1, Math.ceil((questionIds.length * 90) / 60));
@@ -408,11 +448,13 @@ export const getExamSession = createServerFn({ method: "GET" })
 export const saveExamAnswers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      sessionId: z.string().uuid(),
-      answers: z.record(z.string(), z.number().int().min(0).max(20)),
-      flagged: z.array(z.string().uuid()).max(500),
-    }).parse(d),
+    z
+      .object({
+        sessionId: z.string().uuid(),
+        answers: z.record(z.string(), z.number().int().min(0).max(20)),
+        flagged: z.array(z.string().uuid()).max(500),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
@@ -449,11 +491,22 @@ function computeExamScore(
 export const submitExamSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      sessionId: z.string().uuid(),
-      answers: z.record(z.string(), z.number().int().min(0).max(20)).optional(),
-      timeSpentMs: z.record(z.string(), z.number().int().min(0).max(60 * 60 * 1000)).optional(),
-    }).parse(d),
+    z
+      .object({
+        sessionId: z.string().uuid(),
+        answers: z.record(z.string(), z.number().int().min(0).max(20)).optional(),
+        timeSpentMs: z
+          .record(
+            z.string(),
+            z
+              .number()
+              .int()
+              .min(0)
+              .max(60 * 60 * 1000),
+          )
+          .optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
@@ -482,7 +535,11 @@ export const submitExamSession = createServerFn({ method: "POST" })
             .eq("id", session.exam_id)
             .maybeSingle();
           if (exam) {
-            return { correct: exam.points_correct, incorrect: exam.points_incorrect, empty: exam.points_empty };
+            return {
+              correct: exam.points_correct,
+              incorrect: exam.points_incorrect,
+              empty: exam.points_empty,
+            };
           }
         }
         return FALLBACK_SCORING;
@@ -493,22 +550,24 @@ export const submitExamSession = createServerFn({ method: "POST" })
     let correctCount = 0;
     let incorrectCount = 0;
     let emptyCount = 0;
-    const attemptInserts = ids.map((id) => {
-      const selected = finalAnswers[id];
-      const correct = correctMap.get(id);
-      const isCorrect = selected !== undefined && selected === correct;
-      if (selected === undefined) emptyCount += 1;
-      else if (isCorrect) correctCount += 1;
-      else incorrectCount += 1;
-      return {
-        user_id: userId,
-        exercise_id: id,
-        selected_choice: selected ?? -1,
-        is_correct: isCorrect,
-        time_spent_ms: data.timeSpentMs?.[id] ?? 0,
-        exam_session_id: session.id,
-      };
-    }).filter((a) => a.selected_choice >= 0);
+    const attemptInserts = ids
+      .map((id) => {
+        const selected = finalAnswers[id];
+        const correct = correctMap.get(id);
+        const isCorrect = selected !== undefined && selected === correct;
+        if (selected === undefined) emptyCount += 1;
+        else if (isCorrect) correctCount += 1;
+        else incorrectCount += 1;
+        return {
+          user_id: userId,
+          exercise_id: id,
+          selected_choice: selected ?? -1,
+          is_correct: isCorrect,
+          time_spent_ms: data.timeSpentMs?.[id] ?? 0,
+          exam_session_id: session.id,
+        };
+      })
+      .filter((a) => a.selected_choice >= 0);
 
     if (attemptInserts.length) {
       await supabase.from("attempts").insert(attemptInserts);
@@ -516,7 +575,10 @@ export const submitExamSession = createServerFn({ method: "POST" })
 
     const total = ids.length;
     const maxScore = total * examPoints.correct;
-    const score = computeExamScore({ correct: correctCount, incorrect: incorrectCount, empty: emptyCount }, examPoints);
+    const score = computeExamScore(
+      { correct: correctCount, incorrect: incorrectCount, empty: emptyCount },
+      examPoints,
+    );
 
     await supabase
       .from("exam_sessions")
@@ -542,7 +604,9 @@ export const listMyTemplateSessions = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: rows, error } = await supabase
       .from("exam_sessions")
-      .select("id, exam_id, status, started_at, finished_at, score, total, max_score, exam:exams(id, title, exam_type)")
+      .select(
+        "id, exam_id, status, started_at, finished_at, score, total, max_score, exam:exams(id, title, exam_type)",
+      )
       .eq("user_id", userId)
       .in("status", ["submitted", "graded"])
       .not("exam_id", "is", null)
@@ -558,7 +622,9 @@ export const getExamResult = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: session, error } = await supabase
       .from("exam_sessions")
-      .select("*, exam:exams(id, title, passing_score, points_correct, points_incorrect, points_empty)")
+      .select(
+        "*, exam:exams(id, title, passing_score, points_correct, points_incorrect, points_empty)",
+      )
       .eq("id", data.sessionId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -572,12 +638,17 @@ export const getExamResult = createServerFn({ method: "GET" })
     const byId = new Map((exs ?? []).map((e: any) => [e.id, e]));
 
     const [{ data: sessionAttempts }, { data: avgRows }] = await Promise.all([
-      supabase.from("attempts").select("exercise_id, time_spent_ms").eq("exam_session_id", data.sessionId),
+      supabase
+        .from("attempts")
+        .select("exercise_id, time_spent_ms")
+        .eq("exam_session_id", data.sessionId),
       ids.length > 0
         ? supabase.rpc("get_exercise_avg_times", { _exercise_ids: ids })
         : Promise.resolve({ data: [] as any[] }),
     ]);
-    const timeByQuestion = new Map((sessionAttempts ?? []).map((a: any) => [a.exercise_id, a.time_spent_ms]));
+    const timeByQuestion = new Map(
+      (sessionAttempts ?? []).map((a: any) => [a.exercise_id, a.time_spent_ms]),
+    );
     const avgByQuestion = new Map((avgRows ?? []).map((r: any) => [r.exercise_id, r.avg_time_ms]));
 
     const questions = ids

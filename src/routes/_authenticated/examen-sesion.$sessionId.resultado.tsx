@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -11,6 +11,7 @@ import { getExamStats } from "@/lib/goals.functions";
 import { InfoTooltip } from "@/components/info-tooltip";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
+import { DeleteExamAttemptButton } from "@/components/delete-exam-attempt-button";
 
 export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/resultado")({
   component: ResultPage,
@@ -22,7 +23,10 @@ export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/r
 function useCountUp(target: number, durationMs = 700) {
   const [value, setValue] = useState(0);
   useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       setValue(target);
       return;
     }
@@ -42,9 +46,13 @@ function useCountUp(target: number, durationMs = 700) {
 
 function ResultPage() {
   const { sessionId } = Route.useParams();
+  const navigate = useNavigate();
   const fn = useServerFn(getExamResult);
   const statsFn = useServerFn(getExamStats);
-  const q = useQuery({ queryKey: ["exam-result", sessionId], queryFn: () => fn({ data: { sessionId } }) });
+  const q = useQuery({
+    queryKey: ["exam-result", sessionId],
+    queryFn: () => fn({ data: { sessionId } }),
+  });
 
   const examId: string | null = q.data?.session?.exam_id ?? null;
   const myScorePct: number | null = q.data?.session?.score ?? null;
@@ -74,7 +82,9 @@ function ResultPage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <p className="text-muted-foreground">No pudimos cargar tu resultado todavía.</p>
-        <Button className="press mt-4" onClick={() => q.refetch()}>Reintentar</Button>
+        <Button className="press mt-4" onClick={() => q.refetch()}>
+          Reintentar
+        </Button>
       </div>
     );
   }
@@ -89,20 +99,30 @@ function ResultPage() {
   // read them back directly rather than re-deriving from questions/answers,
   // so a later edit to the exam's scoring config or an exercise's
   // correct_choice never silently rewrites an already-graded result.
-  const correctCount = s.correct_count ?? questions.filter((ex) => answers[ex.id] === ex.correct_choice).length;
+  const correctCount =
+    s.correct_count ?? questions.filter((ex) => answers[ex.id] === ex.correct_choice).length;
   const totalQuestions = questions.length;
   const emptyCount = s.empty_count ?? questions.filter((ex) => answers[ex.id] === undefined).length;
-  const incorrectCount = s.incorrect_count ?? (totalQuestions - correctCount - emptyCount);
+  const incorrectCount = s.incorrect_count ?? totalQuestions - correctCount - emptyCount;
   const maxScore: number = s.max_score ?? totalQuestions * (s.exam?.points_correct ?? 1);
   const timeLimitMin = s.time_limit_min ?? s.exam?.time_limit_min ?? null;
-  const timeTakenSeconds = s.finished_at && s.started_at ? (new Date(s.finished_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null;
+  const timeTakenSeconds =
+    s.finished_at && s.started_at
+      ? (new Date(s.finished_at).getTime() - new Date(s.started_at).getTime()) / 1000
+      : null;
   const selectedQuestion = questions[selectedQuestionIndex];
   const selectedAnswer = answers[selectedQuestion.id];
   const selectedCorrect = selectedQuestion.correct_choice;
   const selectedUnanswered = selectedAnswer === undefined;
   const scoreRatio = maxScore > 0 ? score / maxScore : 0;
-  const scoreStyle = scoreRatio >= 0.75 ? "text-success" : scoreRatio >= 0.2 ? "text-amber-500" : "text-destructive";
-  const scorePanelStyle = scoreRatio >= 0.75 ? "border-success/40 bg-success/5" : scoreRatio >= 0.2 ? "border-amber-400/40 bg-amber-400/10" : "border-destructive/40 bg-destructive/5";
+  const scoreStyle =
+    scoreRatio >= 0.75 ? "text-success" : scoreRatio >= 0.2 ? "text-amber-500" : "text-destructive";
+  const scorePanelStyle =
+    scoreRatio >= 0.75
+      ? "border-success/40 bg-success/5"
+      : scoreRatio >= 0.2
+        ? "border-amber-400/40 bg-amber-400/10"
+        : "border-destructive/40 bg-destructive/5";
   function formatDuration(sec: number | null) {
     if (sec === null || sec === undefined) return "-";
     const s = Math.max(0, Math.round(sec));
@@ -116,7 +136,9 @@ function ResultPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <nav className="text-xs text-muted-foreground">
-        <Link to="/examenes-oficiales" className="hover:underline">Exámenes</Link>
+        <Link to="/examenes-oficiales" className="hover:underline">
+          Exámenes
+        </Link>
       </nav>
       <h1 className="mt-3 font-display text-3xl font-bold">Resultado</h1>
       <p className="text-muted-foreground">{s.exam?.title}</p>
@@ -134,17 +156,28 @@ function ResultPage() {
           {displayScore} <span className="text-2xl text-muted-foreground">/ {maxScore} pts</span>
         </p>
         <p className="mt-1 text-sm">
-          {correctCount} de {totalQuestions} correctas · {passed ? "Aprobado" : `Aprobación: ${passing} pts`}
+          {correctCount} de {totalQuestions} correctas ·{" "}
+          {passed ? "Aprobado" : `Aprobación: ${passing} pts`}
         </p>
         <div className="mt-2 text-sm text-muted-foreground grid grid-cols-2 gap-4">
           <div>
-            <div>Correctas: <strong className="text-success">{correctCount}</strong></div>
-            <div>Incorrectas: <strong className="text-destructive">{incorrectCount}</strong></div>
-            <div>Sin responder: <strong>{emptyCount}</strong></div>
+            <div>
+              Correctas: <strong className="text-success">{correctCount}</strong>
+            </div>
+            <div>
+              Incorrectas: <strong className="text-destructive">{incorrectCount}</strong>
+            </div>
+            <div>
+              Sin responder: <strong>{emptyCount}</strong>
+            </div>
           </div>
           <div>
-            <div>Tiempo límite: <strong>{timeLimitMin ? `${timeLimitMin} min` : "-"}</strong></div>
-            <div>Tiempo tomado: <strong>{formatDuration(timeTakenSeconds)}</strong></div>
+            <div>
+              Tiempo límite: <strong>{timeLimitMin ? `${timeLimitMin} min` : "-"}</strong>
+            </div>
+            <div>
+              Tiempo tomado: <strong>{formatDuration(timeTakenSeconds)}</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -153,7 +186,9 @@ function ResultPage() {
         <div className="animate-alert-in mt-4 rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wider">Comparación con otros estudiantes</span>
+            <span className="text-xs font-medium uppercase tracking-wider">
+              Comparación con otros estudiantes
+            </span>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
             <div>
@@ -175,9 +210,9 @@ function ResultPage() {
                 <p className="flex items-center gap-1 text-muted-foreground">
                   Tu percentil
                   <InfoTooltip>
-                    Indica qué porcentaje de estudiantes obtuvo un puntaje igual o menor al tuyo. Por
-                    ejemplo, un percentil de 80 significa que superaste al 80% de quienes rindieron
-                    este examen.
+                    Indica qué porcentaje de estudiantes obtuvo un puntaje igual o menor al tuyo.
+                    Por ejemplo, un percentil de 80 significa que superaste al 80% de quienes
+                    rindieron este examen.
                   </InfoTooltip>
                 </p>
                 <p className="font-display text-xl font-bold">{statsQ.data.my_percentile}</p>
@@ -185,7 +220,8 @@ function ResultPage() {
             )}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Basado en {statsQ.data.sessions_count} intento{statsQ.data.sessions_count !== 1 ? "s" : ""} de este examen. La comparación es anónima.
+            Basado en {statsQ.data.sessions_count} intento
+            {statsQ.data.sessions_count !== 1 ? "s" : ""} de este examen. La comparación es anónima.
           </p>
         </div>
       )}
@@ -193,7 +229,9 @@ function ResultPage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="rounded-xl border border-border bg-card p-4">
           <h2 className="font-display text-xl font-bold">Revisión</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Selecciona la pregunta que quieras revisar.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Selecciona la pregunta que quieras revisar.
+          </p>
           <div className="mt-4 grid grid-cols-5 gap-2">
             {questions.map((ex: any, i: number) => {
               const selected = answers[ex.id];
@@ -207,10 +245,13 @@ function ResultPage() {
                   type="button"
                   onClick={() => setSelectedQuestionIndex(i)}
                   className={`press h-10 rounded-md border text-sm font-semibold transition ${
-                    isSelected ? "border-primary bg-primary/10 text-primary" :
-                    isCorrect ? "border-success/50 bg-success/10 text-success" :
-                    isAnswered ? "border-destructive/50 bg-destructive/10 text-destructive" :
-                    "border-border bg-background hover:border-primary/40"
+                    isSelected
+                      ? "border-primary bg-primary/10 text-primary"
+                      : isCorrect
+                        ? "border-success/50 bg-success/10 text-success"
+                        : isAnswered
+                          ? "border-destructive/50 bg-destructive/10 text-destructive"
+                          : "border-border bg-background hover:border-primary/40"
                   }`}
                 >
                   {i + 1}
@@ -232,44 +273,75 @@ function ResultPage() {
         </aside>
 
         <section className="space-y-4">
-          <div key={selectedQuestion.id} className="animate-card-swap rounded-xl border border-border bg-card p-5">
+          <div
+            key={selectedQuestion.id}
+            className="animate-card-swap rounded-xl border border-border bg-card p-5"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-semibold">Pregunta {selectedQuestionIndex + 1}</p>
                 <p className="text-sm text-muted-foreground">
-                  {selectedUnanswered ? "Sin responder" : selectedAnswer === selectedCorrect ? "Correcta" : "Incorrecta"}
+                  {selectedUnanswered
+                    ? "Sin responder"
+                    : selectedAnswer === selectedCorrect
+                      ? "Correcta"
+                      : "Incorrecta"}
                 </p>
               </div>
               <div className="flex items-center gap-1">
-                {selectedQuestion.time_spent_ms !== null && selectedQuestion.time_spent_ms !== undefined && (() => {
-                  const isSlow = !!selectedQuestion.avg_time_ms && selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5;
-                  return (
-                    <>
-                      <Badge variant="outline" className={isSlow ? "border-amber-500/40 text-amber-600" : ""}>
-                        <Clock className="mr-1 h-3 w-3" />
-                        {formatDuration(selectedQuestion.time_spent_ms / 1000)}
-                        {isSlow ? " · Lento" : ""}
-                      </Badge>
-                      {isSlow && (
-                        <InfoTooltip>
-                          Te demoraste más de lo esperado en esta pregunta, comparado con el tiempo
-                          promedio de otros estudiantes para el nivel de dificultad de esta pregunta.
-                        </InfoTooltip>
-                      )}
-                    </>
-                  );
-                })()}
+                {selectedQuestion.time_spent_ms !== null &&
+                  selectedQuestion.time_spent_ms !== undefined &&
+                  (() => {
+                    const isSlow =
+                      !!selectedQuestion.avg_time_ms &&
+                      selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5;
+                    return (
+                      <>
+                        <Badge
+                          variant="outline"
+                          className={isSlow ? "border-amber-500/40 text-amber-600" : ""}
+                        >
+                          <Clock className="mr-1 h-3 w-3" />
+                          {formatDuration(selectedQuestion.time_spent_ms / 1000)}
+                          {isSlow ? " · Lento" : ""}
+                        </Badge>
+                        {isSlow && (
+                          <InfoTooltip>
+                            Te demoraste más de lo esperado en esta pregunta, comparado con el
+                            tiempo promedio de otros estudiantes para el nivel de dificultad de esta
+                            pregunta.
+                          </InfoTooltip>
+                        )}
+                      </>
+                    );
+                  })()}
                 <Badge
                   variant="outline"
-                  className={selectedUnanswered ? "border-muted-foreground text-muted-foreground" : selectedAnswer === selectedCorrect ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}
+                  className={
+                    selectedUnanswered
+                      ? "border-muted-foreground text-muted-foreground"
+                      : selectedAnswer === selectedCorrect
+                        ? "border-success/40 text-success"
+                        : "border-destructive/40 text-destructive"
+                  }
                 >
-                  {selectedUnanswered ? "No respondida" : selectedAnswer === selectedCorrect ? "Correcta" : "Incorrecta"}
+                  {selectedUnanswered
+                    ? "No respondida"
+                    : selectedAnswer === selectedCorrect
+                      ? "Correcta"
+                      : "Incorrecta"}
                 </Badge>
               </div>
             </div>
-            <div className="mt-3 text-sm"><MathText text={selectedQuestion.statement_md} /></div>
+            <div className="mt-3 text-sm">
+              <MathText text={selectedQuestion.statement_md} />
+            </div>
             {selectedQuestion.statement_image_path && (
-              <img src={selectedQuestion.statement_image_path} alt="Enunciado" className="mt-4 max-h-96 rounded-md object-contain" />
+              <img
+                src={selectedQuestion.statement_image_path}
+                alt="Enunciado"
+                className="mt-4 max-h-96 rounded-md object-contain"
+              />
             )}
             <ul className="mt-4 space-y-2 text-sm">
               {(selectedQuestion.choices as string[]).map((c, ci) => {
@@ -279,9 +351,11 @@ function ResultPage() {
                   <li
                     key={ci}
                     className={`rounded-md border px-3 py-2 ${
-                      isCorrectChoice ? "border-success/50 bg-success/10 text-success" :
-                      isSelectedChoice ? "border-destructive/50 bg-destructive/10 text-destructive" :
-                      "border-border bg-background text-foreground"
+                      isCorrectChoice
+                        ? "border-success/50 bg-success/10 text-success"
+                        : isSelectedChoice
+                          ? "border-destructive/50 bg-destructive/10 text-destructive"
+                          : "border-border bg-background text-foreground"
                     }`}
                   >
                     <span className="mr-2 font-semibold">{String.fromCharCode(65 + ci)}.</span>
@@ -292,12 +366,16 @@ function ResultPage() {
             </ul>
 
             <details className="mt-3" open>
-              <summary className="cursor-pointer text-sm font-medium text-primary">Solución paso a paso</summary>
+              <summary className="cursor-pointer text-sm font-medium text-primary">
+                Solución paso a paso
+              </summary>
               <div className="mt-2 rounded-md bg-muted p-3 text-sm">
                 {selectedQuestion.solution_md ? (
                   <MathText text={selectedQuestion.solution_md} />
                 ) : (
-                  <p className="text-sm text-muted-foreground">No hay solución disponible para esta pregunta.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No hay solución disponible para esta pregunta.
+                  </p>
                 )}
               </div>
             </details>
@@ -310,9 +388,19 @@ function ResultPage() {
         </section>
       </div>
 
-      <div className="mt-8 flex gap-2">
-        <Button asChild variant="outline" className="press"><Link to="/examenes-oficiales">Volver a exámenes</Link></Button>
-        <Button asChild className="press"><Link to="/panel">Ir a mi panel</Link></Button>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Button asChild variant="outline" className="press">
+            <Link to="/examenes-oficiales">Volver a exámenes</Link>
+          </Button>
+          <Button asChild className="press">
+            <Link to="/panel">Ir a mi panel</Link>
+          </Button>
+        </div>
+        <DeleteExamAttemptButton
+          sessionId={sessionId}
+          onDeleted={() => navigate({ to: "/panel" })}
+        />
       </div>
     </div>
   );

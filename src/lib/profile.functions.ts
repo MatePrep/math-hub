@@ -59,6 +59,12 @@ function containsBlockedWord(value: string): boolean {
 export const PREP_TIME_VALUES = ["recien_empiezo", "menos_3_meses", "3_a_6_meses", "mas_6_meses"] as const;
 export const PREP_METHOD_VALUES = ["academia", "autodidacta", "colegio_particular", "primera_vez"] as const;
 
+// Treats "" the same as an omitted/null value: these fields are surfaced as optional
+// selects in the UI, and clients (older bundles, form libraries, etc.) sometimes send
+// "" rather than null for "not answered" — reject the request only for actually-invalid values.
+const nullableOnEmpty = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === "" ? null : v), schema);
+
 const updateSchema = z.object({
   fullName: z.string().trim().max(120).optional(),
   pseudonym: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_\-]+$/).nullable().optional(),
@@ -66,9 +72,9 @@ const updateSchema = z.object({
   leaderboardOptIn: z.boolean().optional(),
   weeklyGoalQuestions: z.number().int().min(1).max(1000).optional(),
   weeklyGoalExams: z.number().int().min(0).max(50).optional(),
-  prepTime: z.enum(PREP_TIME_VALUES).nullable().optional(),
-  prepMethod: z.enum(PREP_METHOD_VALUES).nullable().optional(),
-  weeklyStudyHours: z.number().int().min(0).max(168).nullable().optional(),
+  prepTime: nullableOnEmpty(z.enum(PREP_TIME_VALUES).nullable().optional()),
+  prepMethod: nullableOnEmpty(z.enum(PREP_METHOD_VALUES).nullable().optional()),
+  weeklyStudyHours: nullableOnEmpty(z.number().int().min(0).max(168).nullable().optional()),
   initialWeakTopicIds: z.array(z.string().uuid()).max(20).nullable().optional(),
   onboardingCompleted: z.boolean().optional(),
   universities: z

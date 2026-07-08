@@ -119,10 +119,10 @@ function TopicPage() {
         .map((s: any) => ({ ...s, count: freqMap[s.id] ?? 0 }))
         .sort((a, b) => b.count - a.count || a.order - b.order)
     : topic.subtopics.map((s: any) => ({ ...s, count: 0 }));
-  const highlightedIds = new Set(
+  const topFrequentIds = new Set(
     subtopicsRanked
       .filter((s) => s.count > 0)
-      .slice(0, 5)
+      .slice(0, 3)
       .map((s) => s.id),
   );
 
@@ -162,21 +162,15 @@ function TopicPage() {
                   to="/practica/$topicSlug"
                   params={{ topicSlug: topic.slug }}
                   search={{ subtopic: s.slug }}
-                  className="justify-between"
                 >
+                  {topFrequentIds.has(s.id) && <span aria-hidden="true">🔥 </span>}
                   {s.name}
-                  {hasTargetUniversity && s.count > 0 && (
-                    <Badge variant="outline" className="ml-2 shrink-0 text-[10px] font-normal">
-                      {s.count}
-                    </Badge>
-                  )}
                 </Link>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
         <aside>
@@ -190,15 +184,15 @@ function TopicPage() {
                   <TooltipTrigger
                     type="button"
                     className="text-muted-foreground/70 hover:text-foreground"
-                    aria-label="¿Qué significa este número?"
+                    aria-label="¿Cómo están ordenados los subtemas?"
                   >
                     <HelpCircle className="h-3.5 w-3.5" />
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-64 text-left">
-                    El número junto a cada subtema indica cuántas preguntas de examen real
-                    (con año conocido) hubo en los últimos 10 años en la universidad
-                    seleccionada. Los subtemas más frecuentes aparecen primero y están
-                    resaltados, como sugerencia de en qué enfocar tu estudio.
+                    Los subtemas están ordenados de mayor a menor frecuencia según los exámenes
+                    reales (con año conocido) de los últimos 10 años en la universidad seleccionada.
+                    Los 3 más frecuentes están marcados con 🔥, como sugerencia de en qué enfocar tu
+                    estudio.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -222,12 +216,12 @@ function TopicPage() {
 
           <ul className="mt-3 space-y-1">
             {subtopicsRanked.map((s) => {
-              const highlighted = highlightedIds.has(s.id);
+              const isTopFrequent = topFrequentIds.has(s.id);
               return (
                 <li key={s.id}>
                   <div
-                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${
-                      highlighted
+                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
+                      isTopFrequent
                         ? "border border-primary/30 bg-primary/5"
                         : "border border-transparent"
                     }`}
@@ -237,13 +231,9 @@ function TopicPage() {
                       params={{ slug: topic.slug, subtopic: s.slug }}
                       className="flex-1 text-foreground/80 hover:text-foreground hover:underline"
                     >
+                      {isTopFrequent && <span aria-hidden="true">🔥 </span>}
                       {s.name}
                     </Link>
-                    {hasTargetUniversity && s.count > 0 && (
-                      <Badge variant="outline" className="shrink-0 text-[10px] font-normal">
-                        {s.count} en 10 años
-                      </Badge>
-                    )}
                   </div>
                 </li>
               );
@@ -271,7 +261,10 @@ function TopicPage() {
                 key={d.v}
                 from={Route.fullPath}
                 to="."
-                search={(prev: { difficulty: "all" | "facil" | "medio" | "dificil" }) => ({ ...prev, difficulty: d.v })}
+                search={(prev: { difficulty: "all" | "facil" | "medio" | "dificil" }) => ({
+                  ...prev,
+                  difficulty: d.v,
+                })}
                 className="rounded-full"
               >
                 <Badge

@@ -4,12 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useState, useEffect } from "react";
-import { getTopicBySlug, listExercises, getExercise } from "@/lib/exercises.functions";
+import {
+  getTopicBySlug,
+  listExercises,
+  getExercise,
+  getSubtopicFrequency,
+} from "@/lib/exercises.functions";
+import { getFullProfile } from "@/lib/profile.functions";
 import { recordAttempt } from "@/lib/attempts.functions";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, ChevronRight, Shuffle } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronRight, Shuffle, Info } from "lucide-react";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
@@ -39,7 +45,9 @@ export const Route = createFileRoute("/_authenticated/practica/$topicSlug")({
   notFoundComponent: () => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
       <h2 className="font-display text-2xl font-bold">Tema no encontrado</h2>
-      <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">Volver a temas</Link>
+      <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
+        Volver a temas
+      </Link>
     </div>
   ),
 });
@@ -53,8 +61,25 @@ function PracticePage() {
 
   const q = useQuery({
     queryKey: ["practice-exercises", topicSlug, subtopic ?? "all"],
-    queryFn: () => listFn({ data: { topicSlug, subtopicSlug: subtopic, limit: 100 } }),
+    queryFn: () =>
+      listFn({ data: { topicSlug, subtopicSlug: subtopic, limit: subtopic ? 200 : 100 } }),
   });
+
+  const profileFn = useServerFn(getFullProfile);
+  const profileQ = useQuery({ queryKey: ["full-profile"], queryFn: () => profileFn() });
+  const targetUniversity = (profileQ.data?.universities ?? [])
+    .map((u: any) => u.university)
+    .filter(Boolean)[0];
+
+  const currentSubtopic = subtopic ? topic.subtopics.find((s) => s.slug === subtopic) : undefined;
+
+  const freqFn = useServerFn(getSubtopicFrequency);
+  const freqQ = useQuery({
+    queryKey: ["subtopic-frequency", topicSlug, targetUniversity?.id],
+    queryFn: () => freqFn({ data: { topicSlug, universityId: targetUniversity.id } }),
+    enabled: !!currentSubtopic && !!targetUniversity?.id,
+  });
+  const subtopicFreqCount = currentSubtopic ? (freqQ.data?.[currentSubtopic.id] ?? 0) : 0;
 
   const [order, setOrder] = useState<string[]>([]);
   const [idx, setIdx] = useState(0);
@@ -66,9 +91,12 @@ function PracticePage() {
   useEffect(() => {
     if (q.data && order.length === 0) {
       const ids = q.data.map((e: any) => e.id);
-      setOrder([...ids].sort(() => Math.random() - 0.5));
+      const shuffled = [...ids].sort(() => Math.random() - 0.5);
+      // Practicing a specific subtopic is a focused round: 10 random exercises,
+      // or fewer if the subtopic doesn't have that many.
+      setOrder(subtopic ? shuffled.slice(0, 10) : shuffled);
     }
-  }, [q.data, order.length]);
+  }, [q.data, order.length, subtopic]);
 
   useEffect(() => {
     setSelected(null);
@@ -87,12 +115,17 @@ function PracticePage() {
     enabled: !!currentId && !!result,
   });
 
-  if (q.isLoading) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>;
+  if (q.isLoading)
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>
+    );
   if (!q.data || q.data.length === 0) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <p className="text-muted-foreground">No hay preguntas disponibles para este tema.</p>
-        <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">Volver a temas</Link>
+        <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
+          Volver a temas
+        </Link>
       </div>
     );
   }
@@ -106,13 +139,17 @@ function PracticePage() {
     const timeSpent = Math.min(Date.now() - startTime, 30 * 60 * 1000);
     try {
       const r = await recordFn({
-        data: { exerciseId: current.id, selectedChoice: selected, timeSpentMs: timeSpent, examSessionId: null },
+        data: {
+          exerciseId: current.id,
+          selectedChoice: selected,
+          timeSpentMs: timeSpent,
+          examSessionId: null,
+        },
       });
       setResult(r);
       setStats((s) => ({ correct: s.correct + (r.isCorrect ? 1 : 0), done: s.done + 1 }));
     } catch {}
   }
-
 
   function next() {
     if (idx < total - 1) setIdx(idx + 1);
@@ -127,10 +164,15 @@ function PracticePage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <nav className="text-xs text-muted-foreground">
-        <Link to="/temas" className="hover:underline">Temas</Link>
+        <Link to="/temas" className="hover:underline">
+          Temas
+        </Link>
         {" / "}
-        <Link to="/temas/$slug" params={{ slug: topicSlug }} className="hover:underline">{topic.name}</Link>
-        {" / "}<span className="text-foreground">Práctica</span>
+        <Link to="/temas/$slug" params={{ slug: topicSlug }} className="hover:underline">
+          {topic.name}
+        </Link>
+        {" / "}
+        <span className="text-foreground">Práctica</span>
       </nav>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -141,16 +183,42 @@ function PracticePage() {
           </p>
         </div>
         <div className="text-sm text-muted-foreground">
-          <Badge variant="outline">Pregunta {idx + 1} / {total}</Badge>
+          <Badge variant="outline">
+            Pregunta {idx + 1} / {total}
+          </Badge>
           <Badge variant="outline" className="ml-2 border-success/40 text-success">
             {stats.correct}/{stats.done} correctas
           </Badge>
         </div>
       </div>
 
+      {currentSubtopic && targetUniversity && (
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            {subtopicFreqCount > 0 ? (
+              <>
+                <strong className="font-medium text-foreground">{currentSubtopic.name}</strong> tuvo{" "}
+                <strong className="font-medium text-foreground">{subtopicFreqCount}</strong>{" "}
+                pregunta{subtopicFreqCount === 1 ? "" : "s"} en exámenes reales de{" "}
+                {targetUniversity.short_name} en los últimos 10 años. Solo a título informativo.
+              </>
+            ) : (
+              <>
+                <strong className="font-medium text-foreground">{currentSubtopic.name}</strong> no
+                registra preguntas en exámenes reales de {targetUniversity.short_name} en los
+                últimos 10 años. Solo a título informativo.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       <article className="mt-5 rounded-xl border border-border bg-card p-6">
         <div className="mb-3 flex items-center justify-between">
-          <Badge variant="secondary" className="capitalize">{current.difficulty}</Badge>
+          <Badge variant="secondary" className="capitalize">
+            {current.difficulty}
+          </Badge>
           <FavoriteButton exerciseId={current.id} />
         </div>
         <MathText text={current.statement_md} />
@@ -166,10 +234,13 @@ function PracticePage() {
                   disabled={!!result}
                   onClick={() => setSelected(i)}
                   className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
-                    isCorrectChoice ? "border-success bg-success/10" :
-                    isWrongPicked ? "border-destructive bg-destructive/10" :
-                    picked ? "border-primary bg-primary/10 font-medium" :
-                    "border-border bg-background hover:border-primary/40"
+                    isCorrectChoice
+                      ? "border-success bg-success/10"
+                      : isWrongPicked
+                        ? "border-destructive bg-destructive/10"
+                        : picked
+                          ? "border-primary bg-primary/10 font-medium"
+                          : "border-border bg-background hover:border-primary/40"
                   }`}
                 >
                   <span className="mr-2 font-semibold">{String.fromCharCode(65 + i)}.</span>
@@ -181,18 +252,29 @@ function PracticePage() {
         </ul>
 
         {result && (
-          <div className={`mt-4 rounded-md border p-3 text-sm ${result.isCorrect ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}>
+          <div
+            className={`mt-4 rounded-md border p-3 text-sm ${result.isCorrect ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}
+          >
             <div className="flex items-center gap-2 font-semibold">
               {result.isCorrect ? (
-                <><CheckCircle2 className="h-4 w-4 text-success" /> ¡Correcto!</>
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-success" /> ¡Correcto!
+                </>
               ) : (
-                <><XCircle className="h-4 w-4 text-destructive" /> Incorrecto. La respuesta era {String.fromCharCode(65 + result.correctChoice)}.</>
+                <>
+                  <XCircle className="h-4 w-4 text-destructive" /> Incorrecto. La respuesta era{" "}
+                  {String.fromCharCode(65 + result.correctChoice)}.
+                </>
               )}
             </div>
             {detailQ.data?.solution_md && (
               <details className="mt-2">
-                <summary className="cursor-pointer text-xs font-medium text-primary">Ver solución</summary>
-                <div className="mt-2"><MathText text={detailQ.data.solution_md} /></div>
+                <summary className="cursor-pointer text-xs font-medium text-primary">
+                  Ver solución
+                </summary>
+                <div className="mt-2">
+                  <MathText text={detailQ.data.solution_md} />
+                </div>
               </details>
             )}
 
@@ -205,10 +287,20 @@ function PracticePage() {
 
         <div className="mt-5 flex gap-2">
           {!result ? (
-            <Button onClick={submit} disabled={selected === null}>Comprobar respuesta</Button>
+            <Button onClick={submit} disabled={selected === null}>
+              Comprobar respuesta
+            </Button>
           ) : (
             <Button onClick={next}>
-              {idx < total - 1 ? <>Siguiente <ChevronRight className="ml-1 h-4 w-4" /></> : <>Nueva ronda <Shuffle className="ml-1 h-4 w-4" /></>}
+              {idx < total - 1 ? (
+                <>
+                  Siguiente <ChevronRight className="ml-1 h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  Nueva ronda <Shuffle className="ml-1 h-4 w-4" />
+                </>
+              )}
             </Button>
           )}
         </div>
