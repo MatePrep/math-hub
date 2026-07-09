@@ -54,8 +54,6 @@ interface MinScoreRow {
   career: { id: string; name: string } | null;
 }
 
-const NONE = "__none";
-
 function CareerSelectForUniversity({
   universityId,
   value,
@@ -75,12 +73,9 @@ function CareerSelectForUniversity({
   return (
     <Select value={value} onValueChange={onChange} disabled={!universityId}>
       <SelectTrigger>
-        <SelectValue
-          placeholder={universityId ? "Ninguna (opcional)" : "Elige primero la universidad"}
-        />
+        <SelectValue placeholder={universityId ? "Selecciona…" : "Elige primero la universidad"} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={NONE}>Ninguna</SelectItem>
         {careers.length === 0 && (
           <div className="px-2 py-1.5 text-xs text-muted-foreground">
             Sin carreras registradas para esta universidad.
@@ -110,42 +105,44 @@ function PuntajesMinimosPage() {
 
   const [editing, setEditing] = useState<MinScoreRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [universityId, setUniversityId] = useState(NONE);
-  const [examId, setExamId] = useState(NONE);
-  const [careerId, setCareerId] = useState(NONE);
+  const [universityId, setUniversityId] = useState("");
+  const [examId, setExamId] = useState("");
+  const [careerId, setCareerId] = useState("");
   const [minScore, setMinScore] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
 
   useEffect(() => {
-    // Changing university invalidates whichever career was picked for the previous one.
-    setCareerId(NONE);
+    // Changing university invalidates whichever career/exam were picked for the previous one.
+    setCareerId("");
+    setExamId("");
   }, [universityId]);
+
+  const examsForUniversity = (examsQ.data ?? []).filter(
+    (e: any) => e.university?.id === universityId,
+  );
 
   function openNew() {
     setEditing(null);
-    setUniversityId(NONE);
-    setExamId(NONE);
-    setCareerId(NONE);
+    setUniversityId("");
+    setExamId("");
+    setCareerId("");
     setMinScore("");
     setDialogOpen(true);
   }
   function openEdit(r: MinScoreRow) {
     setEditing(r);
-    setUniversityId(r.university?.id ?? NONE);
-    setExamId(r.exam?.id ?? NONE);
-    setCareerId(r.career?.id ?? NONE);
+    setUniversityId(r.university?.id ?? "");
+    setExamId(r.exam?.id ?? "");
+    setCareerId(r.career?.id ?? "");
     setMinScore(String(r.min_score));
     setDialogOpen(true);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const universityIdOrNull = universityId === NONE ? null : universityId;
-    const examIdOrNull = examId === NONE ? null : examId;
-    const careerIdOrNull = careerId === NONE ? null : careerId;
-    if (!universityIdOrNull && !examIdOrNull && !careerIdOrNull) {
-      toast.error("Selecciona al menos universidad, examen o carrera");
+    if (!universityId || !examId || !careerId) {
+      toast.error("Selecciona universidad, examen y carrera");
       flashSaveFeedback("refused");
       return;
     }
@@ -157,12 +154,7 @@ function PuntajesMinimosPage() {
     }
     setSaving(true);
     try {
-      const payload = {
-        universityId: universityIdOrNull,
-        examId: examIdOrNull,
-        careerId: careerIdOrNull,
-        minScore: minScoreNum,
-      };
+      const payload = { universityId, examId, careerId, minScore: minScoreNum };
       if (editing) {
         await updateFn({ data: { ...payload, id: editing.id } });
         toast.success("Puntaje mínimo actualizado — se notificó a los estudiantes afectados");
@@ -213,17 +205,16 @@ function PuntajesMinimosPage() {
             </DialogHeader>
             <form onSubmit={onSubmit} className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Combina cualquiera de los tres campos. Mientras más específico, más prioridad tiene
-                sobre un puntaje más general (ej. universidad + carrera le gana a solo universidad).
+                Un puntaje mínimo siempre se define para una universidad, un examen y una carrera
+                específicos — los tres son obligatorios.
               </p>
               <div>
-                <Label>Universidad</Label>
+                <Label>Universidad *</Label>
                 <Select value={universityId} onValueChange={setUniversityId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Ninguna (opcional)" />
+                    <SelectValue placeholder="Selecciona…" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE}>Ninguna</SelectItem>
                     {(unisQ.data ?? []).map((u: any) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.short_name ?? u.name}
@@ -233,25 +224,30 @@ function PuntajesMinimosPage() {
                 </Select>
               </div>
               <div>
-                <Label>Carrera</Label>
+                <Label>Carrera *</Label>
                 <CareerSelectForUniversity
-                  universityId={universityId === NONE ? "" : universityId}
+                  universityId={universityId}
                   value={careerId}
                   onChange={setCareerId}
                 />
               </div>
               <div>
-                <Label>Examen</Label>
-                <Select value={examId} onValueChange={setExamId}>
+                <Label>Examen *</Label>
+                <Select value={examId} onValueChange={setExamId} disabled={!universityId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Ninguno (opcional)" />
+                    <SelectValue
+                      placeholder={universityId ? "Selecciona…" : "Elige primero la universidad"}
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE}>Ninguno</SelectItem>
-                    {(examsQ.data ?? []).map((e: any) => (
+                    {examsForUniversity.length === 0 && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                        Sin exámenes registrados para esta universidad.
+                      </div>
+                    )}
+                    {examsForUniversity.map((e: any) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.title}
-                        {e.university ? ` — ${e.university.short_name}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -268,8 +264,8 @@ function PuntajesMinimosPage() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Al guardar, se notificará dentro de la app a los estudiantes afectados por esta
-                combinación.
+                Al guardar, se notificará dentro de la app a los estudiantes que ya rindieron este
+                examen.
               </p>
               <DialogFooter>
                 <Button

@@ -734,9 +734,9 @@ export const deleteCareer = createServerFn({ method: "POST" })
   });
 
 // ========== MIN SCORES management ("puntajes mínimos de ingreso") ==========
-// Each row is scoped to any combination of university/exam/career (all
-// optional, at least one required) — see get_applicable_min_score for how
-// the ranking page resolves the most specific applicable row.
+// Every row requires all three dimensions — university, exam, and career —
+// so a min score always applies to exactly one combination. Resolution on
+// the ranking page is a plain equality lookup, no specificity logic needed.
 
 export const listExamsForMinScoreAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -764,69 +764,28 @@ export const listAdminMinScores = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-// Resolves which students are affected by a min-score row, from most to
-// least specific: an exam-scoped row notifies whoever already attempted
-// that exact exam; otherwise a university and/or career scoped row notifies
-// whoever has that (university, career) combination on their profile. When
-// both an exam and a career/university are set, the exam-attempt audience
-// is further narrowed to that career/university.
-async function resolveAffectedUserIds(
-  supabase: any,
-  {
-    universityId,
-    examId,
-    careerId,
-  }: { universityId: string | null; examId: string | null; careerId: string | null },
-): Promise<string[]> {
-  let candidates: Set<string>;
-  if (examId) {
-    const { data } = await supabase
-      .from("exam_sessions")
-      .select("user_id")
-      .eq("exam_id", examId)
-      .in("status", ["submitted", "graded"]);
-    candidates = new Set((data ?? []).map((r: any) => r.user_id as string));
-  } else {
-    let q = supabase.from("student_universities").select("user_id");
-    if (universityId) q = q.eq("university_id", universityId);
-    if (careerId) q = q.eq("career_id", careerId);
-    const { data } = await q;
-    candidates = new Set((data ?? []).map((r: any) => r.user_id as string));
-  }
-  if (examId && (universityId || careerId)) {
-    let q = supabase.from("student_universities").select("user_id");
-    if (universityId) q = q.eq("university_id", universityId);
-    if (careerId) q = q.eq("career_id", careerId);
-    const { data } = await q;
-    const allowed = new Set((data ?? []).map((r: any) => r.user_id as string));
-    candidates = new Set([...candidates].filter((id) => allowed.has(id)));
-  }
-  return [...candidates];
-}
-
-// Writing another user's notifications row is blocked by the self-only RLS
-// policy, so this needs the service-role client (same pattern as
-// resolveExerciseReport in exercise-review.functions.ts).
+// Notifies whoever already attempted this exact exam — the audience a
+// (university, exam, career) min score is actually about. Writing another
+// user's notifications row is blocked by the self-only RLS policy, so this
+// needs the service-role client (same pattern as resolveExerciseReport in
+// exercise-review.functions.ts).
 async function notifyMinScoreUpdate(
   supabase: any,
-  ids: { universityId: string | null; examId: string | null; careerId: string | null },
+  ids: { universityId: string; examId: string; careerId: string },
   minScore: number,
 ) {
-  const [{ data: uni }, { data: exam }, { data: career }] = await Promise.all([
-    ids.universityId
-      ? supabase.from("universities").select("short_name").eq("id", ids.universityId).maybeSingle()
-      : Promise.resolve({ data: null }),
-    ids.examId
-      ? supabase.from("exams").select("title").eq("id", ids.examId).maybeSingle()
-      : Promise.resolve({ data: null }),
-    ids.careerId
-      ? supabase.from("careers").select("name").eq("id", ids.careerId).maybeSingle()
-      : Promise.resolve({ data: null }),
+  const [{ data: exam }, { data: career }, { data: sessions }] = await Promise.all([
+    supabase.from("exams").select("title").eq("id", ids.examId).maybeSingle(),
+    supabase.from("careers").select("name").eq("id", ids.careerId).maybeSingle(),
+    supabase
+      .from("exam_sessions")
+      .select("user_id")
+      .eq("exam_id", ids.examId)
+      .in("status", ["submitted", "graded"]),
   ]);
-  const affected = await resolveAffectedUserIds(supabase, ids);
+  const affected = [...new Set<string>((sessions ?? []).map((s: any) => s.user_id as string))];
   if (affected.length === 0) return;
-  const scopeLabel =
-    [exam?.title, career?.name, uni?.short_name].filter(Boolean).join(" — ") || "tu perfil";
+  const scopeLabel = [exam?.title, career?.name].filter(Boolean).join(" — ") || "tu perfil";
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const title = `Se actualizó el puntaje mínimo de ingreso de ${scopeLabel}`;
   const body = `Ahora es ${minScore}.`;
@@ -838,40 +797,35 @@ async function notifyMinScoreUpdate(
 }
 
 const minScoreFields = z.object({
-  universityId: z.string().uuid().nullable(),
-  examId: z.string().uuid().nullable(),
-  careerId: z.string().uuid().nullable(),
+  universityId: z.string().uuid(),
+  examId: z.string().uuid(),
+  careerId: z.string().uuid(),
   minScore: z.number().min(0).max(1000000),
 });
-const atLeastOneDim = (d: {
-  universityId: string | null;
-  examId: string | null;
-  careerId: string | null;
-}) => !!(d.universityId || d.examId || d.careerId);
-const atLeastOneDimMessage = { message: "Selecciona al menos universidad, examen o carrera" };
-const minScoreBase = minScoreFields.refine(atLeastOneDim, atLeastOneDimMessage);
 
 async function assertNoDuplicateMinScore(
   context: { supabase: any },
-  ids: { universityId: string | null; examId: string | null; careerId: string | null },
+  ids: { universityId: string; examId: string; careerId: string },
   excludeId?: string,
 ) {
-  let q = context.supabase.from("min_scores").select("id");
-  q = ids.universityId ? q.eq("university_id", ids.universityId) : q.is("university_id", null);
-  q = ids.examId ? q.eq("exam_id", ids.examId) : q.is("exam_id", null);
-  q = ids.careerId ? q.eq("career_id", ids.careerId) : q.is("career_id", null);
+  let q = context.supabase
+    .from("min_scores")
+    .select("id")
+    .eq("university_id", ids.universityId)
+    .eq("exam_id", ids.examId)
+    .eq("career_id", ids.careerId);
   if (excludeId) q = q.neq("id", excludeId);
   const { data: existing } = await q.maybeSingle();
   if (existing) {
     throw new Error(
-      "Ya existe un puntaje mínimo para esa combinación de universidad/examen/carrera.",
+      "Ya existe un puntaje mínimo para esa combinación de universidad, examen y carrera.",
     );
   }
 }
 
 export const createMinScore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => minScoreBase.parse(d))
+  .inputValidator((d) => minScoreFields.parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     await assertNoDuplicateMinScore(context, data);
@@ -892,12 +846,7 @@ export const createMinScore = createServerFn({ method: "POST" })
 
 export const updateMinScore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    minScoreFields
-      .extend({ id: z.string().uuid() })
-      .refine(atLeastOneDim, atLeastOneDimMessage)
-      .parse(d),
-  )
+  .inputValidator((d) => minScoreFields.extend({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     await assertNoDuplicateMinScore(context, data, data.id);

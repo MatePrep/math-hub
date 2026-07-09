@@ -253,7 +253,7 @@ function PracticePage() {
                 <button
                   type="button"
                   disabled={!!result}
-                  onClick={() => setSelected(i)}
+                  onClick={() => setSelected((s) => (s === i ? null : i))}
                   className={`press w-full rounded-lg border px-4 py-3 text-left text-sm leading-relaxed transition ${
                     isCorrectChoice
                       ? "animate-flash-once border-success bg-success/10"

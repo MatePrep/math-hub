@@ -39,12 +39,12 @@ export const listPublishedExamsForRanking = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-// Optional benchmark ("puntaje mínimo de ingreso") set by an admin on any
-// combination of university/exam/career — most exams resolve to none, in
-// which case the ranking page simply shows nothing. Resolves the caller's
-// own university/career context for this exam server-side (via their
-// `student_universities` link) so the client only ever passes an examId;
-// `get_applicable_min_score` then picks the most specific matching row.
+// Optional benchmark ("puntaje mínimo de ingreso") set by an admin for one
+// exact (university, exam, career) combination — most students resolve to
+// none, in which case the ranking page shows a "no hay mínimo registrado"
+// message instead of a number. Resolves the caller's own university/career
+// context for this exam server-side (via their `student_universities` link)
+// so the client only ever passes an examId.
 export const getExamMinScore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ examId: z.string().uuid() }).parse(d))
@@ -55,23 +55,25 @@ export const getExamMinScore = createServerFn({ method: "POST" })
       .eq("id", data.examId)
       .maybeSingle();
     const universityId = exam?.university_id ?? null;
+    if (!universityId) return { minScore: null, careerName: null };
 
-    let careerId: string | null = null;
-    if (universityId) {
-      const { data: su } = await context.supabase
-        .from("student_universities")
-        .select("career_id")
-        .eq("user_id", context.userId)
-        .eq("university_id", universityId)
-        .maybeSingle();
-      careerId = su?.career_id ?? null;
-    }
+    const { data: su } = await context.supabase
+      .from("student_universities")
+      .select("career_id, career:careers(name)")
+      .eq("user_id", context.userId)
+      .eq("university_id", universityId)
+      .maybeSingle();
+    const careerId = su?.career_id ?? null;
+    const careerName = (su?.career as any)?.name ?? null;
+    if (!careerId) return { minScore: null, careerName: null };
 
-    const { data: minScore, error } = await context.supabase.rpc("get_applicable_min_score", {
-      _exam_id: data.examId,
-      _university_id: universityId,
-      _career_id: careerId,
-    });
+    const { data: row, error } = await context.supabase
+      .from("min_scores")
+      .select("min_score")
+      .eq("university_id", universityId)
+      .eq("exam_id", data.examId)
+      .eq("career_id", careerId)
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    return { minScore: (minScore as number | null) ?? null };
+    return { minScore: row?.min_score ?? null, careerName };
   });

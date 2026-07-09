@@ -174,7 +174,7 @@ function ExercisePage() {
                   role="radio"
                   aria-checked={isPicked}
                   disabled={!!submitted}
-                  onClick={() => setSelected(i)}
+                  onClick={() => setSelected((s) => (s === i ? null : i))}
                   className={`press w-full rounded-lg border px-4 py-3 text-left text-sm leading-relaxed transition disabled:cursor-default ${
                     isAns
                       ? "animate-flash-once border-success/50 bg-success/10 font-medium"

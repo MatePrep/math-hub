@@ -494,30 +494,30 @@ export type Database = {
       };
       min_scores: {
         Row: {
-          career_id: string | null;
+          career_id: string;
           created_at: string;
-          exam_id: string | null;
+          exam_id: string;
           id: string;
           min_score: number;
-          university_id: string | null;
+          university_id: string;
           updated_at: string;
         };
         Insert: {
-          career_id?: string | null;
+          career_id: string;
           created_at?: string;
-          exam_id?: string | null;
+          exam_id: string;
           id?: string;
           min_score: number;
-          university_id?: string | null;
+          university_id: string;
           updated_at?: string;
         };
         Update: {
-          career_id?: string | null;
+          career_id?: string;
           created_at?: string;
-          exam_id?: string | null;
+          exam_id?: string;
           id?: string;
           min_score?: number;
-          university_id?: string | null;
+          university_id?: string;
           updated_at?: string;
         };
         Relationships: [
@@ -794,14 +794,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      get_applicable_min_score: {
-        Args: {
-          _career_id: string | null;
-          _exam_id: string | null;
-          _university_id: string | null;
-        };
-        Returns: number;
-      };
       get_exam_leaderboard: {
         Args: { _exam_id: string; _limit?: number };
         Returns: {

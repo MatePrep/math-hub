@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Timer, Flag, CheckCircle2, Loader2 } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
-import { getExamSession, saveExamAnswers, submitExamSession, getExamResult } from "@/lib/exams.functions";
+import {
+  getExamSession,
+  saveExamAnswers,
+  submitExamSession,
+  getExamResult,
+} from "@/lib/exams.functions";
 import { getExerciseImageUrl } from "@/lib/storage";
 import { FavoriteButton } from "@/components/favorite-button";
 
@@ -89,7 +94,9 @@ function TakeExam() {
       );
       if (alive) setImgUrls(map);
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [questions]);
 
   const doSubmit = useCallback(async () => {
@@ -152,7 +159,9 @@ function TakeExam() {
     if (a === savedRef.current.answers && f === savedRef.current.flagged) return;
     const t = setTimeout(() => {
       saveFn({ data: { sessionId, answers, flagged: flag } })
-        .then(() => { savedRef.current = { answers: a, flagged: f }; })
+        .then(() => {
+          savedRef.current = { answers: a, flagged: f };
+        })
         .catch(() => {});
     }, 800);
     return () => clearTimeout(t);
@@ -160,21 +169,39 @@ function TakeExam() {
 
   const answered = useMemo(() => Object.keys(answers).length, [answers]);
 
-  if (q.isLoading || !session) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>;
-  if (questions.length === 0) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">Examen sin preguntas.</div>;
+  if (q.isLoading || !session)
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>
+    );
+  if (questions.length === 0)
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
+        Examen sin preguntas.
+      </div>
+    );
 
   const ex = questions[idx];
   const isLastQuestion = idx === questions.length - 1;
-  const currentAnswered = answers[ex.id] !== undefined;
-  const canSubmit = isLastQuestion && currentAnswered;
+  // Students may finish with unanswered questions — those just grade as empty.
+  const canSubmit = isLastQuestion;
 
   function pick(i: number) {
-    setAnswers((a) => ({ ...a, [ex.id]: i }));
+    setAnswers((a) => {
+      // Clicking the already-selected choice again undoes it, letting the
+      // student go back to unanswered instead of being stuck once picked.
+      if (a[ex.id] === i) {
+        const next = { ...a };
+        delete next[ex.id];
+        return next;
+      }
+      return { ...a, [ex.id]: i };
+    });
   }
   function toggleFlag() {
     setFlagged((s) => {
       const next = new Set(s);
-      if (next.has(ex.id)) next.delete(ex.id); else next.add(ex.id);
+      if (next.has(ex.id)) next.delete(ex.id);
+      else next.add(ex.id);
       return next;
     });
   }
@@ -184,8 +211,12 @@ function TakeExam() {
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-muted-foreground">Pregunta <strong>{idx + 1}</strong> de {questions.length}</p>
-            <p className="text-xs text-muted-foreground">Respondidas: {answered}/{questions.length}</p>
+            <p className="text-sm text-muted-foreground">
+              Pregunta <strong>{idx + 1}</strong> de {questions.length}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Respondidas: {answered}/{questions.length}
+            </p>
           </div>
           <div
             className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold transition-colors duration-300 ${lowTime ? "animate-flash-once bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}
@@ -195,16 +226,30 @@ function TakeExam() {
           </div>
         </div>
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-          <div className="h-full bg-primary transition-all" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${((idx + 1) / questions.length) * 100}%` }}
+          />
         </div>
 
-        <div key={ex.id} className="animate-card-swap mt-5 rounded-xl border border-border bg-card p-6">
+        <div
+          key={ex.id}
+          className="animate-card-swap mt-5 rounded-xl border border-border bg-card p-6"
+        >
           <div className="mb-3 flex items-center justify-between">
             {ex.topic?.name && <Badge variant="secondary">{ex.topic.name}</Badge>}
             <div className="flex items-center gap-1">
               <FavoriteButton exerciseId={ex.id} />
-              <Button variant="ghost" size="sm" onClick={toggleFlag} className={flagged.has(ex.id) ? "text-warning" : ""}>
-                <span key={flagged.has(ex.id) ? "flagged" : "unflagged"} className="animate-icon-pop mr-1 inline-flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleFlag}
+                className={flagged.has(ex.id) ? "text-warning" : ""}
+              >
+                <span
+                  key={flagged.has(ex.id) ? "flagged" : "unflagged"}
+                  className="animate-icon-pop mr-1 inline-flex"
+                >
                   <Flag className="h-4 w-4" />
                 </span>
                 {flagged.has(ex.id) ? "Desmarcar" : "Marcar"}
@@ -213,7 +258,11 @@ function TakeExam() {
           </div>
           <MathText text={ex.statement_md} />
           {imgUrls[ex.id] && (
-            <img src={imgUrls[ex.id]} alt="Enunciado" className="mt-4 max-h-96 rounded-md object-contain" />
+            <img
+              src={imgUrls[ex.id]}
+              alt="Enunciado"
+              className="mt-4 max-h-96 rounded-md object-contain"
+            />
           )}
           <ul className="mt-5 space-y-2">
             {(ex.choices as string[]).map((c, i) => {
@@ -226,7 +275,9 @@ function TakeExam() {
                     onClick={() => pick(i)}
                     className={`press w-full rounded-lg border px-4 py-3 text-left text-sm transition ${picked ? "border-primary bg-primary/10 font-medium" : "border-border bg-background hover:border-primary/40"}`}
                   >
-                    <span className="mr-2 font-semibold text-primary">{String.fromCharCode(65 + i)}.</span>
+                    <span className="mr-2 font-semibold text-primary">
+                      {String.fromCharCode(65 + i)}.
+                    </span>
                     <ChoiceText text={c} />
                   </button>
                 </li>
@@ -236,9 +287,19 @@ function TakeExam() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <Button type="button" variant="outline" disabled={idx === 0} onClick={() => setIdx((i) => i - 1)} className="press min-h-11">Anterior</Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={idx === 0}
+            onClick={() => setIdx((i) => i - 1)}
+            className="press min-h-11"
+          >
+            Anterior
+          </Button>
           {idx < questions.length - 1 ? (
-            <Button type="button" onClick={() => setIdx((i) => i + 1)} className="press min-h-11">Siguiente</Button>
+            <Button type="button" onClick={() => setIdx((i) => i + 1)} className="press min-h-11">
+              Siguiente
+            </Button>
           ) : (
             <Button
               type="button"
@@ -246,7 +307,11 @@ function TakeExam() {
               disabled={submitting || !canSubmit}
               className="press min-h-11"
             >
-              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              {submitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
               {grading ? "Calculando tu resultado…" : submitting ? "Enviando…" : "Finalizar examen"}
             </Button>
           )}
@@ -266,9 +331,11 @@ function TakeExam() {
                 type="button"
                 onClick={() => setIdx(i)}
                 className={`press relative h-9 rounded-md border text-xs font-semibold transition ${
-                  isCurrent ? "border-primary ring-2 ring-primary/40" :
-                  isAnswered ? "border-success/50 bg-success/10 text-success" :
-                  "border-border bg-background hover:border-primary/40"
+                  isCurrent
+                    ? "border-primary ring-2 ring-primary/40"
+                    : isAnswered
+                      ? "border-success/50 bg-success/10 text-success"
+                      : "border-border bg-background hover:border-primary/40"
                 }`}
                 aria-label={`Ir a pregunta ${i + 1}`}
               >
@@ -279,8 +346,13 @@ function TakeExam() {
           })}
         </div>
         <div className="mt-4 space-y-1 text-xs text-muted-foreground">
-          <p><span className="inline-block h-3 w-3 rounded-sm border border-success/50 bg-success/10 align-middle" /> Respondida</p>
-          <p><Flag className="inline h-3 w-3 text-warning" /> Marcada</p>
+          <p>
+            <span className="inline-block h-3 w-3 rounded-sm border border-success/50 bg-success/10 align-middle" />{" "}
+            Respondida
+          </p>
+          <p>
+            <Flag className="inline h-3 w-3 text-warning" /> Marcada
+          </p>
         </div>
         <Button
           type="button"
@@ -296,7 +368,13 @@ function TakeExam() {
           size="sm"
         >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isLastQuestion ? (grading ? "Calculando…" : submitting ? "Enviando…" : "Finalizar") : "Ir a la última pregunta"}
+          {isLastQuestion
+            ? grading
+              ? "Calculando…"
+              : submitting
+                ? "Enviando…"
+                : "Finalizar"
+            : "Ir a la última pregunta"}
         </Button>
       </aside>
     </div>
