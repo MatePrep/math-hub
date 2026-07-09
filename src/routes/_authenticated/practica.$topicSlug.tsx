@@ -13,12 +13,14 @@ import {
 import { getFullProfile } from "@/lib/profile.functions";
 import { recordAttempt } from "@/lib/attempts.functions";
 import { MathText, ChoiceText } from "@/lib/math-render";
+import { getExerciseImageUrl } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, ChevronRight, Shuffle, Info } from "lucide-react";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
+import { ZoomableImage } from "@/components/zoomable-image";
 
 const searchSchema = z.object({
   subtopic: z.string().optional(),
@@ -103,6 +105,21 @@ function PracticePage() {
     setResult(null);
     setStartTime(Date.now());
   }, [idx]);
+
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const currentImagePath = q.data?.find((e: any) => e.id === order[idx])?.statement_image_path;
+  useEffect(() => {
+    let alive = true;
+    setImgUrl(null);
+    if (currentImagePath) {
+      getExerciseImageUrl(currentImagePath).then((url) => {
+        if (alive) setImgUrl(url);
+      });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [currentImagePath]);
 
   // Must run unconditionally, before the early returns below — calling a hook
   // only after `q.data` first arrives changes the hook count mid-mount and
@@ -214,7 +231,10 @@ function PracticePage() {
         </div>
       )}
 
-      <article className="mt-5 rounded-xl border border-border bg-card p-6">
+      <article
+        key={current.id}
+        className="animate-card-swap mt-5 rounded-xl border border-border bg-card p-4 sm:p-6"
+      >
         <div className="mb-3 flex items-center justify-between">
           <Badge variant="secondary" className="capitalize">
             {current.difficulty}
@@ -222,6 +242,7 @@ function PracticePage() {
           <FavoriteButton exerciseId={current.id} />
         </div>
         <MathText text={current.statement_md} />
+        {imgUrl && <ZoomableImage src={imgUrl} alt="Diagrama del ejercicio" />}
         <ul className="mt-5 space-y-2">
           {(current.choices as string[]).map((c: string, i: number) => {
             const picked = selected === i;
@@ -233,9 +254,9 @@ function PracticePage() {
                   type="button"
                   disabled={!!result}
                   onClick={() => setSelected(i)}
-                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
+                  className={`press w-full rounded-lg border px-4 py-3 text-left text-sm leading-relaxed transition ${
                     isCorrectChoice
-                      ? "border-success bg-success/10"
+                      ? "animate-flash-once border-success bg-success/10"
                       : isWrongPicked
                         ? "border-destructive bg-destructive/10"
                         : picked
@@ -253,17 +274,17 @@ function PracticePage() {
 
         {result && (
           <div
-            className={`mt-4 rounded-md border p-3 text-sm ${result.isCorrect ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}
+            className={`animate-alert-in mt-4 rounded-md border p-3 text-sm ${result.isCorrect ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}
           >
             <div className="flex items-center gap-2 font-semibold">
               {result.isCorrect ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 text-success" /> ¡Correcto!
+                  <CheckCircle2 className="animate-icon-pop h-4 w-4 text-success" /> ¡Correcto!
                 </>
               ) : (
                 <>
-                  <XCircle className="h-4 w-4 text-destructive" /> Incorrecto. La respuesta era{" "}
-                  {String.fromCharCode(65 + result.correctChoice)}.
+                  <XCircle className="animate-icon-pop h-4 w-4 text-destructive" /> Incorrecto. La
+                  respuesta era {String.fromCharCode(65 + result.correctChoice)}.
                 </>
               )}
             </div>
@@ -287,11 +308,15 @@ function PracticePage() {
 
         <div className="mt-5 flex gap-2">
           {!result ? (
-            <Button onClick={submit} disabled={selected === null}>
+            <Button
+              onClick={submit}
+              disabled={selected === null}
+              className="press w-full min-h-11 sm:w-auto"
+            >
               Comprobar respuesta
             </Button>
           ) : (
-            <Button onClick={next}>
+            <Button onClick={next} className="press w-full min-h-11 sm:w-auto">
               {idx < total - 1 ? (
                 <>
                   Siguiente <ChevronRight className="ml-1 h-4 w-4" />

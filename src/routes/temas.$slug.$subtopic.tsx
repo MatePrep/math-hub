@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getTopicBySlug, listExercises } from "@/lib/exercises.functions";
 import { ExerciseCard } from "@/components/exercise-card";
+import { ExerciseCardSkeleton } from "@/components/skeletons";
 
 const topicQO = (slug: string) =>
   queryOptions({ queryKey: ["topic", slug], queryFn: () => getTopicBySlug({ data: { slug } }) });
@@ -9,8 +10,7 @@ const topicQO = (slug: string) =>
 const exercisesQO = (slug: string, sub: string) =>
   queryOptions({
     queryKey: ["exercises", "topic", slug, "sub", sub],
-    queryFn: () =>
-      listExercises({ data: { topicSlug: slug, subtopicSlug: sub, limit: 100 } }),
+    queryFn: () => listExercises({ data: { topicSlug: slug, subtopicSlug: sub, limit: 100 } }),
   });
 
 export const Route = createFileRoute("/temas/$slug/$subtopic")({
@@ -24,6 +24,9 @@ export const Route = createFileRoute("/temas/$slug/$subtopic")({
     meta: [{ title: `${params.subtopic} · ${params.slug} · MatePre` }],
   }),
   component: SubtopicPage,
+  pendingComponent: SubtopicPagePending,
+  pendingMs: 150,
+  pendingMinMs: 300,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
       {error.message}
@@ -38,6 +41,21 @@ export const Route = createFileRoute("/temas/$slug/$subtopic")({
     </div>
   ),
 });
+
+function SubtopicPagePending() {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="h-3.5 w-48 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+      <div className="mt-3 h-9 w-72 animate-pulse rounded bg-muted motion-reduce:animate-none sm:h-10" />
+      <div className="mt-2 h-4 w-24 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <ExerciseCardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function SubtopicPage() {
   const { slug, subtopic } = Route.useParams();
@@ -63,8 +81,14 @@ function SubtopicPage() {
         {exercises.length} ejercicio{exercises.length === 1 ? "" : "s"}
       </p>
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        {exercises.map((ex: any) => (
-          <ExerciseCard key={ex.id} ex={ex} />
+        {exercises.map((ex: any, i: number) => (
+          <div
+            key={ex.id}
+            className="animate-fade-up"
+            style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
+          >
+            <ExerciseCard ex={ex} />
+          </div>
         ))}
         {exercises.length === 0 && (
           <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">

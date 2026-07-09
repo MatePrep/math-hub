@@ -25,7 +25,7 @@ export function ExerciseCard({ ex }: { ex: ExerciseRow }) {
     <Link
       to="/ejercicio/$id"
       params={{ id: ex.id }}
-      className="group relative block rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
+      className="press group relative block rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
     >
       <FavoriteButton exerciseId={ex.id} className="absolute right-3 top-3" />
       <div className="flex flex-wrap items-center gap-2 pr-8 text-xs">
@@ -40,11 +40,7 @@ export function ExerciseCard({ ex }: { ex: ExerciseRow }) {
           </Badge>
         )}
       </div>
-      <MathText
-        text={ex.statement_md}
-        clampLines={3}
-        className="mt-3 text-sm text-foreground/90"
-      />
+      <MathText text={ex.statement_md} clampLines={3} className="mt-3 text-sm text-foreground/90" />
       <p className="mt-3 text-xs font-medium text-primary group-hover:underline">
         Resolver ejercicio ahora →
       </p>

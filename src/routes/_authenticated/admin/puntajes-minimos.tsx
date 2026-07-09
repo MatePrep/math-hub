@@ -21,15 +21,23 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Pencil, Trash2, Plus, Check } from "lucide-react";
 import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import {
   listAdminMinScores,
+  listExamsForMinScoreAdmin,
+  listAdminCareers,
   createMinScore,
   updateMinScore,
   deleteMinScore,
-  listAdminCareers,
 } from "@/lib/admin.functions";
 import { listAllUniversities } from "@/lib/profile.functions";
 
@@ -39,24 +47,23 @@ export const Route = createFileRoute("/_authenticated/admin/puntajes-minimos")({
 
 interface MinScoreRow {
   id: string;
-  year: number;
   min_score: number;
+  updated_at: string;
   university: { id: string; short_name: string } | null;
+  exam: { id: string; title: string } | null;
   career: { id: string; name: string } | null;
 }
+
+const NONE = "__none";
 
 function CareerSelectForUniversity({
   universityId,
   value,
   onChange,
-  allowAll,
-  triggerClassName,
 }: {
   universityId: string;
   value: string;
   onChange: (v: string) => void;
-  allowAll?: boolean;
-  triggerClassName?: string;
 }) {
   const listFn = useServerFn(listAdminCareers);
   const q = useQuery({
@@ -67,11 +74,13 @@ function CareerSelectForUniversity({
   const careers = q.data ?? [];
   return (
     <Select value={value} onValueChange={onChange} disabled={!universityId}>
-      <SelectTrigger className={triggerClassName}>
-        <SelectValue placeholder={universityId ? "Selecciona una carrera" : "Elige primero la universidad"} />
+      <SelectTrigger>
+        <SelectValue
+          placeholder={universityId ? "Ninguna (opcional)" : "Elige primero la universidad"}
+        />
       </SelectTrigger>
       <SelectContent>
-        {allowAll && <SelectItem value="all">Todas las carreras</SelectItem>}
+        <SelectItem value={NONE}>Ninguna</SelectItem>
         {careers.length === 0 && (
           <div className="px-2 py-1.5 text-xs text-muted-foreground">
             Sin carreras registradas para esta universidad.
@@ -89,87 +98,76 @@ function CareerSelectForUniversity({
 
 function PuntajesMinimosPage() {
   const unisFn = useServerFn(listAllUniversities);
+  const examsFn = useServerFn(listExamsForMinScoreAdmin);
   const listFn = useServerFn(listAdminMinScores);
   const createFn = useServerFn(createMinScore);
   const updateFn = useServerFn(updateMinScore);
   const delFn = useServerFn(deleteMinScore);
 
   const unisQ = useQuery({ queryKey: ["all-universities"], queryFn: () => unisFn() });
-
-  const [filterUniversityId, setFilterUniversityId] = useState<string>("all");
-  const [filterCareerId, setFilterCareerId] = useState<string>("all");
-  const [filterYear, setFilterYear] = useState<string>("");
-
-  useEffect(() => {
-    setFilterCareerId("all");
-  }, [filterUniversityId]);
-
-  const q = useQuery({
-    queryKey: ["admin-min-scores", filterUniversityId, filterCareerId, filterYear],
-    queryFn: () =>
-      listFn({
-        data: {
-          universityId: filterUniversityId !== "all" ? filterUniversityId : undefined,
-          careerId: filterCareerId !== "all" ? filterCareerId : undefined,
-          year: filterYear ? Number(filterYear) : undefined,
-        },
-      }),
-  });
+  const examsQ = useQuery({ queryKey: ["admin-exams-for-min-score"], queryFn: () => examsFn() });
+  const q = useQuery({ queryKey: ["admin-min-scores"], queryFn: () => listFn() });
 
   const [editing, setEditing] = useState<MinScoreRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [universityId, setUniversityId] = useState("");
-  const [careerId, setCareerId] = useState("");
-  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [universityId, setUniversityId] = useState(NONE);
+  const [examId, setExamId] = useState(NONE);
+  const [careerId, setCareerId] = useState(NONE);
   const [minScore, setMinScore] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveFeedback, flashSaveFeedback] = useSaveFeedback();
 
   useEffect(() => {
     // Changing university invalidates whichever career was picked for the previous one.
-    setCareerId("");
+    setCareerId(NONE);
   }, [universityId]);
 
   function openNew() {
     setEditing(null);
-    setUniversityId("");
-    setCareerId("");
-    setYear(String(new Date().getFullYear()));
+    setUniversityId(NONE);
+    setExamId(NONE);
+    setCareerId(NONE);
     setMinScore("");
     setDialogOpen(true);
   }
   function openEdit(r: MinScoreRow) {
     setEditing(r);
-    setUniversityId(r.university?.id ?? "");
-    setCareerId(r.career?.id ?? "");
-    setYear(String(r.year));
+    setUniversityId(r.university?.id ?? NONE);
+    setExamId(r.exam?.id ?? NONE);
+    setCareerId(r.career?.id ?? NONE);
     setMinScore(String(r.min_score));
     setDialogOpen(true);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!universityId || !careerId) {
-      toast.error("Selecciona universidad y carrera");
+    const universityIdOrNull = universityId === NONE ? null : universityId;
+    const examIdOrNull = examId === NONE ? null : examId;
+    const careerIdOrNull = careerId === NONE ? null : careerId;
+    if (!universityIdOrNull && !examIdOrNull && !careerIdOrNull) {
+      toast.error("Selecciona al menos universidad, examen o carrera");
       flashSaveFeedback("refused");
       return;
     }
-    const yearNum = Number(year);
     const minScoreNum = Number(minScore);
-    if (!yearNum || minScoreNum < 0 || minScore.trim() === "") {
-      toast.error("Completa año y puntaje mínimo válidos");
+    if (minScore.trim() === "" || minScoreNum < 0) {
+      toast.error("Completa un puntaje mínimo válido");
       flashSaveFeedback("refused");
       return;
     }
     setSaving(true);
     try {
+      const payload = {
+        universityId: universityIdOrNull,
+        examId: examIdOrNull,
+        careerId: careerIdOrNull,
+        minScore: minScoreNum,
+      };
       if (editing) {
-        await updateFn({
-          data: { id: editing.id, universityId, careerId, year: yearNum, minScore: minScoreNum },
-        });
+        await updateFn({ data: { ...payload, id: editing.id } });
         toast.success("Puntaje mínimo actualizado — se notificó a los estudiantes afectados");
       } else {
-        await createFn({ data: { universityId, careerId, year: yearNum, minScore: minScoreNum } });
+        await createFn({ data: payload });
         toast.success("Puntaje mínimo creado — se notificó a los estudiantes afectados");
       }
       flashSaveFeedback("accepted");
@@ -184,7 +182,10 @@ function PuntajesMinimosPage() {
   }
 
   async function onDelete(r: MinScoreRow) {
-    if (!confirm(`¿Eliminar el puntaje mínimo de ${r.university?.short_name} - ${r.career?.name} (${r.year})?`)) return;
+    const label = [r.exam?.title, r.career?.name, r.university?.short_name]
+      .filter(Boolean)
+      .join(" — ");
+    if (!confirm(`¿Eliminar el puntaje mínimo de "${label || "este registro"}"?`)) return;
     try {
       await delFn({ data: { id: r.id } });
       toast.success("Eliminado");
@@ -197,38 +198,7 @@ function PuntajesMinimosPage() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={filterUniversityId} onValueChange={setFilterUniversityId}>
-            <SelectTrigger className="w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las universidades</SelectItem>
-              {(unisQ.data ?? []).map((u: any) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.short_name ?? u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {filterUniversityId !== "all" && (
-            <CareerSelectForUniversity
-              universityId={filterUniversityId}
-              value={filterCareerId}
-              onChange={setFilterCareerId}
-              allowAll
-              triggerClassName="w-56"
-            />
-          )}
-          <Input
-            type="number"
-            placeholder="Año"
-            value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value)}
-            className="w-28"
-          />
-          <p className="text-sm text-muted-foreground">{q.data?.length ?? 0} registros</p>
-        </div>
+        <p className="text-sm text-muted-foreground">{q.data?.length ?? 0} registros</p>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" onClick={openNew}>
@@ -237,16 +207,23 @@ function PuntajesMinimosPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editing ? "Editar puntaje mínimo" : "Nuevo puntaje mínimo"}</DialogTitle>
+              <DialogTitle>
+                {editing ? "Editar puntaje mínimo" : "Nuevo puntaje mínimo"}
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={onSubmit} className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Combina cualquiera de los tres campos. Mientras más específico, más prioridad tiene
+                sobre un puntaje más general (ej. universidad + carrera le gana a solo universidad).
+              </p>
               <div>
-                <Label>Universidad *</Label>
+                <Label>Universidad</Label>
                 <Select value={universityId} onValueChange={setUniversityId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona…" />
+                    <SelectValue placeholder="Ninguna (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={NONE}>Ninguna</SelectItem>
                     {(unisQ.data ?? []).map((u: any) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.short_name ?? u.name}
@@ -256,24 +233,51 @@ function PuntajesMinimosPage() {
                 </Select>
               </div>
               <div>
-                <Label>Carrera *</Label>
-                <CareerSelectForUniversity universityId={universityId} value={careerId} onChange={setCareerId} />
+                <Label>Carrera</Label>
+                <CareerSelectForUniversity
+                  universityId={universityId === NONE ? "" : universityId}
+                  value={careerId}
+                  onChange={setCareerId}
+                />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Año *</Label>
-                  <Input type="number" min={2000} max={2100} value={year} onChange={(e) => setYear(e.target.value)} required />
-                </div>
-                <div>
-                  <Label>Puntaje mínimo *</Label>
-                  <Input type="number" min={0} value={minScore} onChange={(e) => setMinScore(e.target.value)} required />
-                </div>
+              <div>
+                <Label>Examen</Label>
+                <Select value={examId} onValueChange={setExamId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ninguno (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Ninguno</SelectItem>
+                    {(examsQ.data ?? []).map((e: any) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.title}
+                        {e.university ? ` — ${e.university.short_name}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Puntaje mínimo *</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={minScore}
+                  onChange={(e) => setMinScore(e.target.value)}
+                  required
+                />
               </div>
               <p className="text-xs text-muted-foreground">
-                Al guardar, se notificará dentro de la app a los estudiantes que ya tengan esta universidad y carrera en su perfil.
+                Al guardar, se notificará dentro de la app a los estudiantes afectados por esta
+                combinación.
               </p>
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={saving}
+                >
                   Cancelar
                 </Button>
                 <Button
@@ -301,8 +305,8 @@ function PuntajesMinimosPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Universidad</TableHead>
+              <TableHead>Examen</TableHead>
               <TableHead>Carrera</TableHead>
-              <TableHead>Año</TableHead>
               <TableHead>Puntaje mínimo</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -318,15 +322,25 @@ function PuntajesMinimosPage() {
             {q.data?.map((r: MinScoreRow) => (
               <TableRow key={r.id}>
                 <TableCell>{r.university?.short_name ?? "—"}</TableCell>
+                <TableCell>{r.exam?.title ?? "—"}</TableCell>
                 <TableCell>{r.career?.name ?? "—"}</TableCell>
-                <TableCell>{r.year}</TableCell>
                 <TableCell className="font-medium">{r.min_score}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(r)} aria-label="Editar">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openEdit(r)}
+                      aria-label="Editar"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => onDelete(r)} aria-label="Eliminar">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onDelete(r)}
+                      aria-label="Eliminar"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

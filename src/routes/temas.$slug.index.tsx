@@ -3,11 +3,13 @@ import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query"
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { getTopicBySlug, listExercises, getSubtopicFrequency } from "@/lib/exercises.functions";
 import { getFullProfile } from "@/lib/profile.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { ExerciseCard } from "@/components/exercise-card";
+import { ExerciseCardSkeleton } from "@/components/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -59,6 +61,9 @@ export const Route = createFileRoute("/temas/$slug/")({
     ],
   }),
   component: TopicPage,
+  pendingComponent: TopicPagePending,
+  pendingMs: 150,
+  pendingMinMs: 300,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
       {error.message}
@@ -73,6 +78,30 @@ export const Route = createFileRoute("/temas/$slug/")({
     </div>
   ),
 });
+
+function TopicPagePending() {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="h-3.5 w-24 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+      <div className="mt-3 h-9 w-64 animate-pulse rounded bg-muted motion-reduce:animate-none sm:h-10" />
+      <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
+        <aside className="hidden space-y-2 lg:block">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-8 animate-pulse rounded-md bg-muted motion-reduce:animate-none"
+            />
+          ))}
+        </aside>
+        <section className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <ExerciseCardSkeleton key={i} />
+          ))}
+        </section>
+      </div>
+    </div>
+  );
+}
 
 const diffs = [
   { v: "all", label: "Todos" },
@@ -110,6 +139,12 @@ function TopicPage() {
     enabled: !!effectiveUniversityId,
   });
 
+  useEffect(() => {
+    if (freqQ.isError) {
+      toast.error("No se pudo cargar la frecuencia por universidad. Mostrando orden por defecto.");
+    }
+  }, [freqQ.isError]);
+
   if (!topic) return null;
 
   const freqMap = freqQ.data ?? {};
@@ -142,7 +177,7 @@ function TopicPage() {
           )}
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <DropdownMenuTrigger className="press inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
             Practicar <ChevronDown className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
@@ -214,7 +249,31 @@ function TopicPage() {
             </Select>
           )}
 
-          <ul className="mt-3 space-y-1">
+          {/* Mobile/tablet: horizontal scrollable chips so subtopics never push
+              the exercise list below the fold. Desktop keeps the full vertical list. */}
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            {subtopicsRanked.map((s) => {
+              const isTopFrequent = topFrequentIds.has(s.id);
+              return (
+                <Link
+                  key={s.id}
+                  to="/temas/$slug/$subtopic"
+                  params={{ slug: topic.slug, subtopic: s.slug }}
+                  className="press shrink-0"
+                >
+                  <Badge
+                    variant={isTopFrequent ? "default" : "outline"}
+                    className="cursor-pointer whitespace-nowrap"
+                  >
+                    {isTopFrequent && <span aria-hidden="true">🔥 </span>}
+                    {s.name}
+                  </Badge>
+                </Link>
+              );
+            })}
+          </div>
+
+          <ul className="mt-3 hidden space-y-1 lg:block">
             {subtopicsRanked.map((s) => {
               const isTopFrequent = topFrequentIds.has(s.id);
               return (
@@ -229,7 +288,7 @@ function TopicPage() {
                     <Link
                       to="/temas/$slug/$subtopic"
                       params={{ slug: topic.slug, subtopic: s.slug }}
-                      className="flex-1 text-foreground/80 hover:text-foreground hover:underline"
+                      className="press flex-1 text-foreground/80 hover:text-foreground hover:underline"
                     >
                       {isTopFrequent && <span aria-hidden="true">🔥 </span>}
                       {s.name}
@@ -282,8 +341,14 @@ function TopicPage() {
             </p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {exercises.map((ex: any) => (
-                <ExerciseCard key={ex.id} ex={ex} />
+              {exercises.map((ex: any, i: number) => (
+                <div
+                  key={ex.id}
+                  className="animate-fade-up"
+                  style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
+                >
+                  <ExerciseCard ex={ex} />
+                </div>
               ))}
             </div>
           )}

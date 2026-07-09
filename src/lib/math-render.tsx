@@ -27,17 +27,26 @@ function MarkdownMath({ text, className, inline = false, clampLines }: MarkdownM
   return (
     <Wrapper
       className={cn(
-        // Long formulas (matrices, big fractions, systems) can render wider
-        // than a phone screen; scroll them in place instead of overflowing
-        // the page or getting clipped by a parent's overflow-hidden.
-        // Clamped previews clip instead of scrolling: nesting an
-        // overflow-x-auto box inside a -webkit-line-clamp ancestor breaks
-        // the clamp in Safari, so the two modes must live on the same node.
+        // Horizontal scroll for wide display equations (matrices, systems)
+        // is handled by the dedicated `.katex-display` rule in styles.css,
+        // scoped to just that KaTeX node. This wrapper must stay fully
+        // overflow-visible: per the CSS overflow spec, setting overflow-x
+        // to anything but "visible" forces the used value of overflow-y to
+        // "auto" too — even if overflow-y is explicitly declared "visible" —
+        // turning the statement/alternative into its own mini scroll area
+        // (a stray scrollbar) and silently clipping tall KaTeX constructs
+        // (stacked fractions, exponents) whose glyphs paint slightly
+        // outside their flow-computed box. Leaving overflow unset here is
+        // the actual fix, not a stronger overflow-y override.
+        // Clamped previews are the one deliberate exception: overflow-hidden
+        // truncates the 3-line card preview, and must live on this same
+        // node because nesting a scroll box inside a -webkit-line-clamp
+        // ancestor breaks the clamp in Safari.
         inline
-          ? "inline-block max-w-full overflow-x-auto align-bottom"
+          ? "inline-block max-w-full align-bottom"
           : clampClass
             ? `${clampClass} overflow-hidden`
-            : "max-w-full overflow-x-auto",
+            : "max-w-full",
         className,
       )}
     >
@@ -46,7 +55,11 @@ function MarkdownMath({ text, className, inline = false, clampLines }: MarkdownM
         rehypePlugins={[rehypeKatex]}
         components={{
           p: ({ node, ...props }) =>
-            inline ? <span {...props} /> : <p className="leading-relaxed [&:not(:first-child)]:mt-3" {...props} />,
+            inline ? (
+              <span {...props} />
+            ) : (
+              <p className="leading-relaxed [&:not(:first-child)]:mt-3" {...props} />
+            ),
         }}
       >
         {text}

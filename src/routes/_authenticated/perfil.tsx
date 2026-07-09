@@ -28,6 +28,7 @@ import { Trash2, Plus, User, Eye, EyeOff, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSaveFeedback } from "@/hooks/use-save-feedback";
+import { DeleteAccountButton } from "@/components/delete-account-button";
 
 const PREP_TIME_OPTIONS: Array<{ value: (typeof PREP_TIME_VALUES)[number]; label: string }> = [
   { value: "recien_empiezo", label: "Recién empiezo" },
@@ -271,7 +272,10 @@ function PerfilPage() {
           </p>
         </div>
       </div>
-      <form onSubmit={onSubmit} className="mt-6 space-y-6 rounded-xl border border-border bg-card p-6">
+      <form
+        onSubmit={onSubmit}
+        className="mt-6 space-y-6 rounded-xl border border-border bg-card p-6"
+      >
         <div>
           <Label htmlFor="name">Nombre completo</Label>
           <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -300,7 +304,11 @@ function PerfilPage() {
               Si lo desactivas, no aparecerás en el leaderboard de tu(s) universidad(es).
             </p>
           </div>
-          <Switch id="ranking-opt-in" checked={leaderboardOptIn} onCheckedChange={setLeaderboardOptIn} />
+          <Switch
+            id="ranking-opt-in"
+            checked={leaderboardOptIn}
+            onCheckedChange={setLeaderboardOptIn}
+          />
         </div>
 
         <div>
@@ -346,6 +354,7 @@ function PerfilPage() {
               type="button"
               size="sm"
               variant="outline"
+              className="pointer-coarse:h-11 pointer-coarse:px-4"
               onClick={addUniversityRow}
               disabled={universitiesQ.isLoading}
             >
@@ -353,9 +362,10 @@ function PerfilPage() {
             </Button>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Agrega una o varias. Si tienes la fecha de tu examen, indícala para ver la cuenta regresiva en tu panel.
+            Agrega una o varias. Si tienes la fecha de tu examen, indícala para ver la cuenta
+            regresiva en tu panel.
           </p>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 divide-y divide-border sm:space-y-2 sm:divide-y-0">
             {universities.length === 0 && (
               <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
                 Aún no agregaste ninguna universidad.
@@ -366,12 +376,17 @@ function PerfilPage() {
                 (c: any) => c.active || c.id === row.careerId,
               );
               return (
-                <div key={i} className="flex flex-wrap items-center gap-2">
+                <div
+                  key={i}
+                  className="grid grid-cols-1 gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem_auto] sm:items-center sm:py-0"
+                >
                   <Select
                     value={row.universityId}
-                    onValueChange={(v) => updateUniversityRow(i, { universityId: v, careerId: null })}
+                    onValueChange={(v) =>
+                      updateUniversityRow(i, { universityId: v, careerId: null })
+                    }
                   >
-                    <SelectTrigger className="min-w-[160px] flex-1">
+                    <SelectTrigger>
                       <SelectValue placeholder="Universidad" />
                     </SelectTrigger>
                     <SelectContent>
@@ -387,11 +402,19 @@ function PerfilPage() {
                   </Select>
                   <Select
                     value={row.careerId ?? "__none"}
-                    onValueChange={(v) => updateUniversityRow(i, { careerId: v === "__none" ? null : v })}
+                    onValueChange={(v) =>
+                      updateUniversityRow(i, { careerId: v === "__none" ? null : v })
+                    }
                     disabled={rowCareers.length === 0}
                   >
-                    <SelectTrigger className="min-w-[160px] flex-1">
-                      <SelectValue placeholder={rowCareers.length === 0 ? "Sin carreras registradas" : "Carrera (opcional)"} />
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          rowCareers.length === 0
+                            ? "Sin carreras registradas"
+                            : "Carrera (opcional)"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">— ninguna —</SelectItem>
@@ -402,15 +425,24 @@ function PerfilPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    type="date"
-                    className="w-40"
-                    value={row.examDate}
-                    onChange={(e) => updateUniversityRow(i, { examDate: e.target.value })}
-                  />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeUniversityRow(i)} aria-label="Quitar">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 sm:contents">
+                    <Input
+                      type="date"
+                      className="flex-1 sm:w-full"
+                      value={row.examDate}
+                      onChange={(e) => updateUniversityRow(i, { examDate: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 pointer-coarse:h-11 pointer-coarse:w-11"
+                      onClick={() => removeUniversityRow(i)}
+                      aria-label="Quitar universidad"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -438,7 +470,9 @@ function PerfilPage() {
                 <SelectContent>
                   <SelectItem value="__none">Sin definir</SelectItem>
                   {PREP_TIME_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -458,7 +492,9 @@ function PerfilPage() {
                 <SelectContent>
                   <SelectItem value="__none">Sin definir</SelectItem>
                   {PREP_METHOD_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -507,7 +543,7 @@ function PerfilPage() {
 
         <Button
           type="submit"
-          className={`press min-h-11 ${saveFeedback === "refused" ? "animate-shake" : ""}`}
+          className={`press w-full min-h-11 sm:w-auto ${saveFeedback === "refused" ? "animate-shake" : ""}`}
           disabled={busy}
         >
           {busy ? (
@@ -562,7 +598,11 @@ function PerfilPage() {
                       aria-label={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                     >
                       <span key={showNewPassword ? "hide" : "show"} className="animate-icon-pop">
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </span>
                     </button>
                   </div>
@@ -590,7 +630,7 @@ function PerfilPage() {
                 )}
                 <Button
                   type="submit"
-                  className={`press min-h-11 ${passwordFeedback === "refused" ? "animate-shake" : ""}`}
+                  className={`press w-full min-h-11 sm:w-auto ${passwordFeedback === "refused" ? "animate-shake" : ""}`}
                   disabled={passwordBusy}
                 >
                   {passwordBusy ? (
@@ -607,11 +647,23 @@ function PerfilPage() {
             </>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">
-              Tu cuenta usa "Continuar con Google" y no tiene contraseña propia. Ingresa siempre con ese botón desde la pantalla de acceso.
+              Tu cuenta usa "Continuar con Google" y no tiene contraseña propia. Ingresa siempre con
+              ese botón desde la pantalla de acceso.
             </p>
           )}
         </div>
       )}
+
+      <div className="mt-6 rounded-xl border border-destructive/30 bg-card p-6">
+        <h2 className="font-display text-xl font-bold text-destructive">Zona de peligro</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Eliminar tu cuenta borra tu perfil y todos tus datos asociados (historial de ejercicios,
+          simulacros, metas, favoritos y notificaciones) de forma permanente e irreversible.
+        </p>
+        <div className="mt-3">
+          <DeleteAccountButton />
+        </div>
+      </div>
     </div>
   );
 }

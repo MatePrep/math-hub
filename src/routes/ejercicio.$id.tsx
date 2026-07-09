@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getExercise, listExercises } from "@/lib/exercises.functions";
 import { recordAttempt } from "@/lib/attempts.functions";
 import { MathText, ChoiceText } from "@/lib/math-render";
+import { getExerciseImageUrl } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
+import { ZoomableImage } from "@/components/zoomable-image";
 
 const exQO = (id: string) =>
   queryOptions({ queryKey: ["exercise", id], queryFn: () => getExercise({ data: { id } }) });
@@ -58,12 +60,26 @@ function ExercisePage() {
   );
   const [startedAt, setStartedAt] = useState(() => Date.now());
   const [siblings, setSiblings] = useState<string[]>([]);
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
 
   // Reset on id change
   useEffect(() => {
     setSelected(null);
     setSubmitted(null);
   }, [id]);
+
+  useEffect(() => {
+    let alive = true;
+    setImgUrl(null);
+    if (ex?.statement_image_path) {
+      getExerciseImageUrl(ex.statement_image_path).then((url) => {
+        if (alive) setImgUrl(url);
+      });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [ex?.statement_image_path]);
 
   // Load sibling exercise ids in same topic for prev/next
   useEffect(() => {
@@ -136,11 +152,15 @@ function ExercisePage() {
         )}
       </div>
 
-      <article className="mt-4 rounded-xl border border-border bg-card p-6 shadow-sm">
+      <article
+        key={ex.id}
+        className="animate-card-swap mt-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6"
+      >
         <h1 className="sr-only">Ejercicio</h1>
         <div className="text-base">
           <MathText text={ex.statement_md} />
         </div>
+        {imgUrl && <ZoomableImage src={imgUrl} alt="Diagrama del ejercicio" />}
 
         <ul className="mt-6 space-y-2" role="radiogroup" aria-label="Alternativas">
           {choices.map((c, i) => {
@@ -155,9 +175,9 @@ function ExercisePage() {
                   aria-checked={isPicked}
                   disabled={!!submitted}
                   onClick={() => setSelected(i)}
-                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition disabled:cursor-default ${
+                  className={`press w-full rounded-lg border px-4 py-3 text-left text-sm leading-relaxed transition disabled:cursor-default ${
                     isAns
-                      ? "border-success/50 bg-success/10 font-medium"
+                      ? "animate-flash-once border-success/50 bg-success/10 font-medium"
                       : isWrong
                         ? "border-destructive/50 bg-destructive/10"
                         : isPicked
@@ -177,13 +197,17 @@ function ExercisePage() {
 
         {!submitted ? (
           <div className="mt-6 flex justify-end">
-            <Button onClick={handleVerify} disabled={selected === null} className="min-h-11">
+            <Button
+              onClick={handleVerify}
+              disabled={selected === null}
+              className="press w-full min-h-11 sm:w-auto"
+            >
               Verificar respuesta
             </Button>
           </div>
         ) : (
           <div
-            className={`mt-6 flex items-center gap-2 rounded-lg p-4 text-sm font-medium ${
+            className={`animate-alert-in mt-6 flex items-center gap-2 rounded-lg p-4 text-sm font-medium ${
               submitted.correct
                 ? "bg-success/10 text-success"
                 : "bg-destructive/10 text-destructive"
@@ -192,12 +216,12 @@ function ExercisePage() {
           >
             {submitted.correct ? (
               <>
-                <CheckCircle2 className="h-5 w-5" /> ¡Correcto! Muy bien.
+                <CheckCircle2 className="animate-icon-pop h-5 w-5" /> ¡Correcto! Muy bien.
               </>
             ) : (
               <>
-                <XCircle className="h-5 w-5" /> Incorrecto. La respuesta correcta es la{" "}
-                {String.fromCharCode(65 + submitted.correctChoice)}.
+                <XCircle className="animate-icon-pop h-5 w-5" /> Incorrecto. La respuesta correcta
+                es la {String.fromCharCode(65 + submitted.correctChoice)}.
               </>
             )}
           </div>
@@ -227,7 +251,7 @@ function ExercisePage() {
           variant="outline"
           disabled={!prevId}
           onClick={() => prevId && navigate({ to: "/ejercicio/$id", params: { id: prevId } })}
-          className="min-h-11"
+          className="press min-h-11"
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
         </Button>
@@ -238,14 +262,14 @@ function ExercisePage() {
             setSubmitted(null);
             setStartedAt(Date.now());
           }}
-          className="min-h-11"
+          className="press min-h-11"
         >
           Reintentar
         </Button>
         <Button
           disabled={!nextId}
           onClick={() => nextId && navigate({ to: "/ejercicio/$id", params: { id: nextId } })}
-          className="min-h-11"
+          className="press min-h-11"
         >
           Siguiente <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

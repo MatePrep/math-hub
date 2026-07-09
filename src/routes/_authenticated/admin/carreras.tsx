@@ -23,7 +23,14 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Pencil, Trash2, Plus, Check } from "lucide-react";
 import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import {
@@ -44,7 +51,6 @@ interface CareerRow {
   name: string;
   active: boolean;
   studentCount: number;
-  minScoreCount: number;
 }
 
 function CarrerasPage() {
@@ -102,7 +108,9 @@ function CarrerasPage() {
         toast.success("Carrera actualizada");
       } else {
         const res = await createFn({ data: { universityId, name: name.trim() } });
-        toast[res.duplicated ? "info" : "success"](res.duplicated ? "Ya existía" : "Carrera creada");
+        toast[res.duplicated ? "info" : "success"](
+          res.duplicated ? "Ya existía" : "Carrera creada",
+        );
       }
       flashSaveFeedback("accepted");
       q.refetch();
@@ -166,10 +174,20 @@ function CarrerasPage() {
             <form onSubmit={onSubmit} className="space-y-3">
               <div>
                 <Label>Nombre *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={120}
+                />
               </div>
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={saving}
+                >
                   Cancelar
                 </Button>
                 <Button
@@ -198,7 +216,6 @@ function CarrerasPage() {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Estudiantes</TableHead>
-              <TableHead>Puntajes mínimos</TableHead>
               <TableHead>Activa</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -206,14 +223,14 @@ function CarrerasPage() {
           <TableBody>
             {!universityId && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
                   Selecciona una universidad para ver sus carreras.
                 </TableCell>
               </TableRow>
             )}
             {universityId && q.isLoading && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
                   Cargando…
                 </TableCell>
               </TableRow>
@@ -225,14 +242,16 @@ function CarrerasPage() {
                   <Badge variant="secondary">{c.studentCount}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{c.minScoreCount}</Badge>
-                </TableCell>
-                <TableCell>
                   <Switch checked={c.active} onCheckedChange={() => onToggle(c)} />
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(c)} aria-label="Editar">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openEdit(c)}
+                      aria-label="Editar"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -240,7 +259,7 @@ function CarrerasPage() {
                       variant="ghost"
                       onClick={() => onDelete(c)}
                       aria-label="Eliminar"
-                      disabled={c.studentCount > 0 || c.minScoreCount > 0}
+                      disabled={c.studentCount > 0}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -250,7 +269,7 @@ function CarrerasPage() {
             ))}
             {universityId && !q.isLoading && q.data?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
                   Sin carreras todavía.
                 </TableCell>
               </TableRow>

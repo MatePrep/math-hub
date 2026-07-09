@@ -105,7 +105,7 @@ export const listExercises = createServerFn({ method: "GET" })
     let q = sb
       .from("exercises")
       .select(
-        `id, statement_md, difficulty, exam_year, tags, choices, correct_choice, topic:topics!inner(slug,name), subtopic:${subtopicEmbed}, university:universities(slug,short_name)`,
+        `id, statement_md, statement_image_path, difficulty, exam_year, tags, choices, correct_choice, topic:topics!inner(slug,name), subtopic:${subtopicEmbed}, university:universities(slug,short_name)`,
       )
       .order("created_at", { ascending: false })
       .limit(data.limit);
@@ -129,7 +129,7 @@ export const getExercise = createServerFn({ method: "GET" })
     const { data: ex, error } = await sb
       .from("exercises")
       .select(
-        "id, statement_md, choices, correct_choice, solution_md, difficulty, exam_year, tags, topic:topics(slug,name), subtopic:subtopics(slug,name), university:universities(slug,short_name,name)",
+        "id, statement_md, statement_image_path, choices, correct_choice, solution_md, difficulty, exam_year, tags, topic:topics(slug,name), subtopic:subtopics(slug,name), university:universities(slug,short_name,name)",
       )
       .eq("id", data.id)
       .maybeSingle();

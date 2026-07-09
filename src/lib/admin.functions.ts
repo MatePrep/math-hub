@@ -18,7 +18,9 @@ async function assertAdmin(context: { supabase: any; userId: string }) {
 // surfaced to the admin instead of a false "guardado" toast.
 function assertRowsAffected(rows: any[] | null | undefined, entity: string) {
   if (!rows || rows.length === 0) {
-    throw new Error(`No se pudo guardar ${entity}: no se encontró el registro o no tienes permiso.`);
+    throw new Error(
+      `No se pudo guardar ${entity}: no se encontró el registro o no tienes permiso.`,
+    );
   }
 }
 
@@ -55,11 +57,12 @@ const exerciseSchema = exerciseBase.refine((d) => d.correct_choice < d.choices.l
   path: ["correct_choice"],
 });
 
-const exerciseUpdateSchema = exerciseBase.extend({ id: z.string().uuid() }).refine(
-  (d) => d.correct_choice < d.choices.length,
-  { message: "correct_choice fuera de rango", path: ["correct_choice"] },
-);
-
+const exerciseUpdateSchema = exerciseBase
+  .extend({ id: z.string().uuid() })
+  .refine((d) => d.correct_choice < d.choices.length, {
+    message: "correct_choice fuera de rango",
+    path: ["correct_choice"],
+  });
 
 export const listAdminExercises = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -186,7 +189,10 @@ export const bulkImportExercises = createServerFn({ method: "POST" })
       solution_md: d.solution_md,
       tags: d.tags ?? [],
     }));
-    const { data: rows, error } = await context.supabase.from("exercises").insert(payload).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("exercises")
+      .insert(payload)
+      .select("id");
     if (error) throw new Error(error.message);
     return { insertedCount: rows?.length ?? 0, failed };
   });
@@ -222,7 +228,11 @@ export const deleteExercise = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { data: rows, error } = await context.supabase.from("exercises").delete().eq("id", data.id).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("exercises")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
     assertRowsAffected(rows, "el ejercicio");
     return { ok: true };
@@ -258,11 +268,13 @@ export const listAdminTopics = createServerFn({ method: "GET" })
 export const createTopic = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      name: z.string().trim().min(2).max(60),
-      description: z.string().trim().max(300).nullable().optional(),
-      color: z.string().trim().max(20).nullable().optional(),
-    }).parse(d),
+    z
+      .object({
+        name: z.string().trim().min(2).max(60),
+        description: z.string().trim().max(300).nullable().optional(),
+        color: z.string().trim().max(20).nullable().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
@@ -309,10 +321,12 @@ export const createTopic = createServerFn({ method: "POST" })
 export const createSubtopic = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      topic_id: z.string().uuid(),
-      name: z.string().trim().min(2).max(60),
-    }).parse(d),
+    z
+      .object({
+        topic_id: z.string().uuid(),
+        name: z.string().trim().min(2).max(60),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
@@ -359,12 +373,14 @@ export const createSubtopic = createServerFn({ method: "POST" })
 export const renameTopic = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      id: z.string().uuid(),
-      name: z.string().trim().min(2).max(60),
-      description: z.string().trim().max(300).nullable().optional(),
-      color: z.string().trim().max(20).nullable().optional(),
-    }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        name: z.string().trim().min(2).max(60),
+        description: z.string().trim().max(300).nullable().optional(),
+        color: z.string().trim().max(20).nullable().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
@@ -384,9 +400,7 @@ export const renameTopic = createServerFn({ method: "POST" })
 
 export const setTopicActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d),
-  )
+  .inputValidator((d) => z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { data: rows, error } = await context.supabase
@@ -409,9 +423,15 @@ export const deleteTopic = createServerFn({ method: "POST" })
       .select("id", { head: true, count: "exact" })
       .eq("topic_id", data.id);
     if ((count ?? 0) > 0) {
-      throw new Error(`No se puede eliminar: la materia tiene ${count} ejercicios. Desactívala en su lugar.`);
+      throw new Error(
+        `No se puede eliminar: la materia tiene ${count} ejercicios. Desactívala en su lugar.`,
+      );
     }
-    const { data: rows, error } = await context.supabase.from("topics").delete().eq("id", data.id).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("topics")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
     assertRowsAffected(rows, "la materia");
     return { ok: true };
@@ -431,7 +451,10 @@ export const listAdminUniversities = createServerFn({ method: "GET" })
 
     const [{ data: studentRows }, { data: examRows }, { data: exerciseRows }] = await Promise.all([
       context.supabase.from("student_universities").select("university_id"),
-      context.supabase.from("exams").select("university_id, exam_type").not("university_id", "is", null),
+      context.supabase
+        .from("exams")
+        .select("university_id, exam_type")
+        .not("university_id", "is", null),
       context.supabase.from("exercises").select("university_id").not("university_id", "is", null),
     ]);
 
@@ -549,14 +572,31 @@ export const deleteUniversity = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const [{ count: exerciseCount }, { count: examCount }, { count: sessionCount }, { count: studentCount }] =
-      await Promise.all([
-        context.supabase.from("exercises").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
-        context.supabase.from("exams").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
-        context.supabase.from("exam_sessions").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
-        context.supabase.from("student_universities").select("id", { head: true, count: "exact" }).eq("university_id", data.id),
-      ]);
-    const total = (exerciseCount ?? 0) + (examCount ?? 0) + (sessionCount ?? 0) + (studentCount ?? 0);
+    const [
+      { count: exerciseCount },
+      { count: examCount },
+      { count: sessionCount },
+      { count: studentCount },
+    ] = await Promise.all([
+      context.supabase
+        .from("exercises")
+        .select("id", { head: true, count: "exact" })
+        .eq("university_id", data.id),
+      context.supabase
+        .from("exams")
+        .select("id", { head: true, count: "exact" })
+        .eq("university_id", data.id),
+      context.supabase
+        .from("exam_sessions")
+        .select("id", { head: true, count: "exact" })
+        .eq("university_id", data.id),
+      context.supabase
+        .from("student_universities")
+        .select("id", { head: true, count: "exact" })
+        .eq("university_id", data.id),
+    ]);
+    const total =
+      (exerciseCount ?? 0) + (examCount ?? 0) + (sessionCount ?? 0) + (studentCount ?? 0);
     if (total > 0) {
       throw new Error(
         `No se puede eliminar: tiene ${studentCount ?? 0} estudiante(s), ${examCount ?? 0} examen(es)/simulacro(s), ${exerciseCount ?? 0} ejercicio(s) y ${sessionCount ?? 0} sesión(es) asociadas. Desactívala en su lugar.`,
@@ -568,7 +608,11 @@ export const deleteUniversity = createServerFn({ method: "POST" })
       .select("logo_path")
       .eq("id", data.id)
       .maybeSingle();
-    const { data: rows, error } = await context.supabase.from("universities").delete().eq("id", data.id).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("universities")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
     assertRowsAffected(rows, "la universidad");
     if (uni?.logo_path) {
@@ -591,23 +635,20 @@ export const listAdminCareers = createServerFn({ method: "GET" })
       .order("name");
     if (error) throw new Error(error.message);
 
-    const [{ data: studentRows }, { data: scoreRows }] = await Promise.all([
-      context.supabase.from("student_universities").select("career_id").eq("university_id", data.universityId),
-      context.supabase.from("min_admission_scores").select("career_id").eq("university_id", data.universityId),
-    ]);
+    const { data: studentRows } = await context.supabase
+      .from("student_universities")
+      .select("career_id")
+      .eq("university_id", data.universityId);
     const bump = (m: Map<string, number>, key: string | null) => {
       if (!key) return;
       m.set(key, (m.get(key) ?? 0) + 1);
     };
     const studentCounts = new Map<string, number>();
     (studentRows ?? []).forEach((r: any) => bump(studentCounts, r.career_id));
-    const scoreCounts = new Map<string, number>();
-    (scoreRows ?? []).forEach((r: any) => bump(scoreCounts, r.career_id));
 
     return (rows ?? []).map((c: any) => ({
       ...c,
       studentCount: studentCounts.get(c.id) ?? 0,
-      minScoreCount: scoreCounts.get(c.id) ?? 0,
     }));
   });
 
@@ -638,7 +679,9 @@ export const createCareer = createServerFn({ method: "POST" })
 
 export const renameCareer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid(), name: z.string().trim().min(2).max(120) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ id: z.string().uuid(), name: z.string().trim().min(2).max(120) }).parse(d),
+  )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { data: rows, error } = await context.supabase
@@ -671,141 +714,199 @@ export const deleteCareer = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const [{ count: studentCount }, { count: scoreCount }] = await Promise.all([
-      context.supabase.from("student_universities").select("id", { head: true, count: "exact" }).eq("career_id", data.id),
-      context.supabase.from("min_admission_scores").select("id", { head: true, count: "exact" }).eq("career_id", data.id),
-    ]);
-    const total = (studentCount ?? 0) + (scoreCount ?? 0);
-    if (total > 0) {
+    const { count: studentCount } = await context.supabase
+      .from("student_universities")
+      .select("id", { head: true, count: "exact" })
+      .eq("career_id", data.id);
+    if ((studentCount ?? 0) > 0) {
       throw new Error(
-        `No se puede eliminar: ${studentCount ?? 0} estudiante(s) y ${scoreCount ?? 0} puntaje(s) mínimo(s) la referencian. Desactívala en su lugar.`,
+        `No se puede eliminar: ${studentCount} estudiante(s) la referencian. Desactívala en su lugar.`,
       );
     }
-    const { data: rows, error } = await context.supabase.from("careers").delete().eq("id", data.id).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("careers")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
     assertRowsAffected(rows, "la carrera");
     return { ok: true };
   });
 
-// ========== MIN ADMISSION SCORES management ("puntajes mínimos de ingreso") ==========
+// ========== MIN SCORES management ("puntajes mínimos de ingreso") ==========
+// Each row is scoped to any combination of university/exam/career (all
+// optional, at least one required) — see get_applicable_min_score for how
+// the ranking page resolves the most specific applicable row.
+
+export const listExamsForMinScoreAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data, error } = await context.supabase
+      .from("exams")
+      .select("id, title, status, university:universities(id,short_name)")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
 
 export const listAdminMinScores = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z
-      .object({
-        universityId: z.string().uuid().optional(),
-        careerId: z.string().uuid().optional(),
-        year: z.number().int().optional(),
-      })
-      .parse(d ?? {}),
-  )
-  .handler(async ({ context, data }) => {
+  .handler(async ({ context }) => {
     await assertAdmin(context);
-    let q = context.supabase
-      .from("min_admission_scores")
+    const { data, error } = await context.supabase
+      .from("min_scores")
       .select(
-        "id, year, min_score, created_at, updated_at, university:universities(id,short_name), career:careers(id,name)",
+        "id, min_score, updated_at, university:universities(id,short_name), exam:exams(id,title), career:careers(id,name)",
       )
-      .order("year", { ascending: false });
-    if (data.universityId) q = q.eq("university_id", data.universityId);
-    if (data.careerId) q = q.eq("career_id", data.careerId);
-    if (data.year) q = q.eq("year", data.year);
-    const { data: rows, error } = await q;
+      .order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    return data ?? [];
   });
 
-// Admin saves a min score for a university+career -> every student who has
-// that exact (university, career) pair on their profile gets an in-app
-// notification. Writing another user's notifications row is blocked by the
-// self-only RLS policy, so this needs the service-role client (same pattern
-// as resolveExerciseReport in exercise-review.functions.ts).
-async function notifyMinScoreUpdate(
+// Resolves which students are affected by a min-score row, from most to
+// least specific: an exam-scoped row notifies whoever already attempted
+// that exact exam; otherwise a university and/or career scoped row notifies
+// whoever has that (university, career) combination on their profile. When
+// both an exam and a career/university are set, the exam-attempt audience
+// is further narrowed to that career/university.
+async function resolveAffectedUserIds(
   supabase: any,
-  universityId: string,
-  careerId: string,
-  year: number,
-  minScore: number,
-) {
-  const [{ data: uni }, { data: career }, { data: students }] = await Promise.all([
-    supabase.from("universities").select("short_name").eq("id", universityId).maybeSingle(),
-    supabase.from("careers").select("name").eq("id", careerId).maybeSingle(),
-    supabase
-      .from("student_universities")
+  {
+    universityId,
+    examId,
+    careerId,
+  }: { universityId: string | null; examId: string | null; careerId: string | null },
+): Promise<string[]> {
+  let candidates: Set<string>;
+  if (examId) {
+    const { data } = await supabase
+      .from("exam_sessions")
       .select("user_id")
-      .eq("university_id", universityId)
-      .eq("career_id", careerId),
-  ]);
-  const affected = students ?? [];
-  if (affected.length === 0) return;
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const title = `Se actualizó el puntaje mínimo de ingreso de ${uni?.short_name ?? "tu universidad"} - ${career?.name ?? "tu carrera"}`;
-  const body = `Para el año ${year}: ahora es ${minScore}.`;
-  await supabaseAdmin.from("notifications").insert(
-    affected.map((s: any) => ({ user_id: s.user_id, kind: "min_score_updated", title, body })),
-  );
+      .eq("exam_id", examId)
+      .in("status", ["submitted", "graded"]);
+    candidates = new Set((data ?? []).map((r: any) => r.user_id as string));
+  } else {
+    let q = supabase.from("student_universities").select("user_id");
+    if (universityId) q = q.eq("university_id", universityId);
+    if (careerId) q = q.eq("career_id", careerId);
+    const { data } = await q;
+    candidates = new Set((data ?? []).map((r: any) => r.user_id as string));
+  }
+  if (examId && (universityId || careerId)) {
+    let q = supabase.from("student_universities").select("user_id");
+    if (universityId) q = q.eq("university_id", universityId);
+    if (careerId) q = q.eq("career_id", careerId);
+    const { data } = await q;
+    const allowed = new Set((data ?? []).map((r: any) => r.user_id as string));
+    candidates = new Set([...candidates].filter((id) => allowed.has(id)));
+  }
+  return [...candidates];
 }
 
-const minScoreBase = z.object({
-  universityId: z.string().uuid(),
-  careerId: z.string().uuid(),
-  year: z.number().int().min(2000).max(2100),
+// Writing another user's notifications row is blocked by the self-only RLS
+// policy, so this needs the service-role client (same pattern as
+// resolveExerciseReport in exercise-review.functions.ts).
+async function notifyMinScoreUpdate(
+  supabase: any,
+  ids: { universityId: string | null; examId: string | null; careerId: string | null },
+  minScore: number,
+) {
+  const [{ data: uni }, { data: exam }, { data: career }] = await Promise.all([
+    ids.universityId
+      ? supabase.from("universities").select("short_name").eq("id", ids.universityId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    ids.examId
+      ? supabase.from("exams").select("title").eq("id", ids.examId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    ids.careerId
+      ? supabase.from("careers").select("name").eq("id", ids.careerId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const affected = await resolveAffectedUserIds(supabase, ids);
+  if (affected.length === 0) return;
+  const scopeLabel =
+    [exam?.title, career?.name, uni?.short_name].filter(Boolean).join(" — ") || "tu perfil";
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const title = `Se actualizó el puntaje mínimo de ingreso de ${scopeLabel}`;
+  const body = `Ahora es ${minScore}.`;
+  await supabaseAdmin
+    .from("notifications")
+    .insert(
+      affected.map((userId) => ({ user_id: userId, kind: "min_score_updated", title, body })),
+    );
+}
+
+const minScoreFields = z.object({
+  universityId: z.string().uuid().nullable(),
+  examId: z.string().uuid().nullable(),
+  careerId: z.string().uuid().nullable(),
   minScore: z.number().min(0).max(1000000),
 });
+const atLeastOneDim = (d: {
+  universityId: string | null;
+  examId: string | null;
+  careerId: string | null;
+}) => !!(d.universityId || d.examId || d.careerId);
+const atLeastOneDimMessage = { message: "Selecciona al menos universidad, examen o carrera" };
+const minScoreBase = minScoreFields.refine(atLeastOneDim, atLeastOneDimMessage);
+
+async function assertNoDuplicateMinScore(
+  context: { supabase: any },
+  ids: { universityId: string | null; examId: string | null; careerId: string | null },
+  excludeId?: string,
+) {
+  let q = context.supabase.from("min_scores").select("id");
+  q = ids.universityId ? q.eq("university_id", ids.universityId) : q.is("university_id", null);
+  q = ids.examId ? q.eq("exam_id", ids.examId) : q.is("exam_id", null);
+  q = ids.careerId ? q.eq("career_id", ids.careerId) : q.is("career_id", null);
+  if (excludeId) q = q.neq("id", excludeId);
+  const { data: existing } = await q.maybeSingle();
+  if (existing) {
+    throw new Error(
+      "Ya existe un puntaje mínimo para esa combinación de universidad/examen/carrera.",
+    );
+  }
+}
 
 export const createMinScore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => minScoreBase.parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { data: existing } = await context.supabase
-      .from("min_admission_scores")
-      .select("id")
-      .eq("university_id", data.universityId)
-      .eq("career_id", data.careerId)
-      .eq("year", data.year)
-      .maybeSingle();
-    if (existing) {
-      throw new Error("Ya existe un puntaje mínimo para esa universidad, carrera y año. Edítalo en su lugar.");
-    }
+    await assertNoDuplicateMinScore(context, data);
     const { data: row, error } = await context.supabase
-      .from("min_admission_scores")
+      .from("min_scores")
       .insert({
         university_id: data.universityId,
+        exam_id: data.examId,
         career_id: data.careerId,
-        year: data.year,
         min_score: data.minScore,
       })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    await notifyMinScoreUpdate(context.supabase, data.universityId, data.careerId, data.year, data.minScore);
+    await notifyMinScoreUpdate(context.supabase, data, data.minScore);
     return { id: row.id as string };
   });
 
 export const updateMinScore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => minScoreBase.extend({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d) =>
+    minScoreFields
+      .extend({ id: z.string().uuid() })
+      .refine(atLeastOneDim, atLeastOneDimMessage)
+      .parse(d),
+  )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
-    const { data: existing } = await context.supabase
-      .from("min_admission_scores")
-      .select("id")
-      .eq("university_id", data.universityId)
-      .eq("career_id", data.careerId)
-      .eq("year", data.year)
-      .neq("id", data.id)
-      .maybeSingle();
-    if (existing) {
-      throw new Error("Ya existe otro puntaje mínimo para esa universidad, carrera y año.");
-    }
+    await assertNoDuplicateMinScore(context, data, data.id);
     const { data: rows, error } = await context.supabase
-      .from("min_admission_scores")
+      .from("min_scores")
       .update({
         university_id: data.universityId,
+        exam_id: data.examId,
         career_id: data.careerId,
-        year: data.year,
         min_score: data.minScore,
         updated_at: new Date().toISOString(),
       })
@@ -813,7 +914,7 @@ export const updateMinScore = createServerFn({ method: "POST" })
       .select("id");
     if (error) throw new Error(error.message);
     assertRowsAffected(rows, "el puntaje mínimo");
-    await notifyMinScoreUpdate(context.supabase, data.universityId, data.careerId, data.year, data.minScore);
+    await notifyMinScoreUpdate(context.supabase, data, data.minScore);
     return { ok: true };
   });
 
@@ -823,7 +924,7 @@ export const deleteMinScore = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { data: rows, error } = await context.supabase
-      .from("min_admission_scores")
+      .from("min_scores")
       .delete()
       .eq("id", data.id)
       .select("id");
@@ -866,8 +967,7 @@ const examSchema = z
     ...scoringFields,
   })
   .refine(
-    (d) =>
-      d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1,
+    (d) => (d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1),
     { message: "Un examen estándar requiere preguntas; uno de plantilla requiere reglas." },
   );
 
@@ -889,8 +989,7 @@ const examUpdateSchema = z
     ...scoringFields,
   })
   .refine(
-    (d) =>
-      d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1,
+    (d) => (d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1),
     { message: "Un examen estándar requiere preguntas; uno de plantilla requiere reglas." },
   );
 
@@ -909,7 +1008,11 @@ async function validateTemplateRules(
     const { count, error } = await q;
     if (error) throw new Error(error.message);
     if ((count ?? 0) < rule.question_count) {
-      const { data: topic } = await supabase.from("topics").select("name").eq("id", rule.topic_id).maybeSingle();
+      const { data: topic } = await supabase
+        .from("topics")
+        .select("name")
+        .eq("id", rule.topic_id)
+        .maybeSingle();
       throw new Error(
         `La materia "${topic?.name ?? rule.topic_id}" solo tiene ${count ?? 0} ejercicios disponibles para esta universidad (propios o genéricos)${rule.difficulty_filter ? ` (${rule.difficulty_filter})` : ""}, pero pediste ${rule.question_count}.`,
       );
@@ -932,7 +1035,10 @@ export const listAdminExams = createServerFn({ method: "GET" })
       ...e,
       questionCount:
         (e.exam_type ?? "standard") === "template"
-          ? (e.exam_template_rules ?? []).reduce((sum: number, r: any) => sum + (r.question_count ?? 0), 0)
+          ? (e.exam_template_rules ?? []).reduce(
+              (sum: number, r: any) => sum + (r.question_count ?? 0),
+              0,
+            )
           : (e.exam_questions?.[0]?.count ?? 0),
       attemptCount: e.exam_sessions?.[0]?.count ?? 0,
     }));
@@ -945,7 +1051,9 @@ export const getAdminExam = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data: exam, error } = await context.supabase
       .from("exams")
-      .select("*, exam_questions(exercise_id, position), exam_template_rules(id, topic_id, difficulty_filter, question_count, position)")
+      .select(
+        "*, exam_questions(exercise_id, position), exam_template_rules(id, topic_id, difficulty_filter, question_count, position)",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -973,7 +1081,9 @@ export const listExerciseBank = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data, error } = await context.supabase
       .from("exercises")
-      .select("id, statement_md, difficulty, exam_year, topic:topics(id,name), university:universities(id,short_name)")
+      .select(
+        "id, statement_md, difficulty, exam_year, topic:topics(id,name), university:universities(id,short_name)",
+      )
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) throw new Error(error.message);
@@ -1104,7 +1214,11 @@ export const deleteExam = createServerFn({ method: "POST" })
         `No se puede eliminar: hay ${count} intento(s) generado(s). Archívalo en su lugar para conservar el historial.`,
       );
     }
-    const { data: rows, error } = await context.supabase.from("exams").delete().eq("id", data.id).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("exams")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
     assertRowsAffected(rows, "el examen");
     return { ok: true };
@@ -1129,15 +1243,19 @@ export const archiveExam = createServerFn({ method: "POST" })
 export const getTopicQuestionCounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      university_id: z.string().uuid(),
-      pairs: z.array(
-        z.object({
-          topic_id: z.string().uuid(),
-          difficulty_filter: z.enum(["facil", "medio", "dificil"]).nullable().optional(),
-        }),
-      ).max(50),
-    }).parse(d),
+    z
+      .object({
+        university_id: z.string().uuid(),
+        pairs: z
+          .array(
+            z.object({
+              topic_id: z.string().uuid(),
+              difficulty_filter: z.enum(["facil", "medio", "dificil"]).nullable().optional(),
+            }),
+          )
+          .max(50),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
@@ -1150,9 +1268,11 @@ export const getTopicQuestionCounts = createServerFn({ method: "POST" })
         .or(`university_id.eq.${data.university_id},university_id.is.null`);
       if (p.difficulty_filter) q = q.eq("difficulty", p.difficulty_filter);
       const { count } = await q;
-      out.push({ topic_id: p.topic_id, difficulty_filter: p.difficulty_filter ?? null, count: count ?? 0 });
+      out.push({
+        topic_id: p.topic_id,
+        difficulty_filter: p.difficulty_filter ?? null,
+        count: count ?? 0,
+      });
     }
     return out;
   });
-
-

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -11,16 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  getUniversityLeaderboard,
   getExamLeaderboard,
-  listUniversitiesWithExams,
   listPublishedExamsForRanking,
-  getMinScoreForRanking,
-  getMyBestScoreForUniversity,
+  getExamMinScore,
 } from "@/lib/leaderboard.functions";
-import { getUserStats } from "@/lib/attempts.functions";
 
 export const Route = createFileRoute("/_authenticated/ranking")({
   head: () => ({ meta: [{ title: "Ranking · MatePre" }] }),
@@ -28,32 +23,18 @@ export const Route = createFileRoute("/_authenticated/ranking")({
 });
 
 function RankingPage() {
-  const unisFn = useServerFn(listUniversitiesWithExams);
   const examsFn = useServerFn(listPublishedExamsForRanking);
-  const uniBoardFn = useServerFn(getUniversityLeaderboard);
   const examBoardFn = useServerFn(getExamLeaderboard);
 
-  const unisQ = useQuery({ queryKey: ["rank-unis"], queryFn: () => unisFn() });
   const examsQ = useQuery({ queryKey: ["rank-exams"], queryFn: () => examsFn() });
 
-  const [uniId, setUniId] = useState<string>("");
   const [examId, setExamId] = useState<string>("");
-
-  const uniBoardQ = useQuery({
-    queryKey: ["rank-uni-board", uniId],
-    queryFn: () => uniBoardFn({ data: { universityId: uniId, limit: 100 } }),
-    enabled: !!uniId,
-  });
 
   const examBoardQ = useQuery({
     queryKey: ["rank-exam-board", examId],
     queryFn: () => examBoardFn({ data: { examId, limit: 100 } }),
     enabled: !!examId,
   });
-
-  const uniRows = uniBoardQ.data ?? [];
-  const uniMe = uniRows.find((r: any) => r.is_me);
-  const uniTotal = uniRows[0]?.total_count ?? 0;
 
   const examRows = examBoardQ.data ?? [];
   const examMe = examRows.find((r: any) => r.is_me);
@@ -71,88 +52,43 @@ function RankingPage() {
         </p>
       </header>
 
-      <Tabs defaultValue="uni">
-        <TabsList>
-          <TabsTrigger value="uni">Por universidad</TabsTrigger>
-          <TabsTrigger value="exam">Por examen</TabsTrigger>
-        </TabsList>
+      <Select value={examId} onValueChange={setExamId}>
+        <SelectTrigger className="w-full sm:w-96">
+          <SelectValue placeholder="Selecciona un examen" />
+        </SelectTrigger>
+        <SelectContent>
+          {(examsQ.data ?? []).map((e: any) => (
+            <SelectItem key={e.id} value={e.id}>
+              {e.title}
+              {e.university ? ` — ${e.university.short_name}` : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Mejor puntaje obtenido en los últimos 3 meses. Se muestran los 100 mejores puestos.
+      </p>
+      <BoardTable
+        loading={examBoardQ.isLoading && !!examId}
+        rows={examRows
+          .filter((r: any) => r.rank <= 100)
+          .map((r: any) => ({
+            rank: r.rank,
+            pseudonym: r.pseudonym,
+            scoreText: `${r.best_score}${r.max_score != null ? ` / ${r.max_score}` : ""} pts`,
+            subtitle: `${r.attempts_count} intentos`,
+            is_me: r.is_me,
+          }))}
+        scoreLabel="Mejor puntaje"
+      />
+      {examMe && examMe.rank > 100 && (
+        <p className="mt-3 rounded-lg border border-border bg-secondary/40 px-4 py-3 text-sm">
+          Estás en el puesto <span className="font-semibold">#{examMe.rank}</span> de{" "}
+          <span className="font-semibold">{examTotal}</span> estudiantes en los últimos 3 meses.
+        </p>
+      )}
 
-        <TabsContent value="uni" className="mt-4">
-          <Select value={uniId} onValueChange={setUniId}>
-            <SelectTrigger className="w-full sm:w-72">
-              <SelectValue placeholder="Selecciona una universidad" />
-            </SelectTrigger>
-            <SelectContent>
-              {(unisQ.data ?? []).map((u: any) => (
-                <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Precisión promedio (% de aciertos) entre los exámenes y simulacros rendidos en esta
-            universidad durante los últimos 3 meses — no mezcla puntajes en puntos, ya que cada
-            examen puede tener su propio esquema de puntos. Se muestran los 100 mejores puestos.
-          </p>
-          <BoardTable
-            loading={uniBoardQ.isLoading && !!uniId}
-            rows={uniRows
-              .filter((r: any) => r.rank <= 100)
-              .map((r: any) => ({
-                rank: r.rank,
-                pseudonym: r.pseudonym,
-                scoreText: `${r.avg_accuracy}%`,
-                subtitle: `${r.sessions_count} exámenes`,
-                is_me: r.is_me,
-              }))}
-            scoreLabel="Precisión promedio"
-          />
-          {uniMe && uniMe.rank > 100 && (
-            <p className="mt-3 rounded-lg border border-border bg-secondary/40 px-4 py-3 text-sm">
-              Estás en el puesto <span className="font-semibold">#{uniMe.rank}</span> de{" "}
-              <span className="font-semibold">{uniTotal}</span> estudiantes en los últimos 3 meses.
-            </p>
-          )}
-
-          {uniId && <MinScoreCard universityId={uniId} />}
-        </TabsContent>
-
-        <TabsContent value="exam" className="mt-4">
-          <Select value={examId} onValueChange={setExamId}>
-            <SelectTrigger className="w-full sm:w-96">
-              <SelectValue placeholder="Selecciona un examen" />
-            </SelectTrigger>
-            <SelectContent>
-              {(examsQ.data ?? []).map((e: any) => (
-                <SelectItem key={e.id} value={e.id}>
-                  {e.title}{e.university ? ` — ${e.university.short_name}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Mejor puntaje obtenido en los últimos 3 meses. Se muestran los 100 mejores puestos.
-          </p>
-          <BoardTable
-            loading={examBoardQ.isLoading && !!examId}
-            rows={examRows
-              .filter((r: any) => r.rank <= 100)
-              .map((r: any) => ({
-                rank: r.rank,
-                pseudonym: r.pseudonym,
-                scoreText: `${r.best_score}${r.max_score != null ? ` / ${r.max_score}` : ""} pts`,
-                subtitle: `${r.attempts_count} intentos`,
-                is_me: r.is_me,
-              }))}
-            scoreLabel="Mejor puntaje"
-          />
-          {examMe && examMe.rank > 100 && (
-            <p className="mt-3 rounded-lg border border-border bg-secondary/40 px-4 py-3 text-sm">
-              Estás en el puesto <span className="font-semibold">#{examMe.rank}</span> de{" "}
-              <span className="font-semibold">{examTotal}</span> estudiantes en los últimos 3 meses.
-            </p>
-          )}
-        </TabsContent>
-      </Tabs>
+      {examId && <ExamMinScoreCard examId={examId} myBestScore={examMe?.best_score ?? null} />}
     </div>
   );
 }
@@ -162,7 +98,13 @@ function BoardTable({
   loading,
   scoreLabel,
 }: {
-  rows: Array<{ rank: number; pseudonym: string; scoreText: string; subtitle: string; is_me: boolean }>;
+  rows: Array<{
+    rank: number;
+    pseudonym: string;
+    scoreText: string;
+    subtitle: string;
+    is_me: boolean;
+  }>;
   loading: boolean;
   scoreLabel: string;
 }) {
@@ -193,9 +135,16 @@ function BoardTable({
               <td className="px-4 py-2">{r.rank}</td>
               <td className="px-4 py-2">
                 {r.pseudonym}
-                {r.is_me && <Badge className="ml-2" variant="secondary">Tú</Badge>}
+                {r.is_me && (
+                  <Badge className="ml-2" variant="secondary">
+                    Tú
+                  </Badge>
+                )}
               </td>
-              <td className="px-4 py-2 text-right">{r.scoreText}<span className="ml-2 text-xs font-normal text-muted-foreground">{r.subtitle}</span></td>
+              <td className="px-4 py-2 text-right">
+                {r.scoreText}
+                <span className="ml-2 text-xs font-normal text-muted-foreground">{r.subtitle}</span>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -204,56 +153,20 @@ function BoardTable({
   );
 }
 
-// Minimum admission score reference for the university currently selected on
-// the "Por universidad" tab — motivational only, never affects the ranking
-// itself. See plan-ranking-mensual-puntaje-minimo.md §3.
-function MinScoreCard({ universityId }: { universityId: string }) {
-  const minScoreFn = useServerFn(getMinScoreForRanking);
-  const bestScoreFn = useServerFn(getMyBestScoreForUniversity);
-  const statsFn = useServerFn(getUserStats);
-
+// Optional per-exam benchmark set by an admin — most exams have none, in
+// which case this renders nothing. Compares against the score already
+// fetched for the exam leaderboard's "is_me" row, no extra RPC needed.
+function ExamMinScoreCard({ examId, myBestScore }: { examId: string; myBestScore: number | null }) {
+  const minScoreFn = useServerFn(getExamMinScore);
   const minScoreQ = useQuery({
-    queryKey: ["rank-min-score", universityId],
-    queryFn: () => minScoreFn({ data: { universityId } }),
-  });
-
-  const hasMinScore = !!minScoreQ.data?.minScore;
-
-  const bestScoreQ = useQuery({
-    queryKey: ["rank-my-best-score", universityId],
-    queryFn: () => bestScoreFn({ data: { universityId } }),
-    enabled: hasMinScore,
+    queryKey: ["exam-min-score", examId],
+    queryFn: () => minScoreFn({ data: { examId } }),
   });
 
   const minScore = minScoreQ.data?.minScore;
-  const bestScore = bestScoreQ.data?.bestScore ?? null;
-  const isBehind = !!(hasMinScore && minScore && (bestScore == null || bestScore < minScore.minScore));
+  if (!minScoreQ.data || minScore == null) return null;
 
-  const statsQ = useQuery({
-    queryKey: ["user-stats-for-ranking"],
-    queryFn: () => statsFn(),
-    enabled: isBehind,
-  });
-  const weakTopics = [...(statsQ.data?.topicStats ?? [])]
-    .filter((t) => t.total >= 3)
-    .sort((a, b) => a.accuracy - b.accuracy)
-    .slice(0, 2);
-
-  if (minScoreQ.isLoading) return null;
-
-  if (!minScoreQ.data?.hasCareer) {
-    return (
-      <p className="mt-4 rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-        Completa tu carrera en{" "}
-        <Link to="/perfil" className="text-primary hover:underline">
-          tu perfil
-        </Link>{" "}
-        para ver el puntaje mínimo de ingreso de esta universidad.
-      </p>
-    );
-  }
-
-  if (!minScore) return null;
+  const isBehind = myBestScore == null || myBestScore < minScore;
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-card p-4">
@@ -261,35 +174,22 @@ function MinScoreCard({ universityId }: { universityId: string }) {
         <Target className="h-4 w-4 text-primary" /> Puntaje mínimo de ingreso
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
-        {minScoreQ.data.careerName} · {minScore.year}: <span className="font-semibold text-foreground">{minScore.minScore}</span>
+        Referencia para este examen:{" "}
+        <span className="font-semibold text-foreground">{minScore}</span>
       </p>
-      {bestScore == null ? (
+      {myBestScore == null ? (
         <p className="mt-2 text-sm text-muted-foreground">
-          Aún no tienes puntajes en los últimos 3 meses para comparar.
+          Aún no tienes un intento en este examen para comparar.
         </p>
       ) : isBehind ? (
-        <>
-          <p className="mt-2 text-sm">
-            Te faltan <span className="font-semibold">{Math.round(minScore.minScore - bestScore)} puntos</span> para
-            alcanzar el puntaje mínimo de ingreso de {minScore.year}. ¡Sigue practicando!
-          </p>
-          {weakTopics.length > 0 && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Practicar {weakTopics.map((t) => t.name).join(" y ")}, tus temas con más margen de mejora,
-              te puede ayudar a cerrar esa brecha.{" "}
-              <Link
-                to="/temas/$slug"
-                params={{ slug: weakTopics[0].slug }}
-                className="font-medium text-primary hover:underline"
-              >
-                Practicar {weakTopics[0].name} →
-              </Link>
-            </p>
-          )}
-        </>
+        <p className="mt-2 text-sm">
+          Te faltan{" "}
+          <span className="font-semibold">{Math.round(minScore - myBestScore)} puntos</span> para
+          alcanzar el puntaje mínimo de referencia. ¡Sigue practicando!
+        </p>
       ) : (
         <p className="mt-2 text-sm text-success">
-          ¡Vas muy bien! Tu mejor puntaje de los últimos 3 meses ya supera el puntaje mínimo de ingreso.
+          ¡Vas muy bien! Tu mejor puntaje ya supera el puntaje mínimo de referencia.
         </p>
       )}
     </div>
