@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Timer, ListChecks } from "lucide-react";
+import { Timer, ListChecks, ArrowRight } from "lucide-react";
 import { getUniversityBySlug } from "@/lib/exercises.functions";
 import { listPublishedExams } from "@/lib/exams.functions";
 
@@ -27,6 +27,9 @@ export const Route = createFileRoute("/examenes/$slug/")({
   },
   head: ({ params }) => ({ meta: [{ title: `${params.slug} · Exámenes oficiales · MatePre` }] }),
   component: UniPage,
+  pendingComponent: UniPagePending,
+  pendingMs: 150,
+  pendingMinMs: 300,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
       {error.message}
@@ -42,6 +45,30 @@ export const Route = createFileRoute("/examenes/$slug/")({
   ),
 });
 
+function UniPagePending() {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="h-3.5 w-20 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+      <div className="mt-4 h-9 w-64 animate-pulse rounded bg-muted motion-reduce:animate-none sm:h-10" />
+      <div className="mt-10">
+        <div className="h-6 w-40 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-border bg-card p-5 motion-reduce:animate-none"
+            >
+              <div className="h-4 w-2/3 rounded bg-muted" />
+              <div className="mt-2 h-3.5 w-full rounded bg-muted" />
+              <div className="mt-4 h-6 w-24 rounded-full bg-muted" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UniPage() {
   const { slug } = Route.useParams();
   const { data: u } = useSuspenseQuery(uniQO(slug));
@@ -52,7 +79,9 @@ function UniPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <nav className="text-xs text-muted-foreground">
-        <Link to="/examenes" className="hover:underline">Exámenes</Link>{" "}
+        <Link to="/examenes" className="hover:underline">
+          Exámenes
+        </Link>{" "}
         / <span className="text-foreground">{u.short_name}</span>
       </nav>
 
@@ -69,7 +98,8 @@ function UniPage() {
           </span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Exámenes con preguntas fijas definidas por el equipo. Puedes rendir cada examen las veces que quieras.
+          Exámenes con preguntas fijas definidas por el equipo. Puedes rendir cada examen las veces
+          que quieras.
         </p>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -78,18 +108,30 @@ function UniPage() {
               Aún no hay exámenes oficiales publicados para esta universidad.
             </div>
           ) : (
-            (exams ?? []).map((exam: any) => (
-              <div key={exam.id} className="flex flex-col rounded-xl border border-border bg-card p-5">
+            (exams ?? []).map((exam: any, i: number) => (
+              <div
+                key={exam.id}
+                className="animate-fade-up flex flex-col rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
+                style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
+              >
                 <h3 className="font-display font-bold">{exam.title}</h3>
                 {exam.description && (
-                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{exam.description}</p>
+                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
+                    {exam.description}
+                  </p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <Badge variant="outline"><Timer className="mr-1 h-3 w-3" /> {exam.time_limit_min} min</Badge>
-                  <Badge variant="outline"><ListChecks className="mr-1 h-3 w-3" /> {exam.questionCount} preguntas</Badge>
+                  <Badge variant="outline">
+                    <Timer className="mr-1 h-3 w-3" /> {exam.time_limit_min} min
+                  </Badge>
+                  <Badge variant="outline">
+                    <ListChecks className="mr-1 h-3 w-3" /> {exam.questionCount} preguntas
+                  </Badge>
                 </div>
-                <Button asChild size="sm" className="mt-4 self-start">
-                  <Link to="/examen/$id" params={{ id: exam.id }}>Ver examen →</Link>
+                <Button asChild size="sm" className="press mt-4 self-start">
+                  <Link to="/examen/$id" params={{ id: exam.id }}>
+                    Comenzar examen <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
                 </Button>
               </div>
             ))

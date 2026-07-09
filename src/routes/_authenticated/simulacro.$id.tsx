@@ -56,7 +56,19 @@ function SimulacroPreview() {
 
   if (preview.isLoading)
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <div className="h-3.5 w-24 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+        <div className="mt-3 h-9 w-72 animate-pulse rounded bg-muted motion-reduce:animate-none sm:h-10" />
+        <div className="mt-4 flex gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-6 w-20 animate-pulse rounded-full bg-muted motion-reduce:animate-none"
+            />
+          ))}
+        </div>
+        <div className="mt-6 h-64 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" />
+      </div>
     );
   if (preview.isError) {
     return (
@@ -64,10 +76,10 @@ function SimulacroPreview() {
         <p className="text-destructive">No se pudo cargar este simulacro.</p>
         <p className="mt-1 text-sm text-muted-foreground">{(preview.error as any)?.message}</p>
         <div className="mt-4 flex justify-center gap-2">
-          <Button variant="outline" onClick={() => preview.refetch()}>
+          <Button variant="outline" className="press" onClick={() => preview.refetch()}>
             Reintentar
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="press">
             <Link to="/simulacros">Volver</Link>
           </Button>
         </div>
@@ -115,7 +127,7 @@ function SimulacroPreview() {
         <Badge variant="outline">Máx: {t.maxScore} pts</Badge>
       </div>
 
-      <div className="mt-6 rounded-xl border border-border bg-card p-5">
+      <div className="animate-card-swap mt-6 rounded-xl border border-border bg-card p-5">
         <h2 className="font-display text-lg font-bold">Antes de comenzar</h2>
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
           <li className="flex items-start gap-2">

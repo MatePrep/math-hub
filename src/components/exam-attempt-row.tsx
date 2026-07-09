@@ -23,7 +23,7 @@ export function ExamAttemptRow({
       <Link
         to="/examen-sesion/$sessionId/resultado"
         params={{ sessionId }}
-        className={`flex flex-1 items-center justify-between rounded-md border border-border hover:border-primary/40 ${
+        className={`press flex flex-1 items-center justify-between rounded-md border border-border hover:border-primary/40 ${
           compact ? "bg-background px-3 py-2 text-sm" : "bg-card p-3"
         }`}
       >

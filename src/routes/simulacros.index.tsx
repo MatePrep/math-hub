@@ -140,7 +140,24 @@ function SimulacrosPage() {
         )}
       </div>
 
-      {q.isLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
+      {q.isLoading && (
+        <div className="flex flex-col gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-border bg-card p-5 motion-reduce:animate-none"
+            >
+              <div className="h-4 w-2/3 rounded bg-muted" />
+              <div className="mt-2 h-3.5 w-full rounded bg-muted" />
+              <div className="mt-4 flex gap-2">
+                <div className="h-6 w-20 rounded-full bg-muted" />
+                <div className="h-6 w-20 rounded-full bg-muted" />
+              </div>
+              <div className="mt-4 h-9 w-44 rounded-md bg-muted" />
+            </div>
+          ))}
+        </div>
+      )}
       {q.data && q.data.length === 0 && (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
           <p className="text-muted-foreground">Aún no hay plantillas disponibles.</p>

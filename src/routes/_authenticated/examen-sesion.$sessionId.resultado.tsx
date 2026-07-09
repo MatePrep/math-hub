@@ -136,7 +136,7 @@ function ResultPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <nav className="text-xs text-muted-foreground">
-        <Link to="/examenes-oficiales" className="hover:underline">
+        <Link to="/examenes" className="hover:underline">
           Exámenes
         </Link>
       </nav>
@@ -391,7 +391,7 @@ function ResultPage() {
       <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-2">
           <Button asChild variant="outline" className="press">
-            <Link to="/examenes-oficiales">Volver a exámenes</Link>
+            <Link to="/examenes">Volver a exámenes</Link>
           </Button>
           <Button asChild className="press">
             <Link to="/panel">Ir a mi panel</Link>
