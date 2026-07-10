@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query"
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getTopicBySlug, listExercises, getSubtopicFrequency } from "@/lib/exercises.functions";
 import { getFullProfile } from "@/lib/profile.functions";
@@ -169,7 +169,7 @@ function TopicPage() {
         </Link>{" "}
         / <span className="text-foreground">{topic.name}</span>
       </nav>
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
+      <header className="mt-3 flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold sm:text-4xl">{topic.name}</h1>
           {topic.description && (
@@ -208,7 +208,7 @@ function TopicPage() {
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
-        <aside>
+        <aside className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Subtemas
@@ -250,28 +250,17 @@ function TopicPage() {
           )}
 
           {/* Mobile/tablet: horizontal scrollable chips so subtopics never push
-              the exercise list below the fold. Desktop keeps the full vertical list. */}
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden">
-            {subtopicsRanked.map((s) => {
-              const isTopFrequent = topFrequentIds.has(s.id);
-              return (
-                <Link
-                  key={s.id}
-                  to="/temas/$slug/$subtopic"
-                  params={{ slug: topic.slug, subtopic: s.slug }}
-                  className="press shrink-0"
-                >
-                  <Badge
-                    variant={isTopFrequent ? "default" : "outline"}
-                    className="cursor-pointer whitespace-nowrap"
-                  >
-                    {isTopFrequent && <span aria-hidden="true">🔥 </span>}
-                    {s.name}
-                  </Badge>
-                </Link>
-              );
-            })}
-          </div>
+              the exercise list below the fold. Desktop keeps the full vertical list.
+              Mirrors the desktop list's top-frequent styling so both breakpoints read
+              as one page. No edge-to-edge bleed here (unlike the admin nav scroller):
+              this lives inside a grid item (`aside`), which defaults to min-width:auto,
+              so a negative-margin child inflates the implicit column track and pushes
+              the whole page wider than the viewport instead of just visually bleeding. */}
+          <SubtopicChipScroller
+            subtopics={subtopicsRanked}
+            topicSlug={topic.slug}
+            topFrequentIds={topFrequentIds}
+          />
 
           <ul className="mt-3 hidden space-y-1 lg:block">
             {subtopicsRanked.map((s) => {
@@ -310,7 +299,7 @@ function TopicPage() {
           )}
         </aside>
 
-        <section>
+        <section className="min-w-0">
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Dificultad:
@@ -354,6 +343,86 @@ function TopicPage() {
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+type ScrollableSubtopic = { id: string; slug: string; name: string };
+
+// Mobile subtopic chip row. Native overflow-x scrollbars read as broken chrome on a
+// chip list, so it's hidden (`.no-scrollbar`) in favor of edge-fade overlays that
+// only appear on the side there's actually more to scroll toward — tracked via
+// scrollLeft/scrollWidth rather than shown unconditionally, so a short list that
+// doesn't overflow never shows a fade with nothing behind it. Scroll-snap gives the
+// swipe a tactile "settle" per chip instead of free-floating, and each chip reuses
+// the app's list-rhythm stagger (`animate-fade-up` + `--i`) for its entrance.
+function SubtopicChipScroller({
+  subtopics,
+  topicSlug,
+  topFrequentIds,
+}: {
+  subtopics: ScrollableSubtopic[];
+  topicSlug: string;
+  topFrequentIds: Set<string>;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState({ left: false, right: false });
+
+  const updateFade = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const overflowing = el.scrollWidth > el.clientWidth + 1;
+    setFade({
+      left: overflowing && el.scrollLeft > 4,
+      right: overflowing && el.scrollLeft < el.scrollWidth - el.clientWidth - 4,
+    });
+  }, []);
+
+  useEffect(() => {
+    updateFade();
+    window.addEventListener("resize", updateFade);
+    return () => window.removeEventListener("resize", updateFade);
+  }, [updateFade, subtopics.length]);
+
+  return (
+    <div className="relative mt-3 lg:hidden">
+      <div
+        ref={scrollerRef}
+        onScroll={updateFade}
+        className="no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth"
+      >
+        {subtopics.map((s, i) => {
+          const isTopFrequent = topFrequentIds.has(s.id);
+          return (
+            <Link
+              key={s.id}
+              to="/temas/$slug/$subtopic"
+              params={{ slug: topicSlug, subtopic: s.slug }}
+              className={`press animate-fade-up shrink-0 snap-start whitespace-nowrap rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                isTopFrequent
+                  ? "border-primary/30 bg-primary/5 text-foreground"
+                  : "border-border text-foreground/80 hover:border-primary/30 hover:text-foreground"
+              }`}
+              style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
+            >
+              {isTopFrequent && <span aria-hidden="true">🔥 </span>}
+              {s.name}
+            </Link>
+          );
+        })}
+      </div>
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-background to-transparent transition-opacity duration-200 ${
+          fade.left ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent transition-opacity duration-200 ${
+          fade.right ? "opacity-100" : "opacity-0"
+        }`}
+      />
     </div>
   );
 }

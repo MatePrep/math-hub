@@ -127,6 +127,17 @@
   .katex { font-size: 0.92em; }
 }
 
+/* Horizontal chip/tab scrollers (e.g. the mobile subtopic list): hide the native
+   scrollbar, which reads as broken chrome on a chip row, in favor of the paired
+   edge-fade overlays that communicate "more content" instead. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Shared motion primitives (forms, alerts, collapsible panels, tactile feedback) */
 .collapsible {
   display: grid;
