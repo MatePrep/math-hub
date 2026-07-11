@@ -300,6 +300,24 @@
   animation: icon-pop 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Header search bar: a small nudge cue hinting the field is interactive.
+   Shown only while idle and empty (see site-header.tsx); disappears the
+   moment a visitor focuses or types, so it never gets in the way of use. */
+@keyframes search-hint-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateX(-4px);
+    opacity: 0.9;
+  }
+}
+.animate-search-hint {
+  animation: search-hint-nudge 1.6s ease-in-out infinite;
+}
+
 .press {
   transition:
     transform 100ms cubic-bezier(0.25, 1, 0.5, 1),
@@ -406,7 +424,8 @@
   .animate-card-swap,
   .animate-score-in,
   .animate-flash-once,
-  .animate-shake {
+  .animate-shake,
+  .animate-search-hint {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;

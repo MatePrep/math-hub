@@ -113,6 +113,24 @@ export type Database = {
           },
         ];
       };
+      daily_exercise_settings: {
+        Row: {
+          id: boolean;
+          reshuffle_seed: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: boolean;
+          reshuffle_seed?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: boolean;
+          reshuffle_seed?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       exam_questions: {
         Row: {
           exam_id: string;
@@ -890,6 +908,10 @@ export type Database = {
           _user_id: string;
         };
         Returns: boolean;
+      };
+      reshuffle_daily_exercise: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
       };
       submit_daily_exercise_answer: {
         Args: { _selected_choice: number };

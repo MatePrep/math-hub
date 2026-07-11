@@ -3,11 +3,21 @@ import { createClient } from "@supabase/supabase-js";
 import { queryOptions } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
+}
+
+async function assertAdmin(context: { supabase: any; userId: string }) {
+  const { data, error } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Forbidden");
 }
 
 // Public landing-page "reto del día" widget: one exercise picked deterministically
@@ -48,6 +58,18 @@ export const submitDailyExerciseAnswer = createServerFn({ method: "POST" })
       totalAnswers: row.total_answers,
       correctAnswers: row.correct_answers,
     };
+  });
+
+// Admin-only: forces a different deterministic pick (see reshuffle_daily_exercise
+// in the DB — it bumps a seed so today's, and every future day's, hash-based
+// selection changes) instead of waiting for the next calendar day.
+export const reshuffleDailyExercise = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase.rpc("reshuffle_daily_exercise");
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const dailyExerciseQO = queryOptions({

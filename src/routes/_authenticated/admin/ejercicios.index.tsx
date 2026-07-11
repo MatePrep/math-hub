@@ -20,8 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Shuffle } from "lucide-react";
 import { listAdminExercises, deleteExercise } from "@/lib/admin.functions";
+import { reshuffleDailyExercise } from "@/lib/daily-exercise.functions";
 import { MathText } from "@/lib/math-render";
 
 export const Route = createFileRoute("/_authenticated/admin/ejercicios/")({
@@ -32,12 +33,14 @@ function AdminExercisesList() {
   const router = useRouter();
   const fetchList = useServerFn(listAdminExercises);
   const delFn = useServerFn(deleteExercise);
+  const reshuffleFn = useServerFn(reshuffleDailyExercise);
   const q = useQuery({ queryKey: ["admin-exercises"], queryFn: () => fetchList() });
 
   const [filter, setFilter] = useState("");
   const [topicFilter, setTopicFilter] = useState<string>("all");
   const [universityFilter, setUniversityFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const [reshuffling, setReshuffling] = useState(false);
 
   const allTopics = useMemo(() => {
     const map = new Map<string, string>();
@@ -85,17 +88,40 @@ function AdminExercisesList() {
     }
   }
 
+  async function onReshuffleDaily() {
+    setReshuffling(true);
+    try {
+      await reshuffleFn();
+      toast.success("Reto del día actualizado");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Error");
+    } finally {
+      setReshuffling(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {filtered.length} de {q.data?.length ?? 0} ejercicios
         </p>
-        <Button asChild size="sm">
-          <Link to="/admin/ejercicios/nuevo">
-            <Plus className="mr-1 h-4 w-4" /> Nuevo ejercicio
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onReshuffleDaily}
+            disabled={reshuffling}
+            title="Escoge otro ejercicio al azar para el reto del día de la landing page"
+          >
+            <Shuffle className="mr-1 h-4 w-4" /> Cambiar reto del día
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/admin/ejercicios/nuevo">
+              <Plus className="mr-1 h-4 w-4" /> Nuevo ejercicio
+            </Link>
+          </Button>
+        </div>
       </div>
       <div className="mb-3 flex flex-wrap gap-2">
         <Input

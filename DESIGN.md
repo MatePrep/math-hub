@@ -105,24 +105,24 @@ components:
 
 **Creative North Star: "La Hoja de Respuestas" (The Answer Sheet)**
 
-Admi-Tec's public site is built as a real exam answer sheet, at night, mid-exam: ink-navy paper under exam-room light, a mechanical-pencil amber for every mark that matters, tabular data that reads like an actual scoring column rather than marketing copy. Where the old "study notebook" register was calm and academic, this one is closer to the room where the exam is actually happening — timers genuinely ticking, a live ranking, the specific tension of "this is real, and it's timed." It explicitly rejects the celebratory, badge-and-confetti register that habit-tracking apps default to: the ranking and streak mechanics stay dressed as instrumentation (a scoreboard, a stopwatch), never as a game layer. Bricolage Grotesque's blunt geometric weight carries headlines with the confidence of a hero claim; Public Sans keeps every paragraph and label fast and exam-manual plain; JetBrains Mono is reserved for anything that is actually a number being measured — timers, scores, rankings — so those figures read as instrument data the instant they appear.
+Admi-Tec's homepage hero is built as a real exam answer sheet, at night, mid-exam: ink-navy paper under exam-room light, a mechanical-pencil amber for every mark that matters, tabular data that reads like an actual scoring column rather than marketing copy. **This "La Hoja de Respuestas" register is deliberately scoped to the homepage's own landing content only** (the hero, marquee, feature grid, stats, ranking teaser and final CTA sections on `/`, wrapped in the `.at` class) — it is not the site's default. Header, footer, and every other page (temas, exámenes, simulacros, auth, and the whole authenticated app) run the calmer "Cuaderno de Estudio" system described under **Product Surface** below. Bricolage Grotesque's blunt geometric weight carries the homepage's headlines with the confidence of a hero claim; Public Sans keeps its paragraphs and labels fast and exam-manual plain; JetBrains Mono is reserved for anything that is actually a number being measured — timers, scores, rankings — so those figures read as instrument data the instant they appear.
 
 Density stays generous at the section level (16px/24px/40px rhythm, wide `max-w-6xl` sections) but tight inside data-bearing components (the ranking table, the answer-sheet widget) where real exam UI is naturally dense. Depth comes from a one-step-lighter card surface plus a whisper border, not shadow stacking — the one deliberate exception is the hero's `AnswerSheetWidget`, which gets a slow ambient amber glow (`animate-glow`, 5s ease-in-out) because it is the single bold, "this is live" moment of the page; nothing else on the page is allowed to compete with it.
 
-Signed-in product screens (practice, exams, panel) run a second, calmer register — the original "Cuaderno de Estudio" system (§ noted throughout this document as **Product Surface**): warm notebook-paper light theme, Fraunces + Inter, Azul Academia Profundo primary. This is deliberate, not an inconsistency: the public site's job is to sell the moment and get someone to register; the product's job is to be a quiet, focused tool once they're inside working. See [Design Principles → "The public site sells the moment; the app delivers the work"] in PRODUCT.md.
+Every other screen — header, footer, temas/exámenes/simulacros, and the signed-in product (practice, exams, panel) — runs the original "Cuaderno de Estudio" system (§ noted throughout this document as **Product Surface**): warm notebook-paper light theme, Fraunces + Inter, Azul Academia Profundo primary, Ámbar Resaltador accent. This is the site's default register; the homepage hero is the one deliberate exception, not the other way around. Study-facing pages stay light on purpose — a dark canvas didn't read as fitting for pages meant for sustained reading and practice.
 
 **Key Characteristics:**
 
-- Dark ink-navy canvas (`oklch(0.20 0.045 258)`), one amber-gold primary, one teal "correct" accent — never a second decorative hue.
-- Bricolage Grotesque (blunt geometric display) against Public Sans (clean exam-manual body) — a weight contrast, not two similar geometrics.
-- JetBrains Mono + tabular figures for every number that is actually being measured (timers, scores, ranks, stats).
+- The homepage hero only: dark ink-navy canvas (`oklch(0.20 0.045 258)`), one amber-gold primary, one teal "correct" accent — never a second decorative hue.
+- Bricolage Grotesque (blunt geometric display) against Public Sans (clean exam-manual body) on the hero — a weight contrast, not two similar geometrics.
+- JetBrains Mono + tabular figures for every number that is actually being measured (timers, scores, ranks, stats), homepage hero only.
 - Flat cards, whisper borders, ambient (never bouncy) motion; the hero widget's amber glow is the one deliberate exception to "flat by default."
 - No confetti, no cartoon badges, no mascots — competitive energy is expressed as real instrumentation, never gamified toy UI.
-- A second, calmer "study notebook" system (Fraunces/Inter, warm paper light theme) runs the authenticated product surfaces — see Product Surface notes below.
+- Everywhere else — header, footer, temas/exámenes/simulacros, and the authenticated app — runs the light "study notebook" system (Fraunces/Inter, warm paper, blue + amber) described under Product Surface. This is the site's default, not a secondary fallback.
 
 ## 2. Colors
 
-The public-site palette is a real answer sheet under exam-room light: one deep navy-ink surface, one amber pencil-mark primary, one teal "correct" accent, and nothing else decorative.
+The homepage hero's palette is a real answer sheet under exam-room light: one deep navy-ink surface, one amber pencil-mark primary, one teal "correct" accent, and nothing else decorative. It applies only to the `.at`-scoped hero content on `/` — everything else in the product uses the Product Surface palette (see below).
 
 ### Primary
 
@@ -143,9 +143,9 @@ The public-site palette is a real answer sheet under exam-room light: one deep n
 
 ### Named Rules
 
-**The One Pencil Rule.** Amber (`at-primary`) is the only warm, saturated color on the public site. It marks exactly one thing per view — a primary CTA, the one correct answer, the one "you are here" row — never a fill covering a whole section. Teal (`at-success`) handles "correct/positive" so amber stays reserved for emphasis and action.
+**The One Pencil Rule.** Amber (`at-primary`) is the only warm, saturated color on the homepage hero. It marks exactly one thing per view — a primary CTA, the one correct answer, the one "you are here" row — never a fill covering a whole section. Teal (`at-success`) handles "correct/positive" so amber stays reserved for emphasis and action.
 
-**The Product Surface Rule.** The authenticated app after signup does **not** use this palette. It runs its own warm, light "notebook" theme: `app-paper` (`oklch(0.985 0.008 85)`) background, `app-ink` (`oklch(0.21 0.04 260)`) text, `app-primary` (`oklch(0.34 0.13 265)`, Azul Academia Profundo) as its one authoritative color, and `app-highlighter` (`oklch(0.78 0.165 70)`, amber) as its own sparing accent — with a dark-mode variant at `app-primary-dark` (`oklch(0.78 0.13 260)`). The two systems never mix on the same screen; the boundary is the signup wall.
+**The Product Surface Rule.** Everything except the homepage hero's own `.at`-scoped content — header, footer, temas, exámenes, simulacros, auth, and the whole authenticated app — runs the warm, light "notebook" theme instead: `app-paper` (`oklch(0.985 0.008 85)`) background, `app-ink` (`oklch(0.21 0.04 260)`) text, `app-primary` (`oklch(0.34 0.13 265)`, Azul Academia Profundo) as its one authoritative color, and `app-highlighter` (`oklch(0.78 0.165 70)`, amber) as its own sparing accent — with a dark-mode variant at `app-primary-dark` (`oklch(0.78 0.13 260)`). The two systems never mix on the same screen; the `.at` navy/amber system is confined to the homepage's own landing sections, nowhere else.
 
 ## 3. Typography
 
@@ -188,7 +188,7 @@ Flat by default, ink-navy depth conveyed through the card-vs-canvas lightness st
 
 ### Buttons
 
-- **Shape:** rounded-md (8px), 40px height (`lg` size used throughout the public site; `min-h-11` enforced for touch targets).
+- **Shape:** rounded-md (8px), 40px height (`lg` size used throughout the homepage hero; `min-h-11` enforced for touch targets).
 - **Primary:** Amber Pencil Mark fill, navy text (`at-primary-foreground`), tactile `.press` micro-interaction — scales to 97% on `:active` (100ms, no shadow change). Used for "Empezar a practicar", "Crear cuenta gratis".
 - **Outline:** navy background, light text, whisper border; used for secondary asks ("Ver exámenes oficiales", "Ver ranking completo").
 - **Hover/Focus:** background-opacity shift only, plus a 1px amber focus ring — never shadow growth (the Whisper Shadow doctrine carries over from the product theme).
@@ -217,7 +217,7 @@ A continuously scrolling strip of university short names (34s linear loop, dupli
 
 ### Navigation
 
-Inherits the shared shadcn header/sheet structure documented on the product surface (see below); on the public site it renders inside the `.at` scope so its colors resolve to the navy/amber tokens instead of the notebook palette.
+The header, footer, and mobile nav sheet always run the Product Surface palette (see below) — on every page, including the homepage. The `.at` navy/amber system never touches shared chrome; it's confined to the content inside the homepage's own hero/landing sections.
 
 ### Motion
 
@@ -235,18 +235,18 @@ Buttons, cards, badges, inputs, stat tiles, and the favorite-star pattern on the
 
 ### Do:
 
-- **Do** keep Amber Pencil Mark (`oklch(0.83 0.16 92)`) as the public site's only warm, saturated color — the One Pencil Rule.
-- **Do** set every measured figure (timers, scores, ranks, stats) in JetBrains Mono with tabular figures — the Measured-Figure Rule.
+- **Do** keep Amber Pencil Mark (`oklch(0.83 0.16 92)`) as the homepage hero's only warm, saturated color — the One Pencil Rule.
+- **Do** set every measured figure (timers, scores, ranks, stats) in JetBrains Mono with tabular figures on the homepage hero — the Measured-Figure Rule.
 - **Do** keep the ambient glow to the hero `AnswerSheetWidget` only — the One Glow Rule.
 - **Do** keep the ranking and countdown mechanics reading as real instrumentation (a scoreboard, a stopwatch) per PRODUCT.md's "competitive, not gamified" principle.
-- **Do** keep the public (`.at`) and product (notebook) palettes strictly separated by the signup wall — never blend amber-on-navy styling into an authenticated screen or vice versa.
-- **Do** provide a `prefers-reduced-motion` fallback for every public-site animation (marquee, glow, reveal-row), matching what's already implemented.
+- **Do** keep the `.at` navy/amber system scoped to the homepage's own landing sections only — header, footer, temas/exámenes/simulacros, and the authenticated app always use the Product Surface palette. Study-facing pages stay light on purpose.
+- **Do** provide a `prefers-reduced-motion` fallback for every homepage-hero animation (marquee, glow, reveal-row), matching what's already implemented.
 
 ### Don't:
 
-- **Don't** introduce a second saturated accent hue on the public site; teal (`at-success`) is reserved for "correct/positive," amber for emphasis/action — never interchange them.
+- **Don't** introduce a second saturated accent hue on the homepage hero; teal (`at-success`) is reserved for "correct/positive," amber for emphasis/action — never interchange them.
 - **Don't** add confetti, cartoon badges, mascots, or bouncy/elastic motion anywhere — even the competitive ranking and countdown stay dressed as real exam instrumentation (carried over from PRODUCT.md's anti-references, unchanged by the bolder tone).
 - **Don't** use `border-left`/`border-right` accent stripes on cards or list rows; the ranking table's "Tú" row uses a full top border plus background tint, not a side stripe.
-- **Don't** use gradient text or `background-clip: text`; emphasis on the public site comes from the amber color or Bricolage Grotesque weight, never a gradient.
+- **Don't** use gradient text or `background-clip: text`; emphasis on the homepage hero comes from the amber color or Bricolage Grotesque weight, never a gradient.
 - **Don't** darken or enlarge shadows on hover/active; the `.press` scale-down and background-opacity shifts carry all interaction feedback.
-- **Don't** set Fraunces below ~18px on the product surface, and don't let Bricolage Grotesque leak into the authenticated app — the two type systems stay on their own side of the signup wall.
+- **Don't** set Fraunces below ~18px on the product surface, and don't let Bricolage Grotesque or the `.at` navy/amber palette leak outside the homepage's own hero sections — not into the header, footer, temas/exámenes/simulacros, or the authenticated app.

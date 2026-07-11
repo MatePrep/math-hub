@@ -2,6 +2,26 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const EXERCISE_IMAGES_BUCKET = "exercise-images";
 
+// crypto.randomUUID() only exists in secure contexts (HTTPS, or the literal
+// host "localhost") — it's undefined when the admin panel is opened over
+// plain HTTP via a LAN IP or a non-localhost hostname, which throws
+// "crypto.randomUUID is not a function" and breaks every upload.
+//
+// The "exercise-images public read" storage policy grants anon+authenticated
+// SELECT on every object in this bucket with no per-row check (see
+// 20260630193643_...sql) — the filename is the *only* thing standing between
+// "you have the link" and "you can list every exercise's solution image," so
+// it must stay unguessable. crypto.getRandomValues() gives the same
+// cryptographic strength as randomUUID() (here, more: 128 random bits vs
+// UUIDv4's 122) without the secure-context restriction — unlike
+// Math.random(), which is a non-cryptographic PRNG with recoverable internal
+// state and must never back an access-control-relevant identifier.
+function uniqueFileId(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/jpg",
@@ -23,7 +43,7 @@ export function validateImageFile(file: File): string | null {
 
 export async function uploadExerciseImage(file: File): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const path = `${crypto.randomUUID()}.${ext}`;
+  const path = `${uniqueFileId()}.${ext}`;
   const { error } = await supabase.storage
     .from(EXERCISE_IMAGES_BUCKET)
     .upload(path, file, { cacheControl: "31536000", upsert: false, contentType: file.type });
@@ -33,7 +53,7 @@ export async function uploadExerciseImage(file: File): Promise<string> {
 
 export async function uploadUniversityLogo(file: File): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const path = `logos/${crypto.randomUUID()}.${ext}`;
+  const path = `logos/${uniqueFileId()}.${ext}`;
   const { error } = await supabase.storage
     .from(EXERCISE_IMAGES_BUCKET)
     .upload(path, file, { cacheControl: "31536000", upsert: false, contentType: file.type });

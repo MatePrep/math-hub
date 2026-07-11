@@ -5,7 +5,6 @@ import {
   createRootRouteWithContext,
   useRouter,
   useNavigate,
-  useMatches,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -22,7 +21,6 @@ import {
   capturedAuthHasSession,
   translateHashAuthError,
 } from "@/lib/auth-redirect";
-import { cn } from "@/lib/utils";
 
 function NotFoundComponent() {
   return (
@@ -140,13 +138,6 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const navigate = useNavigate();
-  // The public site runs the navy/amber "at" brand register; the authenticated app
-  // (everything under the _authenticated pathless layout) keeps the calmer notebook
-  // theme. Header/footer are shared chrome, so they switch register based on which
-  // side of the signup wall the current route falls on — see DESIGN.md's Product
-  // Surface Rule.
-  const matches = useMatches();
-  const isPublic = !matches.some((m) => m.routeId.startsWith("/_authenticated"));
 
   useEffect(() => {
     // Only actual identity changes (login/logout) warrant refetching every
@@ -240,14 +231,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div
-        className={cn("flex min-h-dvh flex-col bg-background text-foreground", isPublic && "at")}
-      >
-        <SiteHeader isPublic={isPublic} />
+      <div className="flex min-h-dvh flex-col bg-background text-foreground">
+        <SiteHeader />
         <main className="flex-1">
           <Outlet />
         </main>
-        <SiteFooter isPublic={isPublic} />
+        <SiteFooter />
       </div>
       <Toaster />
     </QueryClientProvider>

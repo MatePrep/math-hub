@@ -1,37 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { dailyExerciseQO, submitDailyExerciseAnswer } from "@/lib/daily-exercise.functions";
+import { useInViewOnce } from "@/hooks/use-in-view-once";
 
 const difficultyLabel = { facil: "Fácil", medio: "Medio", dificil: "Difícil" } as const;
 
-type StoredAnswer = {
+type StoredDaily = {
   exerciseId: string;
-  selectedChoice: number;
-  isCorrect: boolean;
-  correctChoice: number;
+  startedAt: number;
+  answer?: {
+    selectedChoice: number;
+    isCorrect: boolean;
+    correctChoice: number;
+    elapsedSeconds: number;
+  };
 };
 
-function readStoredAnswer(exerciseId: string): StoredAnswer | null {
+function readStoredDaily(exerciseId: string): StoredDaily | null {
   try {
-    const raw = localStorage.getItem("admitec_daily_answer");
+    const raw = localStorage.getItem("admitec_daily");
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as StoredAnswer;
+    const parsed = JSON.parse(raw) as StoredDaily;
     return parsed.exerciseId === exerciseId ? parsed : null;
   } catch {
     return null;
   }
 }
 
-function storeAnswer(answer: StoredAnswer) {
+function writeStoredDaily(entry: StoredDaily) {
   try {
-    localStorage.setItem("admitec_daily_answer", JSON.stringify(answer));
+    localStorage.setItem("admitec_daily", JSON.stringify(entry));
   } catch {
     // best-effort only — the widget still works without persistence, it just
-    // won't remember the answer across a reload on this visit
+    // won't remember the timer/answer across a reload on this visit
   }
 }
 
@@ -51,75 +56,76 @@ export function AnswerSheetWidget() {
   const { data: daily } = useSuspenseQuery(dailyExerciseQO);
   const submitAnswer = useServerFn(submitDailyExerciseAnswer);
 
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [visible, setVisible] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [alreadyResolved, setAlreadyResolved] = useState(false);
   const [result, setResult] = useState<{
     isCorrect: boolean;
     correctChoice: number;
     totalAnswers: number;
     correctAnswers: number;
-  } | null>(
-    daily
-      ? (() => {
-          const stored = readStoredAnswer(daily.exerciseId);
-          return stored
-            ? {
-                isCorrect: stored.isCorrect,
-                correctChoice: stored.correctChoice,
-                totalAnswers: daily.totalAnswers,
-                correctAnswers: daily.correctAnswers,
-              }
-            : null;
-        })()
-      : null,
-  );
-  const rootRef = useRef<HTMLDivElement>(null);
+  } | null>(null);
+  const { ref: rootRef, visible } = useInViewOnce<HTMLDivElement>();
 
+  // Resume where this visitor left off for today's exercise: already answered
+  // (freeze the clock, show the "ya resuelto" message), mid-attempt (keep the
+  // clock counting from the real start time instead of resetting on refresh),
+  // or brand new (start a fresh, persisted clock).
   useEffect(() => {
     if (!daily) return;
-    const stored = readStoredAnswer(daily.exerciseId);
-    if (stored) setSelected(stored.selectedChoice);
+    const stored = readStoredDaily(daily.exerciseId);
+    if (stored?.answer) {
+      setSelected(stored.answer.selectedChoice);
+      setResult({
+        isCorrect: stored.answer.isCorrect,
+        correctChoice: stored.answer.correctChoice,
+        totalAnswers: daily.totalAnswers,
+        correctAnswers: daily.correctAnswers,
+      });
+      setElapsedSeconds(stored.answer.elapsedSeconds);
+      setAlreadyResolved(true);
+    } else if (stored) {
+      setStartedAt(stored.startedAt);
+    } else {
+      const now = Date.now();
+      writeStoredDaily({ exerciseId: daily.exerciseId, startedAt: now });
+      setStartedAt(now);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daily?.exerciseId]);
 
+  // Ticks only while the question is still open — once answered (this visit or a
+  // past one), the clock freezes at the time it actually took to solve it.
   useEffect(() => {
-    const id = window.setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    if (startedAt === null || result) return;
+    const tick = () => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    tick();
+    const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const node = rootRef.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+  }, [startedAt, result]);
 
   if (!daily) return null;
 
   async function handleSelect(i: number) {
-    if (result || submitting || !daily) return;
+    if (result || submitting || !daily || startedAt === null) return;
     setSelected(i);
     setSubmitting(true);
     try {
       const res = await submitAnswer({ data: { selectedChoice: i } });
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
       setResult(res);
-      storeAnswer({
+      setElapsedSeconds(elapsed);
+      writeStoredDaily({
         exerciseId: daily.exerciseId,
-        selectedChoice: i,
-        isCorrect: res.isCorrect,
-        correctChoice: res.correctChoice,
+        startedAt,
+        answer: {
+          selectedChoice: i,
+          isCorrect: res.isCorrect,
+          correctChoice: res.correctChoice,
+          elapsedSeconds: elapsed,
+        },
       });
     } catch {
       setSelected(null);
@@ -141,16 +147,13 @@ export function AnswerSheetWidget() {
     >
       <div
         aria-hidden
-        className="animate-glow pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/25 blur-3xl"
+        className="animate-glow pointer-events-none absolute -right-16 -top-16 h-32 w-32 rounded-full bg-primary/15 blur-3xl"
       />
 
       {/* Sheet header */}
       <div className="relative flex items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-          </span>
+          <span className="inline-flex h-2 w-2 rounded-full bg-primary" />
           <span className="font-data text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Reto del día{daily.topicName ? ` · ${daily.topicName}` : ""}
           </span>
@@ -165,6 +168,13 @@ export function AnswerSheetWidget() {
         </div>
       </div>
 
+      {alreadyResolved && (
+        <div className="animate-alert-in relative mx-5 mt-4 flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-3 py-2 text-sm font-medium text-success">
+          <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
+          Ya resolviste el reto de hoy. Vuelve mañana por uno nuevo.
+        </div>
+      )}
+
       {/* Question */}
       <div className="relative px-5 py-5">
         <p className="font-data text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
@@ -172,8 +182,7 @@ export function AnswerSheetWidget() {
         </p>
         <MathText
           text={daily.statementMd}
-          clampLines={3}
-          className="mt-2 text-pretty text-lg font-medium leading-snug text-foreground sm:text-xl"
+          className="mt-2 text-pretty text-sm font-medium leading-snug text-foreground"
         />
 
         <ul className="mt-5 flex flex-col gap-2" role="radiogroup" aria-label="Alternativas">
@@ -222,7 +231,7 @@ export function AnswerSheetWidget() {
                   </span>
                   <span
                     className={cn(
-                      "text-sm",
+                      "text-xs",
                       isAnswerRow || isWrongPick
                         ? "font-semibold text-foreground"
                         : "text-foreground/85",
@@ -243,9 +252,9 @@ export function AnswerSheetWidget() {
           <p className="font-data text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
             Aciertos de hoy
           </p>
-          <p className="font-data mt-0.5 text-3xl font-bold tabular-nums text-foreground">
+          <p className="font-data mt-0.5 text-2xl font-bold tabular-nums text-foreground">
             {accuracy ?? "—"}
-            {accuracy !== null && <span className="text-lg text-muted-foreground">%</span>}
+            {accuracy !== null && <span className="text-base text-muted-foreground">%</span>}
           </p>
         </div>
         <span

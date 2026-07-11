@@ -17,6 +17,7 @@ import { dailyExerciseQO } from "@/lib/daily-exercise.functions";
 import { UniversityMarquee } from "@/components/landing/university-marquee";
 import { TrustPill } from "@/components/landing/trust-pill";
 import { cn } from "@/lib/utils";
+import { useInViewOnce } from "@/hooks/use-in-view-once";
 
 const topicsQO = queryOptions({ queryKey: ["topics"], queryFn: () => listTopics() });
 const uniQO = queryOptions({ queryKey: ["universities"], queryFn: () => listUniversities() });
@@ -95,12 +96,13 @@ function Index() {
   const { data: unis } = useSuspenseQuery(uniQO);
   const { data: exams } = useSuspenseQuery(examsQO);
   const totalExercises = topics.reduce((s, t) => s + t.exerciseCount, 0);
+  const { ref: rankingRef, visible: rankingVisible } = useInViewOnce<HTMLDivElement>();
 
   return (
     <div className="at">
       {/* Hero */}
       <section className="border-b border-border">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:py-24 lg:grid-cols-[1.05fr_1fr] lg:items-center">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:py-24 lg:grid-cols-[1.2fr_1fr] lg:items-center">
           <div>
             <TrustPill>Preparación para todas las universidades</TrustPill>
             <h1 className="mt-5 text-balance text-[clamp(2.5rem,1.9rem+3.2vw,4.5rem)] font-bold leading-[1.02] tracking-[-0.03em]">
@@ -132,7 +134,9 @@ function Index() {
             </div>
           </div>
 
-          <AnswerSheetWidget />
+          <div className="mx-auto w-full max-w-sm lg:max-w-none">
+            <AnswerSheetWidget />
+          </div>
         </div>
       </section>
 
@@ -207,7 +211,7 @@ function Index() {
             </Button>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <div ref={rankingRef} className="overflow-hidden rounded-lg border border-border bg-card">
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <span className="font-data text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 UNI · Últimos 3 meses
@@ -215,17 +219,33 @@ function Index() {
               <span className="font-data text-[0.7rem] text-muted-foreground">Precisión</span>
             </div>
             <ul>
-              {LEADERBOARD.map((row) => (
+              {LEADERBOARD.map((row, i) => (
                 <li
                   key={row.rank}
-                  className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+                  className={cn(
+                    rankingVisible && "animate-fade-up",
+                    "flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0",
+                  )}
+                  style={
+                    rankingVisible ? ({ "--i": Math.min(i, 10) } as React.CSSProperties) : undefined
+                  }
                 >
                   <span className="font-data w-5 text-sm text-muted-foreground">{row.rank}</span>
                   <span className="flex-1 text-sm font-medium">{row.handle}</span>
                   <span className="font-data text-sm font-semibold tabular-nums">{row.score}%</span>
                 </li>
               ))}
-              <li className="flex items-center gap-3 border-t border-primary/30 bg-primary/5 px-5 py-3">
+              <li
+                className={cn(
+                  rankingVisible && "animate-fade-up",
+                  "flex items-center gap-3 border-t border-primary/30 bg-primary/5 px-5 py-3",
+                )}
+                style={
+                  rankingVisible
+                    ? ({ "--i": Math.min(LEADERBOARD.length, 10) } as React.CSSProperties)
+                    : undefined
+                }
+              >
                 <span className="font-data w-5 text-sm text-primary">27</span>
                 <span className="flex-1 text-sm font-medium text-primary">Tú</span>
                 <span className="font-data text-sm font-semibold tabular-nums text-primary">
