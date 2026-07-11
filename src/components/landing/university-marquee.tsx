@@ -2,6 +2,7 @@ type University = {
   id: string;
   short_name: string;
   name: string;
+  logoUrl?: string | null;
 };
 
 export function UniversityMarquee({ universities }: { universities: University[] }) {
@@ -21,8 +22,13 @@ export function UniversityMarquee({ universities }: { universities: University[]
             key={`${u.id}-${i}`}
             role="listitem"
             aria-hidden={i >= universities.length}
-            className="flex shrink-0 items-baseline gap-2.5"
+            className="flex shrink-0 items-center gap-2.5"
           >
+            {u.logoUrl && (
+              <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded bg-white">
+                <img src={u.logoUrl} alt="" className="h-full w-full object-contain" />
+              </span>
+            )}
             <span className="font-display text-lg font-semibold tracking-tight text-foreground/90">
               {u.short_name}
             </span>

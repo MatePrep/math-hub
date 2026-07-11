@@ -76,9 +76,15 @@ function ExamHub() {
             style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
           >
             <div className="flex items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground font-display text-sm font-bold">
-                {u.short_name.slice(0, 4)}
-              </span>
+              {u.logoUrl ? (
+                <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-white">
+                  <img src={u.logoUrl} alt="" className="h-full w-full object-contain" />
+                </span>
+              ) : (
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-display text-sm font-bold">
+                  {u.short_name.slice(0, 4)}
+                </span>
+              )}
               <div className="min-w-0">
                 <h2 className="truncate font-display text-lg font-bold">{u.short_name}</h2>
                 <p className="truncate text-xs text-muted-foreground">{u.name}</p>

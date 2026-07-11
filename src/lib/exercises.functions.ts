@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
+import { EXERCISE_IMAGES_BUCKET } from "@/lib/storage";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -27,7 +28,7 @@ export const listUniversities = createServerFn({ method: "GET" }).handler(async 
   const sb = publicClient();
   const { data, error } = await sb
     .from("universities")
-    .select("id, slug, name, short_name, description")
+    .select("id, slug, name, short_name, description, logo_path")
     .eq("active", true)
     .order("short_name");
   if (error) throw new Error(error.message);
@@ -36,7 +37,26 @@ export const listUniversities = createServerFn({ method: "GET" }).handler(async 
   (counts ?? []).forEach((r) => {
     if (r.university_id) map.set(r.university_id, (map.get(r.university_id) ?? 0) + 1);
   });
-  return (data ?? []).map((u) => ({ ...u, exerciseCount: map.get(u.id) ?? 0 }));
+
+  // Resolve every logo to a signed URL in one batched call instead of a
+  // per-university round trip on the client (which would also mean every
+  // logo pops in late instead of arriving with the rest of the page data).
+  const logoPaths = (data ?? []).map((u) => u.logo_path).filter((p): p is string => !!p);
+  const logoUrls = new Map<string, string>();
+  if (logoPaths.length > 0) {
+    const { data: signed } = await sb.storage
+      .from(EXERCISE_IMAGES_BUCKET)
+      .createSignedUrls(logoPaths, 60 * 60 * 24);
+    (signed ?? []).forEach((s) => {
+      if (s.signedUrl && !s.error) logoUrls.set(s.path ?? "", s.signedUrl);
+    });
+  }
+
+  return (data ?? []).map((u) => ({
+    ...u,
+    exerciseCount: map.get(u.id) ?? 0,
+    logoUrl: u.logo_path ? (logoUrls.get(u.logo_path) ?? null) : null,
+  }));
 });
 
 const topicInput = z.object({ slug: z.string() });
