@@ -17,19 +17,16 @@ import { listPublishedTemplates, listMyTemplateSessions } from "@/lib/exams.func
 import { getFullProfile, listAllUniversities } from "@/lib/profile.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { ExamAttemptRow } from "@/components/exam-attempt-row";
+import { pageMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/simulacros/")({
-  head: () => ({
-    meta: [
-      { title: "Simulacros — MatePre" },
-      {
-        name: "description",
-        content: "Genera simulacros de examen aleatorios a partir de las plantillas disponibles.",
-      },
-      { property: "og:title", content: "Simulacros — MatePre" },
-      { property: "og:description", content: "Practica con simulacros aleatorios personalizados." },
-    ],
-  }),
+  head: () =>
+    pageMeta({
+      path: "/simulacros",
+      title: "Simulacros de admisión",
+      description:
+        "Genera simulacros ilimitados con la distribución real de temas de tu examen de admisión, cronometrados y con revisión detallada.",
+    }),
   component: SimulacrosPage,
 });
 

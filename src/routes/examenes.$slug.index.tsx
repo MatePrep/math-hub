@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Timer, ListChecks, ArrowRight } from "lucide-react";
 import { getUniversityBySlug } from "@/lib/exercises.functions";
 import { listPublishedExams } from "@/lib/exams.functions";
+import { pageMeta, absoluteUrl } from "@/lib/site";
+import { JsonLd } from "@/components/json-ld";
 
 const uniQO = (slug: string) =>
   queryOptions({
@@ -24,8 +26,16 @@ export const Route = createFileRoute("/examenes/$slug/")({
     const u = await context.queryClient.ensureQueryData(uniQO(params.slug));
     if (!u) throw notFound();
     await context.queryClient.ensureQueryData(examsQO(params.slug));
+    return { university: u };
   },
-  head: ({ params }) => ({ meta: [{ title: `${params.slug} · Exámenes oficiales · MatePre` }] }),
+  head: ({ params, loaderData }) => {
+    const name = loaderData?.university?.short_name ?? loaderData?.university?.name ?? params.slug;
+    return pageMeta({
+      path: `/examenes/${params.slug}`,
+      title: `Exámenes de admisión ${name}`,
+      description: `Exámenes oficiales de admisión pasados de ${name} y simulacros cronometrados, con solución paso a paso.`,
+    });
+  },
   component: UniPage,
   pendingComponent: UniPagePending,
   pendingMs: 150,
@@ -78,6 +88,21 @@ function UniPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Exámenes", item: absoluteUrl("/examenes") },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: u.short_name,
+              item: absoluteUrl(`/examenes/${slug}`),
+            },
+          ],
+        }}
+      />
       <nav className="text-xs text-muted-foreground">
         <Link to="/examenes" className="hover:underline">
           Exámenes

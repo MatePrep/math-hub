@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RestablecerPasswordRouteImport } from './routes/restablecer-password'
 import { Route as ExamenesOficialesRouteImport } from './routes/examenes-oficiales'
 import { Route as BuscarRouteImport } from './routes/buscar'
@@ -48,6 +50,16 @@ import { Route as AuthenticatedAdminExamenesIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminEjerciciosNuevoRouteImport } from './routes/_authenticated/admin/ejercicios.nuevo'
 import { Route as AuthenticatedAdminEjerciciosIdRouteImport } from './routes/_authenticated/admin/ejercicios.$id'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RestablecerPasswordRoute = RestablecerPasswordRouteImport.update({
   id: '/restablecer-password',
   path: '/restablecer-password',
@@ -261,6 +273,8 @@ export interface FileRoutesByFullPath {
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/favoritas': typeof AuthenticatedFavoritasRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -300,6 +314,8 @@ export interface FileRoutesByTo {
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/favoritas': typeof AuthenticatedFavoritasRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -340,6 +356,8 @@ export interface FileRoutesById {
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/favoritas': typeof AuthenticatedFavoritasRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -381,6 +399,8 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/examenes-oficiales'
     | '/restablecer-password'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/admin'
     | '/favoritas'
     | '/onboarding'
@@ -420,6 +440,8 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/examenes-oficiales'
     | '/restablecer-password'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/admin'
     | '/favoritas'
     | '/onboarding'
@@ -459,6 +481,8 @@ export interface FileRouteTypes {
     | '/buscar'
     | '/examenes-oficiales'
     | '/restablecer-password'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/_authenticated/favoritas'
     | '/_authenticated/onboarding'
@@ -500,6 +524,8 @@ export interface RootRouteChildren {
   BuscarRoute: typeof BuscarRoute
   ExamenesOficialesRoute: typeof ExamenesOficialesRoute
   RestablecerPasswordRoute: typeof RestablecerPasswordRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   EjercicioIdRoute: typeof EjercicioIdRoute
   ExamenesIndexRoute: typeof ExamenesIndexRoute
   SimulacrosIndexRoute: typeof SimulacrosIndexRoute
@@ -512,6 +538,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/restablecer-password': {
       id: '/restablecer-password'
       path: '/restablecer-password'
@@ -875,6 +915,8 @@ const rootRouteChildren: RootRouteChildren = {
   BuscarRoute: BuscarRoute,
   ExamenesOficialesRoute: ExamenesOficialesRoute,
   RestablecerPasswordRoute: RestablecerPasswordRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   EjercicioIdRoute: EjercicioIdRoute,
   ExamenesIndexRoute: ExamenesIndexRoute,
   SimulacrosIndexRoute: SimulacrosIndexRoute,

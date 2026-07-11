@@ -3,6 +3,8 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getTopicBySlug, listExercises } from "@/lib/exercises.functions";
 import { ExerciseCard } from "@/components/exercise-card";
 import { ExerciseCardSkeleton } from "@/components/skeletons";
+import { pageMeta, absoluteUrl } from "@/lib/site";
+import { JsonLd } from "@/components/json-ld";
 
 const topicQO = (slug: string) =>
   queryOptions({ queryKey: ["topic", slug], queryFn: () => getTopicBySlug({ data: { slug } }) });
@@ -17,12 +19,20 @@ export const Route = createFileRoute("/temas/$slug/$subtopic")({
   loader: async ({ context, params }) => {
     const topic = await context.queryClient.ensureQueryData(topicQO(params.slug));
     if (!topic) throw notFound();
-    if (!topic.subtopics.find((s) => s.slug === params.subtopic)) throw notFound();
+    const subtopic = topic.subtopics.find((s) => s.slug === params.subtopic);
+    if (!subtopic) throw notFound();
     await context.queryClient.ensureQueryData(exercisesQO(params.slug, params.subtopic));
+    return { topic, subtopic };
   },
-  head: ({ params }) => ({
-    meta: [{ title: `${params.subtopic} · ${params.slug} · MatePre` }],
-  }),
+  head: ({ params, loaderData }) => {
+    const topicName = loaderData?.topic?.name ?? params.slug;
+    const subtopicName = loaderData?.subtopic?.name ?? params.subtopic;
+    return pageMeta({
+      path: `/temas/${params.slug}/${params.subtopic}`,
+      title: `${subtopicName} · ${topicName}`,
+      description: `Ejercicios de ${subtopicName} (${topicName}) resueltos paso a paso para tu examen de admisión.`,
+    });
+  },
   component: SubtopicPage,
   pendingComponent: SubtopicPagePending,
   pendingMs: 150,
@@ -66,6 +76,27 @@ function SubtopicPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Temas", item: absoluteUrl("/temas") },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: topic.name,
+              item: absoluteUrl(`/temas/${topic.slug}`),
+            },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: sub.name,
+              item: absoluteUrl(`/temas/${topic.slug}/${sub.slug}`),
+            },
+          ],
+        }}
+      />
       <nav className="text-xs text-muted-foreground" aria-label="Migas">
         <Link to="/temas" className="hover:underline">
           Temas

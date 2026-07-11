@@ -28,6 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, HelpCircle } from "lucide-react";
+import { pageMeta, absoluteUrl } from "@/lib/site";
+import { JsonLd } from "@/components/json-ld";
 
 const searchSchema = z.object({
   difficulty: fallback(z.enum(["all", "facil", "medio", "dificil"]), "all").default("all"),
@@ -53,13 +55,18 @@ export const Route = createFileRoute("/temas/$slug/")({
     if (!topic) throw notFound();
     const diff = deps.difficulty === "all" ? undefined : deps.difficulty;
     await context.queryClient.ensureQueryData(exercisesQO(params.slug, diff));
+    return { topic };
   },
-  head: ({ params }) => ({
-    meta: [
-      { title: `${params.slug} · Temas · MatePre` },
-      { name: "description", content: `Ejercicios de ${params.slug} con solución paso a paso.` },
-    ],
-  }),
+  head: ({ params, loaderData }) => {
+    const name = loaderData?.topic?.name ?? params.slug;
+    return pageMeta({
+      path: `/temas/${params.slug}`,
+      title: name,
+      description:
+        loaderData?.topic?.description ??
+        `Ejercicios de ${name} resueltos paso a paso, organizados por subtema y dificultad.`,
+    });
+  },
   component: TopicPage,
   pendingComponent: TopicPagePending,
   pendingMs: 150,
@@ -163,6 +170,21 @@ function TopicPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Temas", item: absoluteUrl("/temas") },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: topic.name,
+              item: absoluteUrl(`/temas/${slug}`),
+            },
+          ],
+        }}
+      />
       <nav className="text-xs text-muted-foreground" aria-label="Migas">
         <Link to="/temas" className="hover:underline">
           Temas

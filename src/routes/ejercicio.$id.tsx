@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
 import { ZoomableImage } from "@/components/zoomable-image";
+import { pageMeta } from "@/lib/site";
 
 const exQO = (id: string) =>
   queryOptions({ queryKey: ["exercise", id], queryFn: () => getExercise({ data: { id } }) });
@@ -30,8 +31,20 @@ export const Route = createFileRoute("/ejercicio/$id")({
   loader: async ({ context, params }) => {
     const ex = await context.queryClient.ensureQueryData(exQO(params.id));
     if (!ex) throw notFound();
+    return { exercise: ex };
   },
-  head: () => ({ meta: [{ title: "Ejercicio · MatePre" }] }),
+  head: ({ params, loaderData }) => {
+    const ex = loaderData?.exercise;
+    const topicName = ex?.topic?.name;
+    const uniName = ex?.university?.short_name;
+    const title = topicName
+      ? `Ejercicio de ${topicName}${uniName ? ` — ${uniName}` : ""}`
+      : "Ejercicio de práctica";
+    const description = topicName
+      ? `Ejercicio de ${topicName}${uniName ? ` (${uniName})` : ""} resuelto paso a paso${ex?.difficulty ? `. Dificultad: ${difficultyLabel[ex.difficulty]}` : ""}.`
+      : "Ejercicio resuelto paso a paso para tu examen de admisión.";
+    return pageMeta({ path: `/ejercicio/${params.id}`, title, description });
+  },
   component: ExercisePage,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
@@ -156,7 +169,10 @@ function ExercisePage() {
         key={ex.id}
         className="animate-card-swap mt-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6"
       >
-        <h1 className="sr-only">Ejercicio</h1>
+        <h1 className="sr-only">
+          Ejercicio de {ex.topic?.name ?? "práctica"}
+          {ex.university ? ` — ${ex.university.short_name}` : ""}
+        </h1>
         <div className="text-base">
           <MathText text={ex.statement_md} />
         </div>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import {
@@ -7,6 +8,7 @@ import {
   BookOpen,
   Target,
   Trophy,
+  Check,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import { UniversityMarquee } from "@/components/landing/university-marquee";
 import { TrustPill } from "@/components/landing/trust-pill";
 import { cn } from "@/lib/utils";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
+import { pageMeta, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 const topicsQO = queryOptions({ queryKey: ["topics"], queryFn: () => listTopics() });
 const uniQO = queryOptions({ queryKey: ["universities"], queryFn: () => listUniversities() });
@@ -27,16 +30,13 @@ const examsQO = queryOptions({
 });
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Admi-Tec — Práctica de matemáticas para preuniversitarios" },
-      {
-        name: "description",
-        content:
-          "Exámenes oficiales, simulacros ilimitados y ranking anónimo para tu admisión a la UNI, San Marcos, PUCP y más.",
-      },
-    ],
-  }),
+  head: () =>
+    pageMeta({
+      path: "/",
+      title: `${SITE_NAME} — Exámenes oficiales, simulacros y ranking`,
+      description: SITE_DESCRIPTION,
+      rawTitle: true,
+    }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(topicsQO);
     context.queryClient.ensureQueryData(uniQO);
@@ -84,7 +84,7 @@ const FEATURES: Array<{
 ];
 
 const LEADERBOARD = [
-  { rank: 1, handle: "Vector_Andino", score: 96 },
+  { rank: 1, handle: "Vector_123", score: 96 },
   { rank: 2, handle: "RaízDe2", score: 94 },
   { rank: 3, handle: "Postulante_UNI19", score: 93 },
   { rank: 4, handle: "MatrizPeru", score: 91 },
@@ -97,6 +97,18 @@ function Index() {
   const { data: exams } = useSuspenseQuery(examsQO);
   const totalExercises = topics.reduce((s, t) => s + t.exerciseCount, 0);
   const { ref: rankingRef, visible: rankingVisible } = useInViewOnce<HTMLDivElement>();
+  const { ref: featuresRef, visible: featuresVisible } = useInViewOnce<HTMLDivElement>();
+  const [checkedFeatures, setCheckedFeatures] = useState<Set<string>>(new Set());
+  const allFeaturesChecked = checkedFeatures.size === FEATURES.length;
+
+  function toggleFeature(letter: string) {
+    setCheckedFeatures((prev) => {
+      const next = new Set(prev);
+      if (next.has(letter)) next.delete(letter);
+      else next.add(letter);
+      return next;
+    });
+  }
 
   return (
     <div className="at">
@@ -161,22 +173,57 @@ function Index() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          {FEATURES.map((f) => (
-            <div key={f.letter} className="flex gap-4 rounded-lg border border-border bg-card p-6">
-              <span className="font-data grid h-10 w-10 shrink-0 place-items-center rounded-full border border-primary/40 text-base font-bold text-primary">
-                {f.letter}
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <f.icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-                  <h3 className="text-lg font-bold tracking-tight">{f.title}</h3>
+        <div ref={featuresRef} className="mt-10 grid gap-4 sm:grid-cols-2">
+          {FEATURES.map((f, i) => {
+            const checked = checkedFeatures.has(f.letter);
+            return (
+              <button
+                type="button"
+                key={f.letter}
+                onClick={() => toggleFeature(f.letter)}
+                aria-pressed={checked}
+                className={cn(
+                  featuresVisible && "animate-fade-up",
+                  "press flex gap-4 rounded-lg border p-6 text-left transition-colors duration-300",
+                  checked
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card hover:border-primary/40",
+                )}
+                style={featuresVisible ? ({ "--i": i } as React.CSSProperties) : undefined}
+              >
+                <span
+                  className={cn(
+                    "font-data grid h-10 w-10 shrink-0 place-items-center rounded-full border text-base font-bold transition-colors duration-300",
+                    checked
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-primary/40 text-primary",
+                  )}
+                >
+                  {checked ? <Check className="h-5 w-5" strokeWidth={3} /> : f.letter}
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <f.icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+                    <h3 className="text-lg font-bold tracking-tight">{f.title}</h3>
+                  </div>
+                  <p className="mt-2 text-pretty text-sm text-muted-foreground">{f.text}</p>
                 </div>
-                <p className="mt-2 text-pretty text-sm text-muted-foreground">{f.text}</p>
-              </div>
-            </div>
-          ))}
+              </button>
+            );
+          })}
         </div>
+
+        {allFeaturesChecked && (
+          <div className="animate-alert-in mt-6 flex items-center gap-3 rounded-lg border border-success/40 bg-success/10 px-5 py-4">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-success text-success-foreground">
+              <Check className="h-4 w-4" strokeWidth={3} />
+            </span>
+            <p className="text-sm font-semibold text-foreground">
+              Las 4 son ciertas. Así se prepara alguien que sí va a ingresar — y las 4 están en
+              Admi-Tec.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Stats */}

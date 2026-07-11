@@ -1,19 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { listUniversities } from "@/lib/exercises.functions";
+import { pageMeta } from "@/lib/site";
 
 const qo = queryOptions({ queryKey: ["universities"], queryFn: () => listUniversities() });
 
 export const Route = createFileRoute("/examenes/")({
-  head: () => ({
-    meta: [
-      { title: "Exámenes de admisión · MatePre" },
-      {
-        name: "description",
-        content: "Practica ejercicios reales de UNI, San Marcos, PUCP, UNALM y UNFV.",
-      },
-    ],
-  }),
+  head: () =>
+    pageMeta({
+      path: "/examenes",
+      title: "Exámenes de admisión por universidad",
+      description:
+        "Rinde exámenes de admisión oficiales pasados de la UNI, San Marcos, PUCP, UNALM, UNFV y más, en las condiciones reales del examen.",
+    }),
   loader: ({ context }) => context.queryClient.ensureQueryData(qo),
   component: ExamHub,
   pendingComponent: ExamHubPending,

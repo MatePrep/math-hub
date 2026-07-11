@@ -15,7 +15,9 @@ import appCss from "../styles.css?url";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/ui/sonner";
+import { JsonLd } from "@/components/json-ld";
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, absoluteUrl } from "@/lib/site";
 import {
   capturedAuthParams,
   capturedAuthHasSession,
@@ -82,30 +84,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Admi-Tec — Práctica de matemáticas para preuniversitarios" },
-      {
-        name: "description",
-        content:
-          "Plataforma peruana para practicar matemáticas por tema, dificultad y examen de admisión (UNI, San Marcos, PUCP, UNALM, UNFV).",
-      },
-      { name: "author", content: "Admi-Tec" },
+      { title: `${SITE_NAME} — Exámenes oficiales, simulacros y ranking para tu admisión` },
+      { name: "description", content: SITE_DESCRIPTION },
+      { name: "author", content: SITE_NAME },
+      { property: "og:site_name", content: SITE_NAME },
       {
         property: "og:title",
-        content: "Admi-Tec — Práctica de matemáticas para preuniversitarios",
+        content: `${SITE_NAME} — Exámenes oficiales, simulacros y ranking para tu admisión`,
       },
-      {
-        property: "og:description",
-        content: "Ejercicios resueltos paso a paso para tu examen de admisión.",
-      },
+      { property: "og:description", content: SITE_DESCRIPTION },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:image", content: absoluteUrl("/og-image.svg") },
+      { property: "og:locale", content: "es_PE" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "twitter:title",
-        content: "Admi-Tec — Práctica de matemáticas para preuniversitarios",
+        content: `${SITE_NAME} — Exámenes oficiales, simulacros y ranking para tu admisión`,
       },
+      { name: "twitter:description", content: SITE_DESCRIPTION },
+      { name: "twitter:image", content: absoluteUrl("/og-image.svg") },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -231,6 +232,28 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: SITE_URL,
+          logo: absoluteUrl("/favicon.svg"),
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: SITE_NAME,
+          url: SITE_URL,
+          potentialAction: {
+            "@type": "SearchAction",
+            target: `${SITE_URL}/buscar?q={search_term_string}`,
+            "query-input": "required name=search_term_string",
+          },
+        }}
+      />
       <div className="flex min-h-dvh flex-col bg-background text-foreground">
         <SiteHeader />
         <main className="flex-1">

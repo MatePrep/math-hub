@@ -4,6 +4,7 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { searchExercises } from "@/lib/exercises.functions";
 import { ExerciseCard } from "@/components/exercise-card";
+import { pageMeta } from "@/lib/site";
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -19,7 +20,9 @@ export const Route = createFileRoute("/buscar")({
   validateSearch: zodValidator(searchSchema),
   loaderDeps: ({ search }) => ({ q: search.q }),
   loader: ({ context, deps }) => context.queryClient.ensureQueryData(qo(deps.q)),
-  head: () => ({ meta: [{ title: "Buscar · MatePre" }] }),
+  // Search-result pages are unbounded (any ?q= combination) and low-value for
+  // organic search — index the real content pages (temas/examenes) instead.
+  head: () => pageMeta({ path: "/buscar", title: "Buscar", noindex: true }),
   component: SearchPage,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">

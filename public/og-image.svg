@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#1a2f52"/>
+  <circle cx="1080" cy="80" r="220" fill="#d9ab48" opacity="0.12"/>
+  <text x="90" y="290" font-family="Georgia, 'Bricolage Grotesque', sans-serif" font-size="88" font-weight="700" fill="#f7f4ec">Admi-Tec</text>
+  <text x="90" y="370" font-family="Arial, 'Public Sans', sans-serif" font-size="34" fill="#c7cede">
+    Exámenes oficiales, simulacros y ranking
+  </text>
+  <text x="90" y="416" font-family="Arial, 'Public Sans', sans-serif" font-size="34" fill="#c7cede">
+    para tu examen de admisión.
+  </text>
+  <text x="90" y="540" font-family="Arial, 'Public Sans', sans-serif" font-size="26" fill="#d9ab48" letter-spacing="2">
+    UNI · SAN MARCOS · PUCP · UNALM · UNFV
+  </text>
+</svg>

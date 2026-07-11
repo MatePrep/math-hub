@@ -2,19 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { listTopics } from "@/lib/exercises.functions";
 import { TopicCardSkeleton } from "@/components/skeletons";
+import { pageMeta } from "@/lib/site";
 
 const topicsQO = queryOptions({ queryKey: ["topics"], queryFn: () => listTopics() });
 
 export const Route = createFileRoute("/temas/")({
-  head: () => ({
-    meta: [
-      { title: "Temas · MatePre" },
-      {
-        name: "description",
-        content: "Explora ejercicios de matemáticas organizados por tema y subtema.",
-      },
-    ],
-  }),
+  head: () =>
+    pageMeta({
+      path: "/temas",
+      title: "Temas de práctica",
+      description:
+        "Explora ejercicios resueltos paso a paso, organizados por tema y subtema, para todos los cursos de tu examen de admisión.",
+    }),
   loader: ({ context }) => context.queryClient.ensureQueryData(topicsQO),
   component: TopicsIndex,
   pendingComponent: TopicsIndexPending,

@@ -7,14 +7,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { pageMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({
-    meta: [
-      { title: "Ingresar · MatePre" },
-      { name: "description", content: "Crea una cuenta o ingresa para guardar tu progreso." },
-    ],
-  }),
+  head: () =>
+    pageMeta({
+      path: "/auth",
+      title: "Ingresar o crear cuenta",
+      description: "Crea tu cuenta gratis en Admi-Tec o ingresa para guardar tu progreso.",
+    }),
   component: AuthPage,
 });
 

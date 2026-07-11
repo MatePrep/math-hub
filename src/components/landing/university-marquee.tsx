@@ -26,7 +26,13 @@ export function UniversityMarquee({ universities }: { universities: University[]
           >
             {u.logoUrl && (
               <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded bg-white">
-                <img src={u.logoUrl} alt="" className="h-full w-full object-contain" />
+                <img
+                  src={u.logoUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-contain"
+                />
               </span>
             )}
             <span className="font-display text-lg font-semibold tracking-tight text-foreground/90">

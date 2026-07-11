@@ -11,9 +11,12 @@ import {
   capturedAuthHasSession,
   translateHashAuthError,
 } from "@/lib/auth-redirect";
+import { pageMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/restablecer-password")({
-  head: () => ({ meta: [{ title: "Restablecer contraseña · MatePre" }] }),
+  // Only reachable via a one-time emailed token — no standalone value to index.
+  head: () =>
+    pageMeta({ path: "/restablecer-password", title: "Restablecer contraseña", noindex: true }),
   component: ResetPasswordPage,
 });
 
