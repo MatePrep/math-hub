@@ -61,13 +61,16 @@ export async function uploadUniversityLogo(file: File): Promise<string> {
   return path;
 }
 
+// The bucket is public (its RLS policy already grants anon+authenticated
+// unconditional read, so a signed URL added no real access control — see
+// 20260711180000_exercise_images_bucket_public.sql), so this is a stable,
+// cacheable URL rather than a signed one carrying a fresh, expiring token on
+// every call: a signed URL's token changes on every request, which defeats
+// HTTP caching and means every page load re-downloads every image.
 export async function getExerciseImageUrl(path: string | null | undefined): Promise<string | null> {
   if (!path) return null;
-  const { data, error } = await supabase.storage
-    .from(EXERCISE_IMAGES_BUCKET)
-    .createSignedUrl(path, 60 * 60 * 24);
-  if (error) return null;
-  return data?.signedUrl ?? null;
+  const { data } = supabase.storage.from(EXERCISE_IMAGES_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function deleteExerciseImage(path: string): Promise<void> {

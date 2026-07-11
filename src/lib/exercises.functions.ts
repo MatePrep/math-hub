@@ -38,24 +38,16 @@ export const listUniversities = createServerFn({ method: "GET" }).handler(async 
     if (r.university_id) map.set(r.university_id, (map.get(r.university_id) ?? 0) + 1);
   });
 
-  // Resolve every logo to a signed URL in one batched call instead of a
-  // per-university round trip on the client (which would also mean every
-  // logo pops in late instead of arriving with the rest of the page data).
-  const logoPaths = (data ?? []).map((u) => u.logo_path).filter((p): p is string => !!p);
-  const logoUrls = new Map<string, string>();
-  if (logoPaths.length > 0) {
-    const { data: signed } = await sb.storage
-      .from(EXERCISE_IMAGES_BUCKET)
-      .createSignedUrls(logoPaths, 60 * 60 * 24);
-    (signed ?? []).forEach((s) => {
-      if (s.signedUrl && !s.error) logoUrls.set(s.path ?? "", s.signedUrl);
-    });
-  }
-
+  // getPublicUrl is a local string builder (no network call, no expiring
+  // token) — the bucket is public and its RLS already grants anon read on
+  // every object, so a signed URL bought no extra protection here, just a
+  // URL that changes (and can't be cached by the browser) on every request.
   return (data ?? []).map((u) => ({
     ...u,
     exerciseCount: map.get(u.id) ?? 0,
-    logoUrl: u.logo_path ? (logoUrls.get(u.logo_path) ?? null) : null,
+    logoUrl: u.logo_path
+      ? sb.storage.from(EXERCISE_IMAGES_BUCKET).getPublicUrl(u.logo_path).data.publicUrl
+      : null,
   }));
 });
 

@@ -30,13 +30,26 @@ const examsQO = queryOptions({
 });
 
 export const Route = createFileRoute("/")({
-  head: () =>
-    pageMeta({
+  head: () => {
+    const base = pageMeta({
       path: "/",
       title: `${SITE_NAME} — Exámenes oficiales, simulacros y ranking`,
       description: SITE_DESCRIPTION,
       rawTitle: true,
-    }),
+    });
+    return {
+      ...base,
+      links: [
+        ...base.links,
+        // Homepage-hero-only "at" register fonts — see __root.tsx for why these
+        // aren't in the global stylesheet link.
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        },
+      ],
+    };
+  },
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(topicsQO);
     context.queryClient.ensureQueryData(uniQO);
