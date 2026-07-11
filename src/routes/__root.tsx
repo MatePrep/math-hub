@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   useRouter,
   useNavigate,
+  useMatches,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -16,7 +17,12 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { capturedAuthParams, capturedAuthHasSession, translateHashAuthError } from "@/lib/auth-redirect";
+import {
+  capturedAuthParams,
+  capturedAuthHasSession,
+  translateHashAuthError,
+} from "@/lib/auth-redirect";
+import { cn } from "@/lib/utils";
 
 function NotFoundComponent() {
   return (
@@ -47,9 +53,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          La página no cargó
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">La página no cargó</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Algo salió mal. Puedes reintentar o volver al inicio.
         </p>
@@ -80,24 +84,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "MatePre — Práctica de matemáticas para preuniversitarios" },
+      { title: "Admi-Tec — Práctica de matemáticas para preuniversitarios" },
       {
         name: "description",
         content:
           "Plataforma peruana para practicar matemáticas por tema, dificultad y examen de admisión (UNI, San Marcos, PUCP, UNALM, UNFV).",
       },
-      { name: "author", content: "MatePre" },
-      { property: "og:title", content: "MatePre — Práctica de matemáticas para preuniversitarios" },
+      { name: "author", content: "Admi-Tec" },
+      {
+        property: "og:title",
+        content: "Admi-Tec — Práctica de matemáticas para preuniversitarios",
+      },
       {
         property: "og:description",
         content: "Ejercicios resueltos paso a paso para tu examen de admisión.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "MatePre — Práctica de matemáticas para preuniversitarios" },
-      { name: "description", content: "Andes Math Hub is a web platform for Peruvian pre-university students to learn and practice math." },
-      { property: "og:description", content: "Andes Math Hub is a web platform for Peruvian pre-university students to learn and practice math." },
-      { name: "twitter:description", content: "Andes Math Hub is a web platform for Peruvian pre-university students to learn and practice math." },
+      {
+        name: "twitter:title",
+        content: "Admi-Tec — Práctica de matemáticas para preuniversitarios",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -105,7 +112,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
       },
     ],
   }),
@@ -133,6 +140,13 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const navigate = useNavigate();
+  // The public site runs the navy/amber "at" brand register; the authenticated app
+  // (everything under the _authenticated pathless layout) keeps the calmer notebook
+  // theme. Header/footer are shared chrome, so they switch register based on which
+  // side of the signup wall the current route falls on — see DESIGN.md's Product
+  // Surface Rule.
+  const matches = useMatches();
+  const isPublic = !matches.some((m) => m.routeId.startsWith("/_authenticated"));
 
   useEffect(() => {
     // Only actual identity changes (login/logout) warrant refetching every
@@ -226,12 +240,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-dvh flex-col">
-        <SiteHeader />
+      <div
+        className={cn("flex min-h-dvh flex-col bg-background text-foreground", isPublic && "at")}
+      >
+        <SiteHeader isPublic={isPublic} />
         <main className="flex-1">
           <Outlet />
         </main>
-        <SiteFooter />
+        <SiteFooter isPublic={isPublic} />
       </div>
       <Toaster />
     </QueryClientProvider>

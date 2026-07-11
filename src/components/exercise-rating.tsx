@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { getMyExerciseRating, rateExercise } from "@/lib/exercise-feedback.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 
-export function ExerciseRating({ exerciseId, className }: { exerciseId: string; className?: string }) {
+export function ExerciseRating({
+  exerciseId,
+  className,
+}: {
+  exerciseId: string;
+  className?: string;
+}) {
   const signedIn = useSignedIn();
   const getFn = useServerFn(getMyExerciseRating);
   const rateFn = useServerFn(rateExercise);
@@ -52,7 +58,10 @@ export function ExerciseRating({ exerciseId, className }: { exerciseId: string; 
           disabled={m.isPending}
           className="cursor-pointer p-0.5 disabled:cursor-not-allowed"
         >
-          <span key={n === displayed ? `on-${n}` : `off-${n}`} className="inline-flex animate-icon-pop">
+          <span
+            key={n === displayed ? `on-${n}` : `off-${n}`}
+            className="inline-flex animate-icon-pop"
+          >
             <Star
               className={`h-4 w-4 transition-colors ${
                 n <= displayed ? "fill-amber-400 text-amber-400" : "text-muted-foreground/50"

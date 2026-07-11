@@ -5,7 +5,13 @@ import { toast } from "sonner";
 import { toggleFavorite, listMyFavoriteIds } from "@/lib/favorites.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 
-export function FavoriteButton({ exerciseId, className }: { exerciseId: string; className?: string }) {
+export function FavoriteButton({
+  exerciseId,
+  className,
+}: {
+  exerciseId: string;
+  className?: string;
+}) {
   const signedIn = useSignedIn();
 
   const listFn = useServerFn(listMyFavoriteIds);
@@ -44,7 +50,9 @@ export function FavoriteButton({ exerciseId, className }: { exerciseId: string; 
       disabled={m.isPending}
     >
       <span key={isFav ? "fav" : "unfav"} className="animate-icon-pop inline-flex">
-        <Star className={`h-4 w-4 ${isFav ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+        <Star
+          className={`h-4 w-4 ${isFav ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`}
+        />
       </span>
     </button>
   );

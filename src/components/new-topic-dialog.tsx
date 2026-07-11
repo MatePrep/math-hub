@@ -71,10 +71,16 @@ export function NewTopicDialog({
     try {
       const res = isSubtopic
         ? await createSubtopicFn({ data: { topic_id: topicId!, name: name.trim() } })
-        : await createTopicFn({ data: { name: name.trim(), description: description.trim() || null, color } });
+        : await createTopicFn({
+            data: { name: name.trim(), description: description.trim() || null, color },
+          });
 
       if (res.duplicated) {
-        toast.info(isSubtopic ? "Ese subtema ya existía; se seleccionó el existente." : "Esa materia ya existía; se seleccionó la existente.");
+        toast.info(
+          isSubtopic
+            ? "Ese subtema ya existía; se seleccionó el existente."
+            : "Esa materia ya existía; se seleccionó la existente.",
+        );
       } else {
         toast.success(isSubtopic ? "Subtema creado" : "Materia creada");
       }
@@ -124,11 +130,21 @@ export function NewTopicDialog({
           {!isSubtopic && (
             <div>
               <Label>Color</Label>
-              <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-20" />
+              <Input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-10 w-20"
+              />
             </div>
           )}
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => actualOnOpenChange(false)} disabled={saving}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => actualOnOpenChange(false)}
+              disabled={saving}
+            >
               Cancelar
             </Button>
             <Button

@@ -18,12 +18,8 @@ import { getFullProfile } from "@/lib/profile.functions";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { NotificationsBell } from "@/components/notifications-bell";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 const publicNav = [
   { to: "/temas", label: "Temas" },
@@ -38,11 +34,17 @@ const accountNav = [
   { to: "/ranking", label: "Ranking", icon: Trophy },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ isPublic = false }: { isPublic?: boolean }) {
   const navigate = useNavigate();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  // Radix portals (dropdown, sheet) mount into document.body by default, which sits
+  // outside the "at" class scope below and would render the old notebook-theme colors
+  // even when the trigger is on the navy/amber public site. Pointing them at this themed
+  // anchor (not the header itself, which has backdrop-blur — a possible fixed-position
+  // containing block in some browsers) keeps the popover/sheet inside the right palette.
+  const [themeAnchor, setThemeAnchor] = useState<HTMLDivElement | null>(null);
   const signedIn = useSignedIn();
   const { isAdmin } = useIsAdmin();
   const fetchProfile = useServerFn(getFullProfile);
@@ -68,182 +70,191 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
-      <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:gap-6">
-        <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="MatePre — inicio">
-          <span
-            aria-hidden
-            className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display text-lg font-bold"
-          >
-            π
-          </span>
-          <span className="font-display text-xl font-bold tracking-tight">MatePre</span>
-        </Link>
-
-        <form
-          onSubmit={submitSearch}
-          className="hidden min-w-0 items-center md:flex"
-          role="search"
-        >
-          <div className="relative w-full max-w-md">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+    <>
+      <div ref={setThemeAnchor} aria-hidden className={isPublic ? "at" : undefined} />
+      <header
+        className={cn(
+          "sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur",
+          isPublic && "at",
+        )}
+      >
+        <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:gap-6">
+          <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="Admi-Tec — inicio">
+            <span
               aria-hidden
-            />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar ejercicios, temas..."
-              className="pl-9"
-              aria-label="Buscar ejercicios"
-            />
-          </div>
-        </form>
-
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
-          {publicNav.map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              activeProps={{ className: "bg-secondary text-foreground" }}
-              className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-secondary hover:text-foreground"
+              className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display text-base font-bold tracking-tight"
             >
-              {n.label}
-            </Link>
-          ))}
+              A/T
+            </span>
+            <span className="font-display text-xl font-bold tracking-tight">Admi-Tec</span>
+          </Link>
 
-          {signedIn === true && (
-            <>
-              {isAdmin && (
-                <Link
-                  to="/admin/ejercicios"
-                  activeProps={{ className: "bg-secondary text-foreground" }}
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-secondary"
-                >
-                  <Shield className="h-4 w-4" /> Admin
-                </Link>
-              )}
-              <NotificationsBell />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="ml-1 cursor-pointer rounded-full transition duration-150 hover:scale-105 hover:opacity-80 active:scale-95"
-                    aria-label="Cuenta"
+          <form
+            onSubmit={submitSearch}
+            className="hidden min-w-0 items-center md:flex"
+            role="search"
+          >
+            <div className="relative w-full max-w-md">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar ejercicios, temas..."
+                className="pl-9"
+                aria-label="Buscar ejercicios"
+              />
+            </div>
+          </form>
+
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
+            {publicNav.map((n) => (
+              <Link
+                key={n.to}
+                to={n.to}
+                activeProps={{ className: "bg-secondary text-foreground" }}
+                className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-secondary hover:text-foreground"
+              >
+                {n.label}
+              </Link>
+            ))}
+
+            {signedIn === true && (
+              <>
+                {isAdmin && (
+                  <Link
+                    to="/admin/ejercicios"
+                    activeProps={{ className: "bg-secondary text-foreground" }}
+                    className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-secondary"
                   >
-                    <Avatar className="h-8 w-8 border border-border">
-                      {avatarUrl && <AvatarImage src={avatarUrl} alt="" referrerPolicy="no-referrer" />}
-                      <AvatarFallback className="bg-secondary text-secondary-foreground">
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  {accountNav.map((item) => (
-                    <DropdownMenuItem key={item.to} asChild>
-                      <Link to={item.to} className="cursor-pointer">
+                    <Shield className="h-4 w-4" /> Admin
+                  </Link>
+                )}
+                <NotificationsBell />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="ml-1 cursor-pointer rounded-full transition duration-150 hover:scale-105 hover:opacity-80 active:scale-95"
+                      aria-label="Cuenta"
+                    >
+                      <Avatar className="h-8 w-8 border border-border">
+                        {avatarUrl && (
+                          <AvatarImage src={avatarUrl} alt="" referrerPolicy="no-referrer" />
+                        )}
+                        <AvatarFallback className="bg-secondary text-secondary-foreground">
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-52"
+                    container={themeAnchor ?? undefined}
+                  >
+                    {accountNav.map((item) => (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link to={item.to} className="cursor-pointer">
+                          <item.icon className="h-4 w-4" /> {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleSignOut} className="cursor-pointer">
+                      <LogOut className="h-4 w-4" /> Cerrar sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+            {signedIn === false && (
+              <Button asChild size="sm" className="ml-2">
+                <Link to="/auth">Ingresar</Link>
+              </Button>
+            )}
+          </nav>
+
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menú">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72" container={themeAnchor ?? undefined}>
+              <SheetTitle className="sr-only">Menú</SheetTitle>
+              <div className="mt-6 flex flex-col gap-2">
+                <form onSubmit={submitSearch} role="search">
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <Input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="Buscar..."
+                      className="pl-9"
+                      aria-label="Buscar ejercicios"
+                    />
+                  </div>
+                </form>
+                {publicNav.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    onClick={() => setOpen(false)}
+                    className="rounded-md px-3 py-3 text-base font-medium hover:bg-secondary"
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+
+                {signedIn === true && (
+                  <>
+                    <div className="my-1 h-px bg-border" aria-hidden />
+                    {accountNav.map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium hover:bg-secondary"
+                      >
                         <item.icon className="h-4 w-4" /> {item.label}
                       </Link>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleSignOut} className="cursor-pointer">
-                    <LogOut className="h-4 w-4" /> Cerrar sesión
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
-          {signedIn === false && (
-            <Button asChild size="sm" className="ml-2">
-              <Link to="/auth">Ingresar</Link>
-            </Button>
-          )}
-        </nav>
-
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              aria-label="Abrir menú"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-72">
-            <SheetTitle className="sr-only">Menú</SheetTitle>
-            <div className="mt-6 flex flex-col gap-2">
-              <form onSubmit={submitSearch} role="search">
-                <div className="relative">
-                  <Search
-                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <Input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Buscar..."
-                    className="pl-9"
-                    aria-label="Buscar ejercicios"
-                  />
-                </div>
-              </form>
-              {publicNav.map((n) => (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  onClick={() => setOpen(false)}
-                  className="rounded-md px-3 py-3 text-base font-medium hover:bg-secondary"
-                >
-                  {n.label}
-                </Link>
-              ))}
-
-              {signedIn === true && (
-                <>
-                  <div className="my-1 h-px bg-border" aria-hidden />
-                  {accountNav.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium hover:bg-secondary"
+                    ))}
+                    {isAdmin && (
+                      <Link
+                        to="/admin/ejercicios"
+                        onClick={() => setOpen(false)}
+                        className="inline-flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium text-primary hover:bg-secondary"
+                      >
+                        <Shield className="h-4 w-4" /> Admin
+                      </Link>
+                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setOpen(false);
+                        handleSignOut();
+                      }}
                     >
-                      <item.icon className="h-4 w-4" /> {item.label}
-                    </Link>
-                  ))}
-                  {isAdmin && (
-                    <Link
-                      to="/admin/ejercicios"
-                      onClick={() => setOpen(false)}
-                      className="inline-flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium text-primary hover:bg-secondary"
-                    >
-                      <Shield className="h-4 w-4" /> Admin
-                    </Link>
-                  )}
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setOpen(false);
-                      handleSignOut();
-                    }}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                      <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                    </Button>
+                  </>
+                )}
+                {signedIn === false && (
+                  <Button asChild onClick={() => setOpen(false)}>
+                    <Link to="/auth">Ingresar</Link>
                   </Button>
-                </>
-              )}
-              {signedIn === false && (
-                <Button asChild onClick={() => setOpen(false)}>
-                  <Link to="/auth">Ingresar</Link>
-                </Button>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    </header>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+    </>
   );
 }

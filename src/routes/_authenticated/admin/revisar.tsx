@@ -34,7 +34,9 @@ function RevisarPage() {
   const resolveFn = useServerFn(resolveExerciseReport);
   const qc = useQueryClient();
 
-  const [status, setStatus] = useState<"pendiente" | "resuelto" | "descartado" | "all">("pendiente");
+  const [status, setStatus] = useState<"pendiente" | "resuelto" | "descartado" | "all">(
+    "pendiente",
+  );
   const [reasonFilter, setReasonFilter] = useState<string>("all");
 
   const reportsQ = useQuery({
@@ -55,7 +57,11 @@ function RevisarPage() {
   async function onAction(reportId: string, action: "resolve" | "dismiss") {
     try {
       await resolveFn({ data: { reportId, action } });
-      toast.success(action === "resolve" ? "Marcado como resuelto — se notificó al estudiante." : "Reporte descartado.");
+      toast.success(
+        action === "resolve"
+          ? "Marcado como resuelto — se notificó al estudiante."
+          : "Reporte descartado.",
+      );
       qc.invalidateQueries({ queryKey: ["admin-exercise-reports"] });
       qc.invalidateQueries({ queryKey: ["admin-exercise-review-badge"] });
     } catch (e: any) {
@@ -80,7 +86,9 @@ function RevisarPage() {
           </h3>
           <div className="flex flex-wrap gap-2">
             <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="pendiente">Pendientes</SelectItem>
                 <SelectItem value="resuelto">Resueltos</SelectItem>
@@ -89,11 +97,15 @@ function RevisarPage() {
               </SelectContent>
             </Select>
             <Select value={reasonFilter} onValueChange={setReasonFilter}>
-              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los motivos</SelectItem>
                 {EXERCISE_REPORT_REASONS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -113,13 +125,23 @@ function RevisarPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge variant="destructive">{reasonLabel(r.reason)}</Badge>
-                    {r.exercise?.topic?.name && <Badge variant="secondary">{r.exercise.topic.name}</Badge>}
-                    {r.exercise?.subtopic?.name && <Badge variant="outline">{r.exercise.subtopic.name}</Badge>}
+                    {r.exercise?.topic?.name && (
+                      <Badge variant="secondary">{r.exercise.topic.name}</Badge>
+                    )}
+                    {r.exercise?.subtopic?.name && (
+                      <Badge variant="outline">{r.exercise.subtopic.name}</Badge>
+                    )}
                     {r.status !== "pendiente" && (
-                      <Badge variant="outline" className="capitalize">{r.status}</Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {r.status}
+                      </Badge>
                     )}
                   </div>
-                  <MathText text={r.exercise?.statement_md ?? ""} clampLines={2} className="mt-2 text-sm" />
+                  <MathText
+                    text={r.exercise?.statement_md ?? ""}
+                    clampLines={2}
+                    className="mt-2 text-sm"
+                  />
                   {r.note && <p className="mt-1 text-sm text-muted-foreground">"{r.note}"</p>}
                   <p className="mt-1 text-xs text-muted-foreground">
                     {new Date(r.created_at).toLocaleString("es-PE")}
@@ -150,11 +172,12 @@ function RevisarPage() {
 
       <section className="mt-10">
         <h3 className="inline-flex items-center gap-1.5 font-display text-lg font-bold">
-          <Star className="h-4 w-4" /> Calificación baja, sin reporte ({(lowRatedQ.data ?? []).length})
+          <Star className="h-4 w-4" /> Calificación baja, sin reporte (
+          {(lowRatedQ.data ?? []).length})
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          No tienen un reporte puntual, pero su calificación promedio está por debajo de 2 estrellas —
-          vale la pena revisarlos igual.
+          No tienen un reporte puntual, pero su calificación promedio está por debajo de 2 estrellas
+          — vale la pena revisarlos igual.
         </p>
         <div className="mt-3 space-y-2">
           {lowRatedQ.isLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
@@ -164,7 +187,10 @@ function RevisarPage() {
             </p>
           )}
           {(lowRatedQ.data ?? []).map((r: any) => (
-            <div key={r.exercise_id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+            <div
+              key={r.exercise_id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"
+            >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant="outline" className="border-amber-500/40 text-amber-600">

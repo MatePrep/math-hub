@@ -21,10 +21,22 @@ export const Route = createFileRoute("/auth")({
 function GoogleLogo({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 18 18" aria-hidden="true">
-      <path fill="#4285F4" d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9086c1.7018-1.5668 2.6836-3.8741 2.6836-6.615z" />
-      <path fill="#34A853" d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9086-2.2581c-.8059.54-1.8368.8591-3.0477.8591-2.3436 0-4.3282-1.5831-5.0359-3.7104H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z" />
-      <path fill="#FBBC05" d="M3.9641 10.71c-.18-.54-.2822-1.1168-.2822-1.71s.1023-1.17.2822-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.9641 10.71z" />
-      <path fill="#EA4335" d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.9641 7.29C4.6718 5.1627 6.6564 3.5795 9 3.5795z" />
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9086c1.7018-1.5668 2.6836-3.8741 2.6836-6.615z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9086-2.2581c-.8059.54-1.8368.8591-3.0477.8591-2.3436 0-4.3282-1.5831-5.0359-3.7104H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.9641 10.71c-.18-.54-.2822-1.1168-.2822-1.71s.1023-1.17.2822-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.9641 10.71z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.9641 7.29C4.6718 5.1627 6.6564 3.5795 9 3.5795z"
+      />
     </svg>
   );
 }
@@ -34,16 +46,31 @@ function translateAuthError(err: any): string {
   const msg: string = err?.message ?? "";
   const m = msg.toLowerCase();
 
-  if (code === "weak_password" || m.includes("password") && (m.includes("weak") || m.includes("pwned") || m.includes("leaked") || m.includes("compromised"))) {
+  if (
+    code === "weak_password" ||
+    (m.includes("password") &&
+      (m.includes("weak") ||
+        m.includes("pwned") ||
+        m.includes("leaked") ||
+        m.includes("compromised")))
+  ) {
     return "Esa contraseña es insegura o ha aparecido en filtraciones. Elige una más fuerte (mínimo 8 caracteres, mezcla letras, números y símbolos).";
   }
   if (code === "identity_already_exists") {
     return "Esa cuenta de Google ya está vinculada a otro usuario.";
   }
-  if (code === "email_exists" || m.includes("identity is already linked") || (m.includes("identity") && m.includes("already"))) {
+  if (
+    code === "email_exists" ||
+    m.includes("identity is already linked") ||
+    (m.includes("identity") && m.includes("already"))
+  ) {
     return "Ese correo ya tiene una cuenta. Si te registraste con contraseña, ingresa con ese método primero (o confirma tu correo si aún no lo hiciste) para poder vincular Google.";
   }
-  if (code === "user_already_exists" || m.includes("already registered") || m.includes("already exists")) {
+  if (
+    code === "user_already_exists" ||
+    m.includes("already registered") ||
+    m.includes("already exists")
+  ) {
     return "Ya existe una cuenta con ese correo. Intenta ingresar.";
   }
   if (code === "email_address_invalid" || m.includes("invalid email")) {
@@ -111,7 +138,9 @@ function AuthPage() {
     } finally {
       setBusy(false);
       setPendingAction(null);
-      setInfo("Si el correo existe en nuestro sistema, te enviamos un enlace para restablecer tu contraseña. Si tu cuenta usa \"Continuar con Google\", ingresa con ese botón en vez de una contraseña.");
+      setInfo(
+        'Si el correo existe en nuestro sistema, te enviamos un enlace para restablecer tu contraseña. Si tu cuenta usa "Continuar con Google", ingresa con ese botón en vez de una contraseña.',
+      );
     }
   }
 
@@ -174,7 +203,8 @@ function AuthPage() {
     );
 
     if (!popup) {
-      const friendly = "Tu navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e inténtalo de nuevo.";
+      const friendly =
+        "Tu navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e inténtalo de nuevo.";
       setFormError(friendly);
       toast.error(friendly);
       setBusy(false);
@@ -306,135 +336,151 @@ function AuthPage() {
           </div>
         ) : (
           <>
-        <div key={tab} className="animate-alert-in">
-          <h1 className="text-balance font-display text-2xl font-bold">
-            {tab === "signup" ? "Crea tu cuenta" : "Bienvenido de nuevo"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {tab === "signup"
-              ? "Es gratis y toma menos de un minuto."
-              : "Ingresa para continuar con tu progreso."}
-          </p>
-        </div>
+            <div key={tab} className="animate-alert-in">
+              <h1 className="text-balance font-display text-2xl font-bold">
+                {tab === "signup" ? "Crea tu cuenta" : "Bienvenido de nuevo"}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {tab === "signup"
+                  ? "Es gratis y toma menos de un minuto."
+                  : "Ingresa para continuar con tu progreso."}
+              </p>
+            </div>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-6">
-          <TabsList className="grid grid-cols-2">
-            <TabsTrigger value="signin">Ingresar</TabsTrigger>
-            <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
-          </TabsList>
+            <Tabs
+              value={tab}
+              onValueChange={(v) => setTab(v as "signin" | "signup")}
+              className="mt-6"
+            >
+              <TabsList className="grid grid-cols-2">
+                <TabsTrigger value="signin">Ingresar</TabsTrigger>
+                <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
+              </TabsList>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div className="collapsible" data-open={tab === "signup"} aria-hidden={tab !== "signup"}>
-              <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                <div
+                  className="collapsible"
+                  data-open={tab === "signup"}
+                  aria-hidden={tab !== "signup"}
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="full_name">Nombre completo</Label>
+                      <Input
+                        id="full_name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Ana Pérez"
+                        required={tab === "signup"}
+                        tabIndex={tab === "signup" ? undefined : -1}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="full_name">Nombre completo</Label>
+                  <Label htmlFor="email">Correo</Label>
                   <Input
-                    id="full_name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Ana Pérez"
-                    required={tab === "signup"}
-                    tabIndex={tab === "signup" ? undefined : -1}
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@correo.com"
+                    required
+                    autoComplete="email"
                   />
                 </div>
-              </div>
-            </div>
+                <div>
+                  <Label htmlFor="password">Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={tab === "signup" ? 8 : 6}
+                      autoComplete={tab === "signin" ? "current-password" : "new-password"}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center overflow-hidden rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      <span key={showPassword ? "hide" : "show"} className="animate-icon-pop">
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                  {tab === "signup" && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Mínimo 8 caracteres. Evita contraseñas comunes (como “123456” o “password”).
+                    </p>
+                  )}
+                  {tab === "signin" && (
+                    <button
+                      type="button"
+                      onClick={() => setMode("forgot")}
+                      className="mt-1 text-xs font-medium text-primary hover:underline"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  )}
+                </div>
 
-            <div>
-              <Label htmlFor="email">Correo</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@correo.com"
-                required
-                autoComplete="email"
-              />
+                {formError && (
+                  <p
+                    role="alert"
+                    className="animate-alert-in rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  >
+                    {formError}
+                  </p>
+                )}
+                {info && (
+                  <p
+                    role="status"
+                    className="animate-alert-in rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground"
+                  >
+                    {info}
+                  </p>
+                )}
+
+                <Button type="submit" className="press w-full min-h-11" disabled={busy}>
+                  {pendingAction === "form" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {pendingAction === "form"
+                    ? "Procesando…"
+                    : tab === "signin"
+                      ? "Ingresar"
+                      : "Crear cuenta"}
+                </Button>
+              </form>
+            </Tabs>
+
+            <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              o
+              <span className="h-px flex-1 bg-border" />
             </div>
-            <div>
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={tab === "signup" ? 8 : 6}
-                  autoComplete={tab === "signin" ? "current-password" : "new-password"}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center overflow-hidden rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                >
-                  <span key={showPassword ? "hide" : "show"} className="animate-icon-pop">
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </span>
-                </button>
-              </div>
-              {tab === "signup" && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Mínimo 8 caracteres. Evita contraseñas comunes (como “123456” o “password”).
-                </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="press w-full min-h-11"
+              disabled={busy}
+              onClick={handleGoogle}
+            >
+              {pendingAction === "google" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <GoogleLogo className="mr-2 h-4 w-4" />
               )}
-              {tab === "signin" && (
-                <button
-                  type="button"
-                  onClick={() => setMode("forgot")}
-                  className="mt-1 text-xs font-medium text-primary hover:underline"
-                >
-                  ¿Olvidaste tu contraseña?
-                </button>
-              )}
-            </div>
-
-            {formError && (
-              <p
-                role="alert"
-                className="animate-alert-in rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              >
-                {formError}
-              </p>
-            )}
-            {info && (
-              <p
-                role="status"
-                className="animate-alert-in rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground"
-              >
-                {info}
-              </p>
-            )}
-
-            <Button type="submit" className="press w-full min-h-11" disabled={busy}>
-              {pendingAction === "form" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {pendingAction === "form" ? "Procesando…" : tab === "signin" ? "Ingresar" : "Crear cuenta"}
+              Continuar con Google
             </Button>
-          </form>
-        </Tabs>
-
-        <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          o
-          <span className="h-px flex-1 bg-border" />
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="press w-full min-h-11"
-          disabled={busy}
-          onClick={handleGoogle}
-        >
-          {pendingAction === "google" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <GoogleLogo className="mr-2 h-4 w-4" />
-          )}
-          Continuar con Google
-        </Button>
           </>
         )}
       </div>

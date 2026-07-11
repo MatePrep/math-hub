@@ -75,7 +75,9 @@ export const regenerateNotifications = createServerFn({ method: "POST" })
     // Countdown reminders (per uni)
     (unis ?? []).forEach((u: any) => {
       if (!u.exam_date) return;
-      const daysLeft = Math.ceil((new Date(u.exam_date).getTime() - Date.now()) / (24 * 3600 * 1000));
+      const daysLeft = Math.ceil(
+        (new Date(u.exam_date).getTime() - Date.now()) / (24 * 3600 * 1000),
+      );
       const uniName = u.university?.short_name ?? "tu universidad";
       if (daysLeft > 0 && daysLeft <= 30) {
         const kind = `countdown_${uniName}_${daysLeft <= 7 ? "week" : daysLeft <= 15 ? "twoweeks" : "month"}`;

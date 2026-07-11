@@ -5,7 +5,9 @@
 // required/min/max/email field even though every string in this app is
 // Spanish. `setCustomValidity` is the only way to override that bubble's
 // text, so every native-validated <input>/<textarea> routes through this.
-export function getSpanishValidationMessage(target: HTMLInputElement | HTMLTextAreaElement): string {
+export function getSpanishValidationMessage(
+  target: HTMLInputElement | HTMLTextAreaElement,
+): string {
   const v = target.validity;
   if (v.valid) return "";
   if (v.valueMissing) return "Completa este campo.";
@@ -16,8 +18,10 @@ export function getSpanishValidationMessage(target: HTMLInputElement | HTMLTextA
   }
   if (v.tooShort) return `Debe tener al menos ${target.minLength} caracteres.`;
   if (v.tooLong) return `Debe tener como máximo ${target.maxLength} caracteres.`;
-  if (v.rangeUnderflow) return `El valor debe ser mayor o igual a ${(target as HTMLInputElement).min}.`;
-  if (v.rangeOverflow) return `El valor debe ser menor o igual a ${(target as HTMLInputElement).max}.`;
+  if (v.rangeUnderflow)
+    return `El valor debe ser mayor o igual a ${(target as HTMLInputElement).min}.`;
+  if (v.rangeOverflow)
+    return `El valor debe ser menor o igual a ${(target as HTMLInputElement).max}.`;
   if (v.stepMismatch) return "El valor no es válido para el incremento permitido.";
   if (v.patternMismatch) return "El formato no es válido.";
   if (v.badInput) return "Ingresa un valor válido.";
@@ -31,6 +35,8 @@ export function handleNativeInvalid(e: React.InvalidEvent<HTMLInputElement | HTM
 // The custom message set by handleNativeInvalid persists across re-checks
 // until cleared, so every edit must reset it before native validation runs
 // again (e.g. on the next submit) — otherwise a fixed field stays "invalid".
-export function clearNativeValidity(e: React.SyntheticEvent<HTMLInputElement | HTMLTextAreaElement>) {
+export function clearNativeValidity(
+  e: React.SyntheticEvent<HTMLInputElement | HTMLTextAreaElement>,
+) {
   e.currentTarget.setCustomValidity("");
 }

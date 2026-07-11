@@ -12,7 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { listAdminExercises, deleteExercise } from "@/lib/admin.functions";
 import { MathText } from "@/lib/math-render";
@@ -85,35 +92,54 @@ function AdminExercisesList() {
           {filtered.length} de {q.data?.length ?? 0} ejercicios
         </p>
         <Button asChild size="sm">
-          <Link to="/admin/ejercicios/nuevo"><Plus className="mr-1 h-4 w-4" /> Nuevo ejercicio</Link>
+          <Link to="/admin/ejercicios/nuevo">
+            <Plus className="mr-1 h-4 w-4" /> Nuevo ejercicio
+          </Link>
         </Button>
       </div>
       <div className="mb-3 flex flex-wrap gap-2">
-        <Input placeholder="Buscar…" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />
+        <Input
+          placeholder="Buscar…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="max-w-xs"
+        />
         <Select value={topicFilter} onValueChange={setTopicFilter}>
-          <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-56">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los temas</SelectItem>
             {allTopics.map((t) => (
-              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+              <SelectItem key={t.id} value={t.id}>
+                {t.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={universityFilter} onValueChange={setUniversityFilter}>
-          <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-56">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las universidades</SelectItem>
             {allUniversities.map((u) => (
-              <SelectItem key={u.id} value={u.id}>{u.short_name}</SelectItem>
+              <SelectItem key={u.id} value={u.id}>
+                {u.short_name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={yearFilter} onValueChange={setYearFilter}>
-          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los años</SelectItem>
             {years.map((y) => (
-              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              <SelectItem key={y} value={String(y)}>
+                {y}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -132,14 +158,21 @@ function AdminExercisesList() {
           </TableHeader>
           <TableBody>
             {q.isLoading && (
-              <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">Cargando…</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                  Cargando…
+                </TableCell>
+              </TableRow>
             )}
             {filtered.map((ex: any) => (
               <TableRow key={ex.id}>
                 <TableCell className="max-w-md">
                   <MathText text={ex.statement_md} clampLines={1} className="text-sm" />
                 </TableCell>
-                <TableCell>{ex.topic?.name}{ex.subtopic ? ` · ${ex.subtopic.name}` : ""}</TableCell>
+                <TableCell>
+                  {ex.topic?.name}
+                  {ex.subtopic ? ` · ${ex.subtopic.name}` : ""}
+                </TableCell>
                 <TableCell>{ex.university?.short_name ?? "—"}</TableCell>
                 <TableCell className="capitalize">{ex.difficulty}</TableCell>
                 <TableCell>{ex.exam_year ?? "—"}</TableCell>
@@ -150,7 +183,12 @@ function AdminExercisesList() {
                         <Pencil className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => onDelete(ex.id)} aria-label="Eliminar">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onDelete(ex.id)}
+                      aria-label="Eliminar"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -160,7 +198,9 @@ function AdminExercisesList() {
             {!q.isLoading && filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                  {(q.data?.length ?? 0) === 0 ? "Sin ejercicios todavía." : "Ningún ejercicio coincide con los filtros."}
+                  {(q.data?.length ?? 0) === 0
+                    ? "Sin ejercicios todavía."
+                    : "Ningún ejercicio coincide con los filtros."}
                 </TableCell>
               </TableRow>
             )}

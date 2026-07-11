@@ -24,7 +24,14 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Pencil, Trash2, Plus, Search, Check } from "lucide-react";
 import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import {
@@ -82,20 +89,32 @@ function UniversidadesPage() {
     return (q.data ?? []).filter((u: UniversityRow) => {
       if (statusFilter === "active" && !u.active) return false;
       if (statusFilter === "inactive" && u.active) return false;
-      if (term && !u.name.toLowerCase().includes(term) && !u.short_name.toLowerCase().includes(term)) return false;
+      if (
+        term &&
+        !u.name.toLowerCase().includes(term) &&
+        !u.short_name.toLowerCase().includes(term)
+      )
+        return false;
       return true;
     });
   }, [q.data, search, statusFilter]);
 
   function openNew() {
     setEditing(null);
-    setName(""); setShortName(""); setDescription(""); setExamDate(""); setLogoPath(null);
+    setName("");
+    setShortName("");
+    setDescription("");
+    setExamDate("");
+    setLogoPath(null);
     setDialogOpen(true);
   }
   function openEdit(u: UniversityRow) {
     setEditing(u);
-    setName(u.name); setShortName(u.short_name); setDescription(u.description ?? "");
-    setExamDate(u.exam_date ?? ""); setLogoPath(u.logo_path);
+    setName(u.name);
+    setShortName(u.short_name);
+    setDescription(u.description ?? "");
+    setExamDate(u.exam_date ?? "");
+    setLogoPath(u.logo_path);
     setDialogOpen(true);
   }
 
@@ -142,15 +161,20 @@ function UniversidadesPage() {
     try {
       await setActiveFn({ data: { id: u.id, active: !u.active } });
       q.refetch();
-    } catch (err: any) { toast.error(err?.message ?? "Error"); }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Error");
+    }
   }
 
   async function onDelete(u: UniversityRow) {
     if (!confirm(`¿Eliminar la universidad "${u.name}"?`)) return;
     try {
       await delFn({ data: { id: u.id } });
-      toast.success("Eliminada"); q.refetch();
-    } catch (err: any) { toast.error(err?.message ?? "Error"); }
+      toast.success("Eliminada");
+      q.refetch();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Error");
+    }
   }
 
   const hasReferences = (u: UniversityRow) =>
@@ -170,7 +194,9 @@ function UniversidadesPage() {
             />
           </div>
           <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="active">Activas</SelectItem>
@@ -180,14 +206,43 @@ function UniversidadesPage() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Nueva universidad</Button>
+            <Button size="sm" onClick={openNew}>
+              <Plus className="mr-1 h-4 w-4" /> Nueva universidad
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>{editing ? "Editar universidad" : "Nueva universidad"}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{editing ? "Editar universidad" : "Nueva universidad"}</DialogTitle>
+            </DialogHeader>
             <form onSubmit={onSubmit} className="space-y-3">
-              <div><Label>Nombre *</Label><Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={150} /></div>
-              <div><Label>Nombre corto *</Label><Input value={shortName} onChange={(e) => setShortName(e.target.value)} required maxLength={40} placeholder="ej. UNMSM" /></div>
-              <div><Label>Descripción</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={500} /></div>
+              <div>
+                <Label>Nombre *</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={150}
+                />
+              </div>
+              <div>
+                <Label>Nombre corto *</Label>
+                <Input
+                  value={shortName}
+                  onChange={(e) => setShortName(e.target.value)}
+                  required
+                  maxLength={40}
+                  placeholder="ej. UNMSM"
+                />
+              </div>
+              <div>
+                <Label>Descripción</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                />
+              </div>
               <div>
                 <Label>Fecha del examen de admisión</Label>
                 <Input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
@@ -202,7 +257,14 @@ function UniversidadesPage() {
                 uploadFn={uploadUniversityLogo}
               />
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={saving}
+                >
+                  Cancelar
+                </Button>
                 <Button
                   type="submit"
                   className={`press ${saveFeedback === "refused" ? "animate-shake" : ""}`}
@@ -239,7 +301,11 @@ function UniversidadesPage() {
           </TableHeader>
           <TableBody>
             {q.isLoading && (
-              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">Cargando…</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                  Cargando…
+                </TableCell>
+              </TableRow>
             )}
             {filtered.map((u: UniversityRow) => (
               <TableRow key={u.id}>
@@ -252,21 +318,42 @@ function UniversidadesPage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell><Badge variant="secondary">{u.studentCount}</Badge></TableCell>
-                <TableCell><Badge variant="secondary">{u.examCount}</Badge></TableCell>
-                <TableCell><Badge variant="secondary">{u.templateCount}</Badge></TableCell>
-                <TableCell><Badge variant="secondary">{u.exerciseCount}</Badge></TableCell>
-                <TableCell><Switch checked={u.active} onCheckedChange={() => onToggle(u)} /></TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{u.studentCount}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{u.examCount}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{u.templateCount}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{u.exerciseCount}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Switch checked={u.active} onCheckedChange={() => onToggle(u)} />
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(u)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openEdit(u)}
+                      aria-label="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => onDelete(u)}
                       aria-label="Eliminar"
                       disabled={hasReferences(u)}
-                      title={hasReferences(u) ? "Tiene referencias asociadas — desactívala en su lugar" : undefined}
+                      title={
+                        hasReferences(u)
+                          ? "Tiene referencias asociadas — desactívala en su lugar"
+                          : undefined
+                      }
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -275,7 +362,11 @@ function UniversidadesPage() {
               </TableRow>
             ))}
             {!q.isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">Sin resultados.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                  Sin resultados.
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>
@@ -288,12 +379,23 @@ function UniversityLogo({ path }: { path: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    if (!path) { setUrl(null); return; }
-    getExerciseImageUrl(path).then((u) => { if (alive) setUrl(u); });
-    return () => { alive = false; };
+    if (!path) {
+      setUrl(null);
+      return;
+    }
+    getExerciseImageUrl(path).then((u) => {
+      if (alive) setUrl(u);
+    });
+    return () => {
+      alive = false;
+    };
   }, [path]);
   return url ? (
-    <img src={url} alt="" className="h-8 w-8 shrink-0 rounded-md border border-border object-cover" />
+    <img
+      src={url}
+      alt=""
+      className="h-8 w-8 shrink-0 rounded-md border border-border object-cover"
+    />
   ) : (
     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-border text-[10px] text-muted-foreground">
       —

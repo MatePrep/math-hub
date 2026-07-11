@@ -5,7 +5,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pencil, Trash2, Plus, Archive } from "lucide-react";
 import { listAdminExams, deleteExam, archiveExam } from "@/lib/admin.functions";
@@ -37,7 +44,12 @@ function AdminExamsList() {
   }
 
   async function onArchive(id: string) {
-    if (!confirm("¿Archivar este examen? Dejará de aparecer para los estudiantes, pero se conserva el historial.")) return;
+    if (
+      !confirm(
+        "¿Archivar este examen? Dejará de aparecer para los estudiantes, pero se conserva el historial.",
+      )
+    )
+      return;
     try {
       await archive({ data: { id } });
       toast.success("Examen archivado");
@@ -65,7 +77,9 @@ function AdminExamsList() {
           </Tabs>
         </div>
         <Button asChild size="sm">
-          <Link to="/admin/examenes/nuevo"><Plus className="mr-1 h-4 w-4" /> Nuevo examen</Link>
+          <Link to="/admin/examenes/nuevo">
+            <Plus className="mr-1 h-4 w-4" /> Nuevo examen
+          </Link>
         </Button>
       </div>
       <div className="rounded-lg border border-border bg-card">
@@ -82,7 +96,13 @@ function AdminExamsList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {q.isLoading && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">Cargando…</TableCell></TableRow>}
+            {q.isLoading && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                  Cargando…
+                </TableCell>
+              </TableRow>
+            )}
             {rows.map((e: any) => {
               const isTemplate = (e.exam_type ?? "standard") === "template";
               const hasAttempts = (e.attemptCount ?? 0) > 0;
@@ -95,7 +115,12 @@ function AdminExamsList() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={e.status === "published" ? "default" : "outline"} className="capitalize">{e.status}</Badge>
+                    <Badge
+                      variant={e.status === "published" ? "default" : "outline"}
+                      className="capitalize"
+                    >
+                      {e.status}
+                    </Badge>
                   </TableCell>
                   <TableCell>{e.questionCount}</TableCell>
                   <TableCell>{e.time_limit_min} min</TableCell>
@@ -103,10 +128,18 @@ function AdminExamsList() {
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button asChild size="icon" variant="ghost">
-                        <Link to="/admin/examenes/$id" params={{ id: e.id }} aria-label="Editar"><Pencil className="h-4 w-4" /></Link>
+                        <Link to="/admin/examenes/$id" params={{ id: e.id }} aria-label="Editar">
+                          <Pencil className="h-4 w-4" />
+                        </Link>
                       </Button>
                       {e.status !== "archived" && (
-                        <Button size="icon" variant="ghost" onClick={() => onArchive(e.id)} aria-label="Archivar" title="Archivar">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onArchive(e.id)}
+                          aria-label="Archivar"
+                          title="Archivar"
+                        >
                           <Archive className="h-4 w-4" />
                         </Button>
                       )}
@@ -116,7 +149,9 @@ function AdminExamsList() {
                         onClick={() => onDelete(e.id)}
                         aria-label="Eliminar"
                         disabled={hasAttempts}
-                        title={hasAttempts ? "Archivar en su lugar: hay intentos generados" : "Eliminar"}
+                        title={
+                          hasAttempts ? "Archivar en su lugar: hay intentos generados" : "Eliminar"
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -126,7 +161,11 @@ function AdminExamsList() {
               );
             })}
             {rows.length === 0 && !q.isLoading && (
-              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">Sin exámenes.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                  Sin exámenes.
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>

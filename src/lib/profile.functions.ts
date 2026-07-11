@@ -40,12 +40,49 @@ export const listAllUniversities = createServerFn({ method: "GET" })
 // Blocked words for pseudonyms: covers common Spanish/English vulgarity and slurs.
 // Checked server-side (in addition to the format regex) so it can't be bypassed from the client.
 const PSEUDONYM_BLOCKLIST = [
-  "puta", "puto", "putita", "putito", "mierda", "pendejo", "pendeja", "cabron", "cabrona",
-  "verga", "chinga", "chingar", "carajo", "culero", "culera", "maricon", "marica",
-  "gilipollas", "hijueputa", "hdp", "conchatumadre", "conchasumadre", "conchesumadre",
-  "huevon", "huevona", "malparido", "malparida", "estupido", "estupida", "idiota", "imbecil",
-  "fuck", "shit", "bitch", "asshole", "bastard", "whore", "slut", "cunt", "nigger", "faggot",
-  "nazi", "hitler",
+  "puta",
+  "puto",
+  "putita",
+  "putito",
+  "mierda",
+  "pendejo",
+  "pendeja",
+  "cabron",
+  "cabrona",
+  "verga",
+  "chinga",
+  "chingar",
+  "carajo",
+  "culero",
+  "culera",
+  "maricon",
+  "marica",
+  "gilipollas",
+  "hijueputa",
+  "hdp",
+  "conchatumadre",
+  "conchasumadre",
+  "conchesumadre",
+  "huevon",
+  "huevona",
+  "malparido",
+  "malparida",
+  "estupido",
+  "estupida",
+  "idiota",
+  "imbecil",
+  "fuck",
+  "shit",
+  "bitch",
+  "asshole",
+  "bastard",
+  "whore",
+  "slut",
+  "cunt",
+  "nigger",
+  "faggot",
+  "nazi",
+  "hitler",
 ];
 
 function containsBlockedWord(value: string): boolean {
@@ -56,8 +93,18 @@ function containsBlockedWord(value: string): boolean {
   return PSEUDONYM_BLOCKLIST.some((word) => normalized.includes(word));
 }
 
-export const PREP_TIME_VALUES = ["recien_empiezo", "menos_3_meses", "3_a_6_meses", "mas_6_meses"] as const;
-export const PREP_METHOD_VALUES = ["academia", "autodidacta", "colegio_particular", "primera_vez"] as const;
+export const PREP_TIME_VALUES = [
+  "recien_empiezo",
+  "menos_3_meses",
+  "3_a_6_meses",
+  "mas_6_meses",
+] as const;
+export const PREP_METHOD_VALUES = [
+  "academia",
+  "autodidacta",
+  "colegio_particular",
+  "primera_vez",
+] as const;
 
 // Treats "" the same as an omitted/null value: these fields are surfaced as optional
 // selects in the UI, and clients (older bundles, form libraries, etc.) sometimes send
@@ -67,7 +114,14 @@ const nullableOnEmpty = <T extends z.ZodTypeAny>(schema: T) =>
 
 const updateSchema = z.object({
   fullName: z.string().trim().max(120).optional(),
-  pseudonym: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_\-]+$/).nullable().optional(),
+  pseudonym: z
+    .string()
+    .trim()
+    .min(3)
+    .max(30)
+    .regex(/^[a-zA-Z0-9_\-]+$/)
+    .nullable()
+    .optional(),
   career: z.string().trim().max(120).nullable().optional(),
   leaderboardOptIn: z.boolean().optional(),
   weeklyGoalQuestions: z.number().int().min(1).max(1000).optional(),
@@ -96,7 +150,9 @@ export const updateFullProfile = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     if (data.pseudonym && containsBlockedWord(data.pseudonym)) {
-      throw new Error("Ese pseudónimo no está permitido. Elige otro que no contenga lenguaje ofensivo.");
+      throw new Error(
+        "Ese pseudónimo no está permitido. Elige otro que no contenga lenguaje ofensivo.",
+      );
     }
 
     // Check pseudonym uniqueness (case-insensitive)
@@ -129,12 +185,14 @@ export const updateFullProfile = createServerFn({ method: "POST" })
     if (data.pseudonym !== undefined) patch.pseudonym = data.pseudonym;
     if (data.career !== undefined) patch.career = data.career;
     if (data.leaderboardOptIn !== undefined) patch.leaderboard_opt_in = data.leaderboardOptIn;
-    if (data.weeklyGoalQuestions !== undefined) patch.weekly_goal_questions = data.weeklyGoalQuestions;
+    if (data.weeklyGoalQuestions !== undefined)
+      patch.weekly_goal_questions = data.weeklyGoalQuestions;
     if (data.weeklyGoalExams !== undefined) patch.weekly_goal_exams = data.weeklyGoalExams;
     if (data.prepTime !== undefined) patch.prep_time = data.prepTime;
     if (data.prepMethod !== undefined) patch.prep_method = data.prepMethod;
     if (data.weeklyStudyHours !== undefined) patch.weekly_study_hours = data.weeklyStudyHours;
-    if (data.initialWeakTopicIds !== undefined) patch.initial_weak_topic_ids = data.initialWeakTopicIds;
+    if (data.initialWeakTopicIds !== undefined)
+      patch.initial_weak_topic_ids = data.initialWeakTopicIds;
     if (data.onboardingCompleted) {
       patch.onboarding_completed = true;
       patch.onboarding_completed_at = new Date().toISOString();
@@ -144,14 +202,19 @@ export const updateFullProfile = createServerFn({ method: "POST" })
     // created by the normal signup trigger (e.g. an admin granted the role by
     // email rather than through signup) would otherwise match zero rows on
     // UPDATE and silently fail to save.
-    const { error: profileErr } = await supabase.from("profiles").upsert(patch, { onConflict: "id" });
+    const { error: profileErr } = await supabase
+      .from("profiles")
+      .upsert(patch, { onConflict: "id" });
     if (profileErr) throw new Error(profileErr.message);
 
     if (data.universities) {
       // Replace strategy: delete then insert. Must check the delete's error —
       // a silent failure here followed by a successful insert would leave
       // stale rows alongside the new ones (duplicate universities in the UI).
-      const { error: delErr } = await supabase.from("student_universities").delete().eq("user_id", userId);
+      const { error: delErr } = await supabase
+        .from("student_universities")
+        .delete()
+        .eq("user_id", userId);
       if (delErr) throw new Error(delErr.message);
       if (data.universities.length > 0) {
         const rows = data.universities.map((u) => ({

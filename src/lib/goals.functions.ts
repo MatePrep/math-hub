@@ -5,7 +5,7 @@ import { z } from "zod";
 function startOfIsoWeek(d: Date) {
   const date = new Date(d);
   const day = date.getUTCDay();
-  const diff = (day === 0 ? -6 : 1 - day); // ISO Monday
+  const diff = day === 0 ? -6 : 1 - day; // ISO Monday
   date.setUTCDate(date.getUTCDate() + diff);
   date.setUTCHours(0, 0, 0, 0);
   return date;
@@ -49,7 +49,10 @@ export const getExamStats = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z
-      .object({ examId: z.string().uuid(), myScorePct: z.number().min(0).max(100).nullable().optional() })
+      .object({
+        examId: z.string().uuid(),
+        myScorePct: z.number().min(0).max(100).nullable().optional(),
+      })
       .parse(d),
   )
   .handler(async ({ context, data }) => {

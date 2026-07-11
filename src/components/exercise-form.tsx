@@ -20,11 +20,7 @@ import { MathText, ChoiceText } from "@/lib/math-render";
 import { ImageUpload } from "@/components/image-upload";
 import { NewTopicDialog } from "@/components/new-topic-dialog";
 import { useSaveFeedback } from "@/hooks/use-save-feedback";
-import {
-  listAdminMeta,
-  createExercise,
-  updateExercise,
-} from "@/lib/admin.functions";
+import { listAdminMeta, createExercise, updateExercise } from "@/lib/admin.functions";
 
 type Difficulty = "facil" | "medio" | "dificil";
 
@@ -89,7 +85,6 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial?.id]);
 
-
   const [topicDialogOpen, setTopicDialogOpen] = useState(false);
   const [subtopicDialogOpen, setSubtopicDialogOpen] = useState(false);
 
@@ -107,7 +102,8 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
   function removeChoice(i: number) {
     setV((s) => {
       const choices = s.choices.filter((_, j) => j !== i);
-      const correct = s.correct_choice >= choices.length ? Math.max(0, choices.length - 1) : s.correct_choice;
+      const correct =
+        s.correct_choice >= choices.length ? Math.max(0, choices.length - 1) : s.correct_choice;
       return { ...s, choices, correct_choice: correct };
     });
   }
@@ -166,12 +162,16 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
                 setV((s) => ({ ...s, topic_id: val, subtopic_id: null }));
               }}
             >
-              <SelectTrigger><SelectValue placeholder="Selecciona…" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona…" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__new_topic__">+ Agregar nuevo tema</SelectItem>
                 <SelectSeparator />
                 {meta.data?.topics.map((t: any) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -196,7 +196,9 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
               }}
               disabled={!v.topic_id}
             >
-              <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="(opcional)" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">— ninguno —</SelectItem>
                 <SelectItem value="__new_subtopic__" disabled={!v.topic_id}>
@@ -204,7 +206,9 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
                 </SelectItem>
                 <SelectSeparator />
                 {subtopicsForTopic.map((s: any) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -221,18 +225,25 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
             <Label>Universidad</Label>
             <Select
               value={v.university_id ?? "__none"}
-              onValueChange={(val) => setV((s) => ({ ...s, university_id: val === "__none" ? null : val }))}
+              onValueChange={(val) =>
+                setV((s) => ({ ...s, university_id: val === "__none" ? null : val }))
+              }
             >
-              <SelectTrigger><SelectValue placeholder="Genérico (todas las universidades)" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Genérico (todas las universidades)" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">Genérico — todas las universidades</SelectItem>
                 {meta.data?.universities.map((u: any) => (
-                  <SelectItem key={u.id} value={u.id}>{u.short_name}</SelectItem>
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.short_name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="mt-1 text-xs text-muted-foreground">
-              Déjalo en "Genérico" si el ejercicio no es propio de un examen específico — se mostrará a estudiantes de cualquier universidad.
+              Déjalo en "Genérico" si el ejercicio no es propio de un examen específico — se
+              mostrará a estudiantes de cualquier universidad.
             </p>
           </div>
           <div>
@@ -240,7 +251,9 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
             <Input
               type="number"
               value={v.exam_year ?? ""}
-              onChange={(e) => setV((s) => ({ ...s, exam_year: e.target.value ? Number(e.target.value) : null }))}
+              onChange={(e) =>
+                setV((s) => ({ ...s, exam_year: e.target.value ? Number(e.target.value) : null }))
+              }
               placeholder="2024"
             />
           </div>
@@ -250,7 +263,9 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
               value={v.difficulty}
               onValueChange={(val) => setV((s) => ({ ...s, difficulty: val as Difficulty }))}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="facil">Fácil</SelectItem>
                 <SelectItem value="medio">Medio</SelectItem>
@@ -269,7 +284,12 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
         </div>
 
         <div>
-          <Label>Enunciado * <span className="text-xs text-muted-foreground">(Markdown + LaTeX: $x^2$, $$\int$$)</span></Label>
+          <Label>
+            Enunciado *{" "}
+            <span className="text-xs text-muted-foreground">
+              (Markdown + LaTeX: $x^2$, $$\int$$)
+            </span>
+          </Label>
           <Textarea
             value={v.statement_md}
             onChange={(e) => setV((s) => ({ ...s, statement_md: e.target.value }))}
@@ -306,14 +326,22 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
                 <span className="w-5 text-sm font-semibold">{String.fromCharCode(65 + i)}.</span>
                 <Input value={c} onChange={(e) => setChoice(i, e.target.value)} required />
                 {v.choices.length > 2 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeChoice(i)} aria-label="Eliminar">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeChoice(i)}
+                    aria-label="Eliminar"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
             ))}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Marca con el radio la alternativa correcta.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Marca con el radio la alternativa correcta.
+          </p>
         </div>
 
         <div>
@@ -354,7 +382,11 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
               "Crear ejercicio"
             )}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/ejercicios" })}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate({ to: "/admin/ejercicios" })}
+          >
             Cancelar
           </Button>
         </div>
@@ -362,7 +394,9 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
 
       <aside className="space-y-4">
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Vista previa enunciado</p>
+          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+            Vista previa enunciado
+          </p>
           <MathText text={v.statement_md || "_(vacío)_"} className="text-sm" />
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
@@ -370,13 +404,16 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
           <ul className="space-y-1 text-sm">
             {v.choices.map((c, i) => (
               <li key={i} className={i === v.correct_choice ? "font-semibold text-success" : ""}>
-                {String.fromCharCode(65 + i)}. {c ? <ChoiceText text={c} /> : <em className="text-muted-foreground">vacío</em>}
+                {String.fromCharCode(65 + i)}.{" "}
+                {c ? <ChoiceText text={c} /> : <em className="text-muted-foreground">vacío</em>}
               </li>
             ))}
           </ul>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Vista previa solución</p>
+          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+            Vista previa solución
+          </p>
           <MathText text={v.solution_md || "_(vacío)_"} className="text-sm" />
         </div>
       </aside>

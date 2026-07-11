@@ -72,7 +72,11 @@ export const resolveExerciseReport = createServerFn({ method: "POST" })
     const nextStatus = data.action === "resolve" ? "resuelto" : "descartado";
     const { data: rows, error } = await context.supabase
       .from("exercise_reports")
-      .update({ status: nextStatus, resolved_at: new Date().toISOString(), resolved_by: context.userId })
+      .update({
+        status: nextStatus,
+        resolved_at: new Date().toISOString(),
+        resolved_by: context.userId,
+      })
       .eq("id", data.reportId)
       .select("id");
     if (error) throw new Error(error.message);

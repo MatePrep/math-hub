@@ -1,33 +1,46 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowRight, BookOpen, GraduationCap, Target, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  FileText,
+  Shuffle,
+  BookOpen,
+  Target,
+  Trophy,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { listTopics, listUniversities } from "@/lib/exercises.functions";
+import { listPublishedExams } from "@/lib/exams.functions";
+import { AnswerSheetWidget } from "@/components/landing/answer-sheet-widget";
+import { dailyExerciseQO } from "@/lib/daily-exercise.functions";
+import { UniversityMarquee } from "@/components/landing/university-marquee";
+import { TrustPill } from "@/components/landing/trust-pill";
+import { cn } from "@/lib/utils";
 
-const topicsQO = queryOptions({
-  queryKey: ["topics"],
-  queryFn: () => listTopics(),
-});
-const uniQO = queryOptions({
-  queryKey: ["universities"],
-  queryFn: () => listUniversities(),
+const topicsQO = queryOptions({ queryKey: ["topics"], queryFn: () => listTopics() });
+const uniQO = queryOptions({ queryKey: ["universities"], queryFn: () => listUniversities() });
+const examsQO = queryOptions({
+  queryKey: ["published-exams", "all"],
+  queryFn: () => listPublishedExams({ data: {} }),
 });
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MatePre — Práctica de matemáticas para preuniversitarios" },
+      { title: "Admi-Tec — Práctica de matemáticas para preuniversitarios" },
       {
         name: "description",
         content:
-          "Practica matemáticas con ejercicios resueltos paso a paso y prepárate para UNI, San Marcos, PUCP y más.",
+          "Exámenes oficiales, simulacros ilimitados y ranking anónimo para tu admisión a la UNI, San Marcos, PUCP y más.",
       },
     ],
   }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(topicsQO);
     context.queryClient.ensureQueryData(uniQO);
+    context.queryClient.ensureQueryData(examsQO);
+    context.queryClient.ensureQueryData(dailyExerciseQO);
   },
   component: Index,
   errorComponent: ({ error }) => (
@@ -37,199 +50,220 @@ export const Route = createFileRoute("/")({
   ),
 });
 
+const FEATURES: Array<{
+  letter: "A" | "B" | "C" | "D";
+  icon: LucideIcon;
+  title: string;
+  text: string;
+}> = [
+  {
+    letter: "A",
+    icon: FileText,
+    title: "Exámenes oficiales",
+    text: "Preguntas reales de procesos de admisión anteriores, ordenadas por universidad y año exacto.",
+  },
+  {
+    letter: "B",
+    icon: Shuffle,
+    title: "Simulacros ilimitados",
+    text: "Preguntas aleatorias generadas según la distribución real de temas de tu examen. Repite las veces que quieras.",
+  },
+  {
+    letter: "C",
+    icon: BookOpen,
+    title: "Práctica por tema",
+    text: "Sin cronómetro. Resuelve a tu ritmo y revisa la solución paso a paso apenas respondes.",
+  },
+  {
+    letter: "D",
+    icon: Target,
+    title: "Seguimiento de progreso",
+    text: "Metas semanales, tu historial completo y los subtemas que más caen en el examen de tu universidad.",
+  },
+];
+
+const LEADERBOARD = [
+  { rank: 1, handle: "Vector_Andino", score: 96 },
+  { rank: 2, handle: "RaízDe2", score: 94 },
+  { rank: 3, handle: "Postulante_UNI19", score: 93 },
+  { rank: 4, handle: "MatrizPeru", score: 91 },
+  { rank: 5, handle: "Asíntota_04", score: 89 },
+];
+
 function Index() {
   const { data: topics } = useSuspenseQuery(topicsQO);
   const { data: unis } = useSuspenseQuery(uniQO);
+  const { data: exams } = useSuspenseQuery(examsQO);
+  const totalExercises = topics.reduce((s, t) => s + t.exerciseCount, 0);
 
   return (
-    <div>
+    <div className="at">
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+      <section className="border-b border-border">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:py-24 lg:grid-cols-[1.05fr_1fr] lg:items-center">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-accent" /> Para preuniversitarios del Perú
-            </span>
-            <h1 className="mt-5 text-balance font-display font-bold leading-[0.95] tracking-[-0.03em] text-[clamp(2.75rem,2rem+4vw,5.25rem)]">
-              Domina las matemáticas <span className="text-primary">paso a paso</span> rumbo a tu
-              universidad.
+            <TrustPill>Preparación para todas las universidades</TrustPill>
+            <h1 className="mt-5 text-balance text-[clamp(2.5rem,1.9rem+3.2vw,4.5rem)] font-bold leading-[1.02] tracking-[-0.03em]">
+              Cuando llegues a tu examen,{" "}
+              <span className="text-primary">ya lo habrás resuelto.</span>
             </h1>
-            <p className="mt-5 max-w-md text-pretty text-base text-muted-foreground sm:text-lg">
-              Cientos de ejercicios organizados por tema, dificultad y examen de admisión. Practica,
-              entiende y mide tu progreso.
+            <p className="mt-6 max-w-md text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Admi-Tec convierte los exámenes oficiales de admisión en práctica diaria: simulacros
+              cronometrados, ejercicios resueltos paso a paso y el avance exacto que necesitas para
+              llegar a la UNI, San Marcos, PUCP o tu universidad.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="press min-h-11">
                 <Link to="/temas">
                   Empezar a practicar <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="press min-h-11">
-                <Link to="/examenes">Ver exámenes de admisión</Link>
+                <Link to="/examenes">Ver exámenes oficiales</Link>
               </Button>
             </div>
+            <TrustPill className="mt-4">Gratis para crear tu cuenta, sin tarjeta</TrustPill>
             <div className="mt-10 flex flex-wrap items-baseline gap-x-8 gap-y-4 sm:max-w-md">
-              <Stat label="Temas" value={topics.length} />
+              <HeroStat label="Ejercicios" value={totalExercises} />
               <div className="hidden h-9 w-px bg-border sm:block" aria-hidden />
-              <Stat label="Ejercicios" value={topics.reduce((s, t) => s + t.exerciseCount, 0)} />
+              <HeroStat label="Temas" value={topics.length} />
               <div className="hidden h-9 w-px bg-border sm:block" aria-hidden />
-              <Stat label="Universidades" value={unis.length} />
+              <HeroStat label="Universidades" value={unis.length} />
             </div>
           </div>
-          <div className="relative">
-            <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow sm:p-8">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-[0.05]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(var(--color-primary) 1px, transparent 1px), linear-gradient(90deg, var(--color-primary) 1px, transparent 1px)",
-                  backgroundSize: "22px 22px",
-                }}
-              />
-              <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Ejercicio del día
-                </p>
-                <h3 className="mt-2 text-balance font-display text-2xl font-bold">Álgebra · Cuadráticas</h3>
-                <div className="mt-4 rounded-xl bg-secondary/60 p-4 text-sm">
-                  Halla las raíces reales de <em>x² − 5x + 6 = 0</em>.
-                </div>
-                <ul className="mt-4 space-y-2 text-sm">
-                  {["1 y 6", "2 y 3", "−2 y −3", "−1 y −6"].map((c, i) => (
-                    <li
-                      key={i}
-                      className={`rounded-lg border px-3 py-2 ${
-                        i === 1
-                          ? "border-success/40 bg-success/10 font-medium text-success"
-                          : "border-border bg-background"
-                      }`}
-                    >
-                      {String.fromCharCode(65 + i)}. {c}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  ✓ Solución paso a paso disponible al resolver.
-                </p>
-              </div>
-            </div>
-            <div
-              aria-hidden
-              className="absolute -right-3 -top-3 hidden h-16 w-16 rotate-12 rounded-2xl bg-accent text-accent-foreground shadow-lg sm:grid sm:place-items-center"
-            >
-              <span className="font-display text-2xl font-bold">π</span>
-            </div>
-          </div>
+
+          <AnswerSheetWidget />
         </div>
       </section>
 
-      {/* Features */}
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-          <div className="rounded-2xl border border-border bg-card p-8">
-            <div className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <GraduationCap className="h-5 w-5" />
-            </div>
-            <h3 className="mt-4 text-balance font-display text-2xl font-bold">Organizado por tu universidad</h3>
-            <p className="mt-2 max-w-md text-pretty text-muted-foreground">
-              UNI, San Marcos, PUCP, UNALM y UNFV tienen exámenes distintos. Practica con preguntas
-              reales de la universidad a la que postulas, incluido el modo simulacro cronometrado.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {unis.map((u) => (
-                <Badge key={u.id} variant="outline">
-                  {u.short_name}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <MiniFeature
-              icon={<BookOpen className="h-4 w-4" />}
-              title="Por tema y subtema"
-              text="Álgebra, Geometría, Trigonometría, Aritmética, Razonamiento y Cálculo, con subtemas detallados."
-            />
-            <MiniFeature
-              icon={<Target className="h-4 w-4" />}
-              title="Sigue tu progreso"
-              text="Aciertos por tema, racha diaria y recomendación del próximo tema a reforzar."
-            />
-          </div>
+      {/* University marquee */}
+      <section className="border-b border-border bg-card/50">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-5">
+          <span className="hidden shrink-0 text-sm font-medium text-muted-foreground sm:block">
+            Preparación oficial para
+          </span>
+          <UniversityMarquee universities={unis} />
         </div>
       </section>
 
-      {/* Topics */}
-      <section className="mx-auto max-w-6xl px-4 pb-16">
-        <div className="mb-6 flex items-end justify-between">
-          <h2 className="text-balance font-display text-2xl font-bold sm:text-3xl">Temas</h2>
-          <Link to="/temas" className="text-sm font-medium text-primary hover:underline">
-            Ver todos →
-          </Link>
+      {/* Features A/B/C/D */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
+        <div className="max-w-xl">
+          <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
+            ¿Cómo se prepara alguien que sí va a ingresar?
+          </h2>
+          <p className="mt-3 text-pretty text-muted-foreground">
+            Marca todas las que apliquen — porque en Admi-Tec, las cuatro son parte del mismo plan.
+          </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {topics.map((t, i) => (
-            <Link
-              key={t.id}
-              to="/temas/$slug"
-              params={{ slug: t.slug }}
-              className="group animate-fade-up rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
-              style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-lg font-bold">{t.name}</h3>
-                <span className="text-xs text-muted-foreground">{t.exerciseCount} ej.</span>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{t.description}</p>
-              <span className="mt-3 inline-block text-sm font-medium text-primary group-hover:underline">
-                Practicar →
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+          {FEATURES.map((f) => (
+            <div key={f.letter} className="flex gap-4 rounded-lg border border-border bg-card p-6">
+              <span className="font-data grid h-10 w-10 shrink-0 place-items-center rounded-full border border-primary/40 text-base font-bold text-primary">
+                {f.letter}
               </span>
-            </Link>
+              <div>
+                <div className="flex items-center gap-2">
+                  <f.icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  <h3 className="text-lg font-bold tracking-tight">{f.title}</h3>
+                </div>
+                <p className="mt-2 text-pretty text-sm text-muted-foreground">{f.text}</p>
+              </div>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* Universities */}
-      <section className="border-t border-border bg-secondary/30">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="text-balance font-display text-2xl font-bold sm:text-3xl">Exámenes de admisión</h2>
-          <p className="mt-2 max-w-2xl text-pretty text-muted-foreground">
-            Prepárate con preguntas reales y de práctica para las principales universidades del
-            Perú.
-          </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {unis.map((u, i) => (
-              <Link
-                key={u.id}
-                to="/examenes/$slug"
-                params={{ slug: u.slug }}
-                className="animate-fade-up rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
-                style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground font-display text-sm font-bold">
-                    {u.short_name.slice(0, 3)}
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="truncate font-display text-base font-bold">{u.short_name}</h3>
-                    <p className="truncate text-xs text-muted-foreground">{u.name}</p>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">{u.exerciseCount} ejercicios</p>
+      {/* Stats */}
+      <section className="border-y border-border bg-card/50">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-4 py-14 sm:grid-cols-4">
+          <BigStat value={totalExercises} label="Ejercicios resueltos y explicados" />
+          <BigStat value={exams.length} label="Exámenes oficiales" />
+          <BigStat value={unis.length} label="Universidades cubiertas" />
+          <BigStat value={topics.length} label="Temas y subtemas" />
+        </div>
+      </section>
+
+      {/* Ranking / community */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+          <div>
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+              <Trophy className="h-4 w-4" /> Ranking anónimo
+            </span>
+            <h2 className="mt-3 text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
+              Compite sin exponer tu nombre.
+            </h2>
+            <p className="mt-3 max-w-md text-pretty text-muted-foreground">
+              Compara tu desempeño con otros postulantes a tu misma universidad, con seudónimo y
+              solo con los últimos 3 meses de actividad. Nadie ve tu nombre real — ni siquiera
+              nosotros lo mostramos.
+            </p>
+            <Button asChild variant="outline" className="press mt-6">
+              <Link to="/ranking">
+                Ver ranking completo <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
-            ))}
+            </Button>
           </div>
+
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border px-5 py-3">
+              <span className="font-data text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                UNI · Últimos 3 meses
+              </span>
+              <span className="font-data text-[0.7rem] text-muted-foreground">Precisión</span>
+            </div>
+            <ul>
+              {LEADERBOARD.map((row) => (
+                <li
+                  key={row.rank}
+                  className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+                >
+                  <span className="font-data w-5 text-sm text-muted-foreground">{row.rank}</span>
+                  <span className="flex-1 text-sm font-medium">{row.handle}</span>
+                  <span className="font-data text-sm font-semibold tabular-nums">{row.score}%</span>
+                </li>
+              ))}
+              <li className="flex items-center gap-3 border-t border-primary/30 bg-primary/5 px-5 py-3">
+                <span className="font-data w-5 text-sm text-primary">27</span>
+                <span className="flex-1 text-sm font-medium text-primary">Tú</span>
+                <span className="font-data text-sm font-semibold tabular-nums text-primary">
+                  81%
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="border-t border-border bg-card/50">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center">
+          <TrustPill>Únete en menos de un minuto</TrustPill>
+          <h2 className="text-balance text-[clamp(1.75rem,1.4rem+1.6vw,3rem)] font-bold tracking-[-0.03em]">
+            Tu próximo simulacro puede empezar ahora mismo.
+          </h2>
+          <p className="max-w-md text-pretty text-muted-foreground">
+            Crea tu cuenta gratis y elige tu universidad. Sin tarjeta, sin compromiso.
+          </p>
+          <Button asChild size="lg" className="press min-h-11">
+            <Link to="/auth">
+              Crear cuenta gratis <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </section>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function HeroStat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{value}</div>
+      <div className="font-data text-3xl font-bold tabular-nums tracking-tight sm:text-4xl">
+        {value}
+      </div>
       <div className="mt-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
@@ -237,24 +271,13 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function MiniFeature({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
+function BigStat({ value, label }: { value: number; label: string }) {
   return (
-    <div className="flex-1 rounded-2xl border border-border bg-card p-5">
-      <div className="flex items-center gap-3">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
-          {icon}
-        </div>
-        <h3 className="font-display text-base font-bold">{title}</h3>
+    <div className={cn("text-center sm:text-left")}>
+      <div className="font-data text-4xl font-bold tabular-nums tracking-tight sm:text-5xl">
+        {value}
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+      <div className="mt-1 text-xs text-pretty text-muted-foreground sm:text-sm">{label}</div>
     </div>
   );
 }

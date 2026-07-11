@@ -8,12 +8,21 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 // we additionally layer hover-to-open on top since that's the expected
 // behavior there. Radix's own outside-click/Escape handling closes it either
 // way — no separate mobile/desktop code paths to maintain.
-export function InfoTooltip({ children, className }: { children: React.ReactNode; className?: string }) {
+export function InfoTooltip({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function supportsHover() {
-    return typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    return (
+      typeof window !== "undefined" &&
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    );
   }
   function openOnHover() {
     if (!supportsHover()) return;

@@ -63,7 +63,10 @@ function OnboardingPage() {
 
   const qo = useMemo(() => profileQO(fetchProfile), [fetchProfile]);
   const { data } = useSuspenseQuery(qo);
-  const universitiesQ = useQuery({ queryKey: ["all-universities"], queryFn: () => universitiesFn() });
+  const universitiesQ = useQuery({
+    queryKey: ["all-universities"],
+    queryFn: () => universitiesFn(),
+  });
   const topicsQ = useQuery({ queryKey: ["topics"], queryFn: () => topicsFn() });
   const allUniversities = universitiesQ.data ?? [];
   const allTopics = topicsQ.data ?? [];
@@ -181,9 +184,12 @@ function OnboardingPage() {
       <div className="mt-8 rounded-xl border border-border bg-card p-6">
         {step === 1 && (
           <div>
-            <h2 className="font-display text-lg font-bold">¿A qué universidad(es) buscas postular?</h2>
+            <h2 className="font-display text-lg font-bold">
+              ¿A qué universidad(es) buscas postular?
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Agrega al menos una. Si conoces la fecha de tu examen, indícala para tu cuenta regresiva.
+              Agrega al menos una. Si conoces la fecha de tu examen, indícala para tu cuenta
+              regresiva.
             </p>
             <div className="mt-4 space-y-2">
               {universities.length === 0 && (
@@ -216,13 +222,25 @@ function OnboardingPage() {
                     value={row.examDate}
                     onChange={(e) => updateUniversityRow(i, { examDate: e.target.value })}
                   />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeUniversityRow(i)} aria-label="Quitar">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeUniversityRow(i)}
+                    aria-label="Quitar"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
             </div>
-            <Button type="button" size="sm" variant="outline" className="mt-3" onClick={addUniversityRow}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              onClick={addUniversityRow}
+            >
               <Plus className="mr-1 h-3 w-3" /> Agregar universidad
             </Button>
           </div>
@@ -291,13 +309,19 @@ function OnboardingPage() {
                       value={row.careerId ?? "__none"}
                       onValueChange={(v) =>
                         setUniversities((rows) =>
-                          rows.map((r, j) => (j === i ? { ...r, careerId: v === "__none" ? null : v } : r)),
+                          rows.map((r, j) =>
+                            j === i ? { ...r, careerId: v === "__none" ? null : v } : r,
+                          ),
                         )
                       }
                       disabled={rowCareers.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={rowCareers.length === 0 ? "Sin carreras registradas" : "Selecciona…"} />
+                        <SelectValue
+                          placeholder={
+                            rowCareers.length === 0 ? "Sin carreras registradas" : "Selecciona…"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none">— ninguna —</SelectItem>
@@ -317,7 +341,9 @@ function OnboardingPage() {
 
         {step === 5 && (
           <div>
-            <h2 className="font-display text-lg font-bold">¿En qué temas sientes que necesitas más refuerzo?</h2>
+            <h2 className="font-display text-lg font-bold">
+              ¿En qué temas sientes que necesitas más refuerzo?
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Nos ayuda a sugerirte por dónde empezar mientras acumulas tu propio historial.
             </p>
@@ -356,14 +382,24 @@ function OnboardingPage() {
       <div className="mt-6 flex items-center justify-between gap-3">
         <div>
           {step > 1 && (
-            <Button type="button" variant="outline" onClick={() => setStep((s) => s - 1)} disabled={submitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep((s) => s - 1)}
+              disabled={submitting}
+            >
               Atrás
             </Button>
           )}
         </div>
         <div className="flex items-center gap-2">
           {step > 1 && step < TOTAL_STEPS && (
-            <Button type="button" variant="ghost" onClick={() => setStep((s) => s + 1)} disabled={submitting}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setStep((s) => s + 1)}
+              disabled={submitting}
+            >
               Omitir por ahora
             </Button>
           )}

@@ -117,7 +117,11 @@ export function ImageUpload({
               disabled={uploading}
               onClick={() => inputRef.current?.click()}
             >
-              {uploading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
+              {uploading ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Upload className="mr-1 h-3 w-3" />
+              )}
               Reemplazar
             </Button>
             <Button

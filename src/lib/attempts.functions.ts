@@ -9,7 +9,12 @@ export const recordAttempt = createServerFn({ method: "POST" })
       .object({
         exerciseId: z.string().uuid(),
         selectedChoice: z.number().int().min(0).max(20),
-        timeSpentMs: z.number().int().min(0).max(60 * 60 * 1000).default(0),
+        timeSpentMs: z
+          .number()
+          .int()
+          .min(0)
+          .max(60 * 60 * 1000)
+          .default(0),
         examSessionId: z.string().uuid().nullable().optional(),
       })
       .parse(d),

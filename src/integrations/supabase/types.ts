@@ -81,6 +81,38 @@ export type Database = {
           },
         ];
       };
+      daily_exercise_answers: {
+        Row: {
+          answer_date: string;
+          created_at: string;
+          exercise_id: string;
+          id: string;
+          is_correct: boolean;
+        };
+        Insert: {
+          answer_date: string;
+          created_at?: string;
+          exercise_id: string;
+          id?: string;
+          is_correct: boolean;
+        };
+        Update: {
+          answer_date?: string;
+          created_at?: string;
+          exercise_id?: string;
+          id?: string;
+          is_correct?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daily_exercise_answers_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: false;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       exam_questions: {
         Row: {
           exam_id: string;
@@ -794,6 +826,22 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      get_daily_exercise: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          choices: Json;
+          correct_answers: number;
+          difficulty: Database["public"]["Enums"]["difficulty"];
+          exercise_id: string;
+          statement_md: string;
+          topic_name: string;
+          total_answers: number;
+        }[];
+      };
+      get_daily_exercise_id: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
       get_exam_leaderboard: {
         Args: { _exam_id: string; _limit?: number };
         Returns: {
@@ -842,6 +890,16 @@ export type Database = {
           _user_id: string;
         };
         Returns: boolean;
+      };
+      submit_daily_exercise_answer: {
+        Args: { _selected_choice: number };
+        Returns: {
+          correct_answers: number;
+          correct_choice: number;
+          exercise_id: string;
+          is_correct: boolean;
+          total_answers: number;
+        }[];
       };
     };
     Enums: {

@@ -9,7 +9,15 @@ import { MathText } from "@/lib/math-render";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Flame, Target, ListChecks, Trophy, CalendarClock, AlertCircle, Shuffle } from "lucide-react";
+import {
+  Flame,
+  Target,
+  ListChecks,
+  Trophy,
+  CalendarClock,
+  AlertCircle,
+  Shuffle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/panel")({
   head: () => ({ meta: [{ title: "Panel · MatePre" }] }),
@@ -49,20 +57,25 @@ function PanelPage() {
       id: u.id,
       name: u.university?.short_name ?? u.university?.name ?? "",
       examDate: u.effectiveExamDate as string,
-      daysLeft: Math.ceil((new Date(u.effectiveExamDate).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000),
+      daysLeft: Math.ceil(
+        (new Date(u.effectiveExamDate).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000,
+      ),
     }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="font-display text-3xl font-bold sm:text-4xl">Tu panel</h1>
-      <p className="mt-1 text-muted-foreground">Revisa tu progreso y planifica tu próxima sesión.</p>
+      <p className="mt-1 text-muted-foreground">
+        Revisa tu progreso y planifica tu próxima sesión.
+      </p>
 
       {hasNoTargetUniversity && (
         <div className="mt-6 flex items-start gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
           <p>
-            Aún no elegiste tu universidad objetivo, así que no podemos mostrarte la cuenta regresiva ni filtrar contenido para ti.{" "}
+            Aún no elegiste tu universidad objetivo, así que no podemos mostrarte la cuenta
+            regresiva ni filtrar contenido para ti.{" "}
             <Link to="/perfil" className="font-medium text-primary hover:underline">
               Completa tu perfil →
             </Link>
@@ -96,16 +109,8 @@ function PanelPage() {
           label="% Aciertos"
           value={`${stats.accuracy}%`}
         />
-        <StatCard
-          icon={<Trophy className="h-5 w-5" />}
-          label="Correctos"
-          value={stats.correct}
-        />
-        <StatCard
-          icon={<Flame className="h-5 w-5" />}
-          label="Racha (días)"
-          value={stats.streak}
-        />
+        <StatCard icon={<Trophy className="h-5 w-5" />} label="Correctos" value={stats.correct} />
+        <StatCard icon={<Flame className="h-5 w-5" />} label="Racha (días)" value={stats.streak} />
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -171,7 +176,10 @@ function PanelPage() {
         ) : (
           <ul className="mt-4 divide-y divide-border">
             {stats.recent.map((r) => (
-              <li key={r.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3">
+              <li
+                key={r.id}
+                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3"
+              >
                 <span
                   className={`h-2 w-2 shrink-0 rounded-full ${
                     r.isCorrect ? "bg-success" : "bg-destructive"
@@ -216,7 +224,9 @@ function StartPracticeCard({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="font-display text-lg font-bold">
-            {isNewStudent ? "¡Bienvenido! Da tu primer examen o simulacro" : "Practica con condiciones reales"}
+            {isNewStudent
+              ? "¡Bienvenido! Da tu primer examen o simulacro"
+              : "Practica con condiciones reales"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {isNewStudent
@@ -256,14 +266,19 @@ function CountdownCard({
         <span className="text-xs font-medium uppercase tracking-wider">Cuenta regresiva</span>
       </div>
       <p className="mt-3 font-display text-3xl font-bold">
-        {featured.daysLeft > 0 ? `Faltan ${featured.daysLeft} días` : featured.daysLeft === 0 ? "¡Es hoy!" : "Ya pasó"}
+        {featured.daysLeft > 0
+          ? `Faltan ${featured.daysLeft} días`
+          : featured.daysLeft === 0
+            ? "¡Es hoy!"
+            : "Ya pasó"}
       </p>
       <p className="text-sm text-muted-foreground">{featured.name}</p>
       {rest.length > 0 && (
         <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm text-muted-foreground">
           {rest.map((u) => (
             <li key={u.id}>
-              {u.name}: {u.daysLeft > 0 ? `${u.daysLeft} días` : u.daysLeft === 0 ? "hoy" : "ya pasó"}
+              {u.name}:{" "}
+              {u.daysLeft > 0 ? `${u.daysLeft} días` : u.daysLeft === 0 ? "hoy" : "ya pasó"}
             </li>
           ))}
         </ul>
@@ -277,8 +292,14 @@ function WeeklyGoalsCard({
 }: {
   progress: { questionsGoal: number; questionsDone: number; examsGoal: number; examsDone: number };
 }) {
-  const questionsPct = Math.min(100, Math.round((progress.questionsDone / Math.max(1, progress.questionsGoal)) * 100));
-  const examsPct = Math.min(100, Math.round((progress.examsDone / Math.max(1, progress.examsGoal)) * 100));
+  const questionsPct = Math.min(
+    100,
+    Math.round((progress.questionsDone / Math.max(1, progress.questionsGoal)) * 100),
+  );
+  const examsPct = Math.min(
+    100,
+    Math.round((progress.examsDone / Math.max(1, progress.examsGoal)) * 100),
+  );
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-center gap-2 text-muted-foreground">
@@ -291,14 +312,18 @@ function WeeklyGoalsCard({
         <div>
           <div className="flex items-center justify-between text-sm">
             <span>Preguntas</span>
-            <span className="font-medium">{progress.questionsDone}/{progress.questionsGoal}</span>
+            <span className="font-medium">
+              {progress.questionsDone}/{progress.questionsGoal}
+            </span>
           </div>
           <Progress value={questionsPct} className="mt-1.5" />
         </div>
         <div>
           <div className="flex items-center justify-between text-sm">
             <span>Simulacros</span>
-            <span className="font-medium">{progress.examsDone}/{progress.examsGoal}</span>
+            <span className="font-medium">
+              {progress.examsDone}/{progress.examsGoal}
+            </span>
           </div>
           <Progress value={examsPct} className="mt-1.5" />
         </div>

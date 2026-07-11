@@ -6,7 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { capturedAuthParams, capturedAuthHasSession, translateHashAuthError } from "@/lib/auth-redirect";
+import {
+  capturedAuthParams,
+  capturedAuthHasSession,
+  translateHashAuthError,
+} from "@/lib/auth-redirect";
 
 export const Route = createFileRoute("/restablecer-password")({
   head: () => ({ meta: [{ title: "Restablecer contraseña · MatePre" }] }),
@@ -15,7 +19,9 @@ export const Route = createFileRoute("/restablecer-password")({
 
 // Captured once at module load, same rationale as src/lib/auth-redirect.ts: read before
 // anything else (supabase-js's own session detection) can touch the URL.
-const linkError = capturedAuthParams?.get("error") ? translateHashAuthError(capturedAuthParams) : null;
+const linkError = capturedAuthParams?.get("error")
+  ? translateHashAuthError(capturedAuthParams)
+  : null;
 const isRecoveryLink = capturedAuthHasSession && capturedAuthParams?.get("type") === "recovery";
 
 function ResetPasswordPage() {

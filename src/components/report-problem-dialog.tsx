@@ -32,7 +32,13 @@ export const EXERCISE_REPORT_REASONS: Array<{ value: string; label: string }> = 
   { value: "otro", label: "Otro" },
 ];
 
-export function ReportProblemDialog({ exerciseId, className }: { exerciseId: string; className?: string }) {
+export function ReportProblemDialog({
+  exerciseId,
+  className,
+}: {
+  exerciseId: string;
+  className?: string;
+}) {
   const signedIn = useSignedIn();
   const reportFn = useServerFn(reportExercise);
   const [open, setOpen] = useState(false);
@@ -84,10 +90,14 @@ export function ReportProblemDialog({ exerciseId, className }: { exerciseId: str
           <div>
             <Label>¿Qué está mal? *</Label>
             <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger><SelectValue placeholder="Selecciona un motivo" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un motivo" />
+              </SelectTrigger>
               <SelectContent>
                 {EXERCISE_REPORT_REASONS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -103,7 +113,12 @@ export function ReportProblemDialog({ exerciseId, className }: { exerciseId: str
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={m.isPending}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={m.isPending}
+            >
               Cancelar
             </Button>
             <Button type="submit" className="press" disabled={m.isPending}>

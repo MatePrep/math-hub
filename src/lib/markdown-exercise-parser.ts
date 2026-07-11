@@ -38,21 +38,17 @@ const SUPPORTED_FORMAT_VERSION = 1;
 
 const DIFFICULTY_MAP: Record<string, ParsedDifficulty> = {
   facil: "facil",
-  "fácil": "facil",
+  fácil: "facil",
   media: "medio",
   medio: "medio",
   dificil: "dificil",
-  "difícil": "dificil",
+  difícil: "dificil",
 };
 
 const COMBINING_DIACRITICS_RE = /[̀-ͯ]/g;
 
 export function normalizeForMatch(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(COMBINING_DIACRITICS_RE, "")
-    .toLowerCase()
-    .trim();
+  return s.normalize("NFD").replace(COMBINING_DIACRITICS_RE, "").toLowerCase().trim();
 }
 
 export function normalizeDifficulty(raw: string | null): ParsedDifficulty | null {
@@ -131,12 +127,24 @@ export function parseExerciseMarkdown(filename: string, raw: string): ParsedExer
     return {
       filename,
       frontmatter: {
-        tema: null, subtema: null, universidad: null, anio_examen: null, dificultad: null,
-        etiquetas: [], respuesta_correcta: null, formato_version: null,
-        imagen_enunciado: null, imagen_solucion: null,
+        tema: null,
+        subtema: null,
+        universidad: null,
+        anio_examen: null,
+        dificultad: null,
+        etiquetas: [],
+        respuesta_correcta: null,
+        formato_version: null,
+        imagen_enunciado: null,
+        imagen_solucion: null,
       },
-      statement_md: null, choices: [], choiceLetters: [], solution_md: null,
-      difficulty: null, correctChoiceIndex: null, errors,
+      statement_md: null,
+      choices: [],
+      choiceLetters: [],
+      solution_md: null,
+      difficulty: null,
+      correctChoiceIndex: null,
+      errors,
     };
   }
 
@@ -181,7 +189,9 @@ export function parseExerciseMarkdown(filename: string, raw: string): ParsedExer
   if (!frontmatter.dificultad) {
     errors.push("Falta el campo 'dificultad' en el frontmatter.");
   } else if (!difficulty) {
-    errors.push(`Dificultad no reconocida: "${frontmatter.dificultad}" (usa facil, media/medio o dificil).`);
+    errors.push(
+      `Dificultad no reconocida: "${frontmatter.dificultad}" (usa facil, media/medio o dificil).`,
+    );
   }
 
   const statement_md = findSection(body, "Enunciado");
@@ -190,10 +200,18 @@ export function parseExerciseMarkdown(filename: string, raw: string): ParsedExer
   const alternativasSection = findSection(body, "Alternativas");
   const { choices, letters } = parseChoices(alternativasSection);
   if (choices.length < 2) {
-    errors.push("Faltan alternativas — se necesitan al menos 2 en la sección '## Alternativas' (formato 'A) texto').");
+    errors.push(
+      "Faltan alternativas — se necesitan al menos 2 en la sección '## Alternativas' (formato 'A) texto').",
+    );
   }
 
-  const solution_md = findSection(body, "Solución paso a paso", "Solucion paso a paso", "Solución", "Solucion");
+  const solution_md = findSection(
+    body,
+    "Solución paso a paso",
+    "Solucion paso a paso",
+    "Solución",
+    "Solucion",
+  );
   if (!solution_md) errors.push("Falta la sección '## Solución paso a paso' o está vacía.");
 
   let correctChoiceIndex: number | null = null;

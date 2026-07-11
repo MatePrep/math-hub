@@ -27,7 +27,6 @@ import {
   getTopicQuestionCounts,
 } from "@/lib/admin.functions";
 
-
 type Status = "draft" | "published" | "archived";
 type Order = "fixed" | "random";
 type ExamType = "standard" | "template";
@@ -124,7 +123,8 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   }, [bank.data]);
 
   const allTopics: Array<{ id: string; name: string }> = (meta.data?.topics ?? []) as any;
-  const allUniversities: Array<{ id: string; short_name: string; name: string }> = (meta.data?.universities ?? []) as any;
+  const allUniversities: Array<{ id: string; short_name: string; name: string }> = (meta.data
+    ?.universities ?? []) as any;
 
   const selectedSet = new Set(v.exercise_ids);
   const available = (bank.data ?? []).filter((e: any) => {
@@ -205,7 +205,6 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
     return match ? match.count : null;
   }
 
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!v.university_id) {
@@ -223,7 +222,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       flashSaveFeedback("refused");
       return;
     }
-    if (v.exam_type === "template" && v.template_rules.some((r) => !r.topic_id || Number(r.question_count) < 1)) {
+    if (
+      v.exam_type === "template" &&
+      v.template_rules.some((r) => !r.topic_id || Number(r.question_count) < 1)
+    ) {
       toast.error("Cada regla necesita materia y cantidad ≥ 1");
       flashSaveFeedback("refused");
       return;
@@ -234,7 +236,9 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         .filter((x) => x.avail !== null && Number(x.r.question_count) > (x.avail as number));
       if (shortages.length > 0) {
         if (v.status === "published") {
-          toast.error("No puedes publicar: algunas reglas piden más preguntas de las que existen en el banco.");
+          toast.error(
+            "No puedes publicar: algunas reglas piden más preguntas de las que existen en el banco.",
+          );
           flashSaveFeedback("refused");
           return;
         }
@@ -286,27 +290,49 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Label>Título *</Label>
-          <Input value={v.title} onChange={(e) => setV((s) => ({ ...s, title: e.target.value }))} required maxLength={120} />
+          <Input
+            value={v.title}
+            onChange={(e) => setV((s) => ({ ...s, title: e.target.value }))}
+            required
+            maxLength={120}
+          />
         </div>
         <div className="sm:col-span-2">
           <Label>Descripción</Label>
-          <Textarea value={v.description ?? ""} onChange={(e) => setV((s) => ({ ...s, description: e.target.value }))} rows={2} maxLength={1000} />
+          <Textarea
+            value={v.description ?? ""}
+            onChange={(e) => setV((s) => ({ ...s, description: e.target.value }))}
+            rows={2}
+            maxLength={1000}
+          />
         </div>
         <div>
           <Label>Universidad *</Label>
-          <Select value={v.university_id} onValueChange={(x) => setV((s) => ({ ...s, university_id: x }))}>
-            <SelectTrigger><SelectValue placeholder="Selecciona una universidad" /></SelectTrigger>
+          <Select
+            value={v.university_id}
+            onValueChange={(x) => setV((s) => ({ ...s, university_id: x }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona una universidad" />
+            </SelectTrigger>
             <SelectContent>
               {allUniversities.map((u) => (
-                <SelectItem key={u.id} value={u.id}>{u.short_name ?? u.name}</SelectItem>
+                <SelectItem key={u.id} value={u.id}>
+                  {u.short_name ?? u.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label>Tipo de examen *</Label>
-          <Select value={v.exam_type} onValueChange={(x) => setV((s) => ({ ...s, exam_type: x as ExamType }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={v.exam_type}
+            onValueChange={(x) => setV((s) => ({ ...s, exam_type: x as ExamType }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="standard">Estándar (preguntas fijas)</SelectItem>
               <SelectItem value="template">Plantilla (aleatorio por materia)</SelectItem>
@@ -321,7 +347,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             max={600}
             value={v.time_limit_min}
             onChange={(e) =>
-              setV((s) => ({ ...s, time_limit_min: e.target.value === "" ? "" : Number(e.target.value) }))
+              setV((s) => ({
+                ...s,
+                time_limit_min: e.target.value === "" ? "" : Number(e.target.value),
+              }))
             }
             required
           />
@@ -334,19 +363,36 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             max={100000}
             value={v.passing_score}
             onChange={(e) =>
-              setV((s) => ({ ...s, passing_score: e.target.value === "" ? "" : Number(e.target.value) }))
+              setV((s) => ({
+                ...s,
+                passing_score: e.target.value === "" ? "" : Number(e.target.value),
+              }))
             }
             required
           />
         </div>
         <div>
           <Label>Máx. intentos (opcional)</Label>
-          <Input type="number" min={1} max={50} value={v.max_attempts ?? ""} onChange={(e) => setV((s) => ({ ...s, max_attempts: e.target.value ? Number(e.target.value) : null }))} placeholder="Sin límite" />
+          <Input
+            type="number"
+            min={1}
+            max={50}
+            value={v.max_attempts ?? ""}
+            onChange={(e) =>
+              setV((s) => ({ ...s, max_attempts: e.target.value ? Number(e.target.value) : null }))
+            }
+            placeholder="Sin límite"
+          />
         </div>
         <div>
           <Label>Orden</Label>
-          <Select value={v.question_order} onValueChange={(x) => setV((s) => ({ ...s, question_order: x as Order }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={v.question_order}
+            onValueChange={(x) => setV((s) => ({ ...s, question_order: x as Order }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="fixed">Fijo</SelectItem>
               <SelectItem value="random">Aleatorio</SelectItem>
@@ -355,8 +401,13 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
         </div>
         <div>
           <Label>Estado</Label>
-          <Select value={v.status} onValueChange={(x) => setV((s) => ({ ...s, status: x as Status }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={v.status}
+            onValueChange={(x) => setV((s) => ({ ...s, status: x as Status }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="draft">Borrador</SelectItem>
               <SelectItem value="published">Publicado</SelectItem>
@@ -365,14 +416,21 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
           </Select>
         </div>
         <div className="sm:col-span-2 flex items-center gap-3 rounded-md border border-border bg-card p-3">
-          <Switch checked={v.allow_multiple_attempts} onCheckedChange={(c) => setV((s) => ({ ...s, allow_multiple_attempts: c }))} id="allow-multi" />
-          <Label htmlFor="allow-multi" className="cursor-pointer">Permitir múltiples intentos (respeta "Máx. intentos" si lo defines)</Label>
+          <Switch
+            checked={v.allow_multiple_attempts}
+            onCheckedChange={(c) => setV((s) => ({ ...s, allow_multiple_attempts: c }))}
+            id="allow-multi"
+          />
+          <Label htmlFor="allow-multi" className="cursor-pointer">
+            Permitir múltiples intentos (respeta "Máx. intentos" si lo defines)
+          </Label>
         </div>
 
         <div className="sm:col-span-2 rounded-md border border-border bg-card p-3">
           <Label className="text-base">Puntaje por pregunta</Label>
           <p className="mt-1 text-xs text-muted-foreground">
-            Propio de este examen — prellenado con +1 / -1 / 0, puedes ajustarlo solo para este examen.
+            Propio de este examen — prellenado con +1 / -1 / 0, puedes ajustarlo solo para este
+            examen.
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             <div>
@@ -382,7 +440,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                 step="0.5"
                 value={v.points_correct}
                 onChange={(e) =>
-                  setV((s) => ({ ...s, points_correct: e.target.value === "" ? "" : Number(e.target.value) }))
+                  setV((s) => ({
+                    ...s,
+                    points_correct: e.target.value === "" ? "" : Number(e.target.value),
+                  }))
                 }
                 required
               />
@@ -394,7 +455,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                 step="0.5"
                 value={v.points_incorrect}
                 onChange={(e) =>
-                  setV((s) => ({ ...s, points_incorrect: e.target.value === "" ? "" : Number(e.target.value) }))
+                  setV((s) => ({
+                    ...s,
+                    points_incorrect: e.target.value === "" ? "" : Number(e.target.value),
+                  }))
                 }
                 required
               />
@@ -406,7 +470,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                 step="0.5"
                 value={v.points_empty}
                 onChange={(e) =>
-                  setV((s) => ({ ...s, points_empty: e.target.value === "" ? "" : Number(e.target.value) }))
+                  setV((s) => ({
+                    ...s,
+                    points_empty: e.target.value === "" ? "" : Number(e.target.value),
+                  }))
                 }
                 required
               />
@@ -423,13 +490,20 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             </h3>
             <div className="flex items-center gap-2">
               <Badge variant="secondary">Total: {templateTotal} preguntas</Badge>
-              <Button type="button" size="sm" variant="outline" onClick={addRule} disabled={allTopics.length === 0}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={addRule}
+                disabled={allTopics.length === 0}
+              >
                 <Plus className="mr-1 h-3 w-3" /> Añadir regla
               </Button>
             </div>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Cada regla escoge N ejercicios aleatorios de una materia y (opcionalmente) una dificultad. Al iniciar, todas las preguntas se mezclan.
+            Cada regla escoge N ejercicios aleatorios de una materia y (opcionalmente) una
+            dificultad. Al iniciar, todas las preguntas se mezclan.
           </p>
           <div className="mt-3 space-y-2">
             {v.template_rules.length === 0 && (
@@ -446,19 +520,30 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                   className={`rounded-md border bg-card p-3 ${insufficient ? "border-destructive/60" : "border-border"}`}
                 >
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_120px_40px]">
-                    <Select value={r.topic_id} onValueChange={(x) => updateRule(i, { topic_id: x })}>
-                      <SelectTrigger><SelectValue placeholder="Materia" /></SelectTrigger>
+                    <Select
+                      value={r.topic_id}
+                      onValueChange={(x) => updateRule(i, { topic_id: x })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Materia" />
+                      </SelectTrigger>
                       <SelectContent>
                         {allTopics.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <Select
                       value={r.difficulty_filter ?? "any"}
-                      onValueChange={(x) => updateRule(i, { difficulty_filter: x === "any" ? null : (x as Difficulty) })}
+                      onValueChange={(x) =>
+                        updateRule(i, { difficulty_filter: x === "any" ? null : (x as Difficulty) })
+                      }
                     >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="any">Cualquier dificultad</SelectItem>
                         <SelectItem value="facil">Fácil</SelectItem>
@@ -472,16 +557,26 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                       max={100}
                       value={r.question_count}
                       onChange={(e) =>
-                        updateRule(i, { question_count: e.target.value === "" ? "" : Number(e.target.value) })
+                        updateRule(i, {
+                          question_count: e.target.value === "" ? "" : Number(e.target.value),
+                        })
                       }
                       aria-label="Cantidad"
                     />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRule(i)} aria-label="Quitar regla">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeRule(i)}
+                      aria-label="Quitar regla"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                   {r.topic_id && (
-                    <p className={`mt-2 text-xs ${insufficient ? "text-destructive" : "text-muted-foreground"}`}>
+                    <p
+                      className={`mt-2 text-xs ${insufficient ? "text-destructive" : "text-muted-foreground"}`}
+                    >
                       {avail === null
                         ? "Consultando disponibilidad…"
                         : insufficient
@@ -494,11 +589,12 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             })}
           </div>
         </div>
-
       ) : (
         <>
           <div>
-            <h3 className="font-display text-lg font-bold">Preguntas seleccionadas ({selectedItems.length})</h3>
+            <h3 className="font-display text-lg font-bold">
+              Preguntas seleccionadas ({selectedItems.length})
+            </h3>
             <div className="mt-2 space-y-2">
               {selectedItems.length === 0 && (
                 <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
@@ -506,23 +602,50 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                 </p>
               )}
               {selectedItems.map((e, i) => (
-                <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
+                <div
+                  key={e.id}
+                  className="flex items-center gap-2 rounded-md border border-border bg-card p-3"
+                >
                   <span className="w-6 text-sm font-semibold text-muted-foreground">{i + 1}.</span>
                   <div className="min-w-0 flex-1">
                     <MathText text={e.statement_md} clampLines={1} className="text-sm" />
                     <div className="mt-1 flex gap-1 text-xs">
                       {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
-                      <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
-                      {e.university?.short_name && <Badge variant="outline">{e.university.short_name}</Badge>}
+                      <Badge variant="outline" className="capitalize">
+                        {e.difficulty}
+                      </Badge>
+                      {e.university?.short_name && (
+                        <Badge variant="outline">{e.university.short_name}</Badge>
+                      )}
                     </div>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => move(e.id, -1)} disabled={i === 0} aria-label="Subir">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => move(e.id, -1)}
+                    disabled={i === 0}
+                    aria-label="Subir"
+                  >
                     <ArrowUp className="h-4 w-4" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => move(e.id, 1)} disabled={i === selectedItems.length - 1} aria-label="Bajar">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => move(e.id, 1)}
+                    disabled={i === selectedItems.length - 1}
+                    aria-label="Bajar"
+                  >
                     <ArrowDown className="h-4 w-4" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(e.id)} aria-label="Quitar">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(e.id)}
+                    aria-label="Quitar"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -533,31 +656,48 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
           <div>
             <h3 className="font-display text-lg font-bold">Banco de ejercicios</h3>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Input placeholder="Buscar…" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />
+              <Input
+                placeholder="Buscar…"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="max-w-xs"
+              />
               <Select value={topicFilter} onValueChange={setTopicFilter}>
-                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los temas</SelectItem>
                   {bankTopics.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={universityFilter} onValueChange={setUniversityFilter}>
-                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las universidades</SelectItem>
                   {bankUniversities.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>{u.short_name}</SelectItem>
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.short_name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los años</SelectItem>
                   {bankYears.map((y) => (
-                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -565,12 +705,17 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             <div className="mt-3 max-h-96 space-y-2 overflow-auto rounded-md border border-border p-2">
               {bank.isLoading && <p className="p-3 text-sm text-muted-foreground">Cargando…</p>}
               {available.map((e: any) => (
-                <div key={e.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-3">
+                <div
+                  key={e.id}
+                  className="flex items-center gap-2 rounded-md border border-border bg-card p-3"
+                >
                   <div className="min-w-0 flex-1">
                     <MathText text={e.statement_md} clampLines={1} className="text-sm" />
                     <div className="mt-1 flex gap-1 text-xs">
                       {e.topic?.name && <Badge variant="secondary">{e.topic.name}</Badge>}
-                      <Badge variant="outline" className="capitalize">{e.difficulty}</Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {e.difficulty}
+                      </Badge>
                     </div>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={() => add(e.id)}>
@@ -604,7 +749,9 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             "Crear examen"
           )}
         </Button>
-        <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/examenes" })}>Cancelar</Button>
+        <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/examenes" })}>
+          Cancelar
+        </Button>
       </div>
     </form>
   );

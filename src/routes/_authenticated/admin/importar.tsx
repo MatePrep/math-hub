@@ -27,7 +27,12 @@ import {
   Pencil,
 } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
-import { listAdminMeta, bulkImportExercises, createTopic, createSubtopic } from "@/lib/admin.functions";
+import {
+  listAdminMeta,
+  bulkImportExercises,
+  createTopic,
+  createSubtopic,
+} from "@/lib/admin.functions";
 import { uploadExerciseImage, validateImageFile } from "@/lib/storage";
 import {
   parseExerciseMarkdown,
@@ -159,7 +164,9 @@ function AdminImportExercises() {
     try {
       const res = await createSubtopicFn({ data: { topic_id: topicId, name } });
       toast[res.duplicated ? "info" : "success"](
-        res.duplicated ? `El subtema "${name}" ya existía — aplicado.` : `Subtema "${name}" creado.`,
+        res.duplicated
+          ? `El subtema "${name}" ya existía — aplicado.`
+          : `Subtema "${name}" creado.`,
       );
       await meta.refetch();
     } catch (e: any) {
@@ -196,9 +203,9 @@ function AdminImportExercises() {
       const o = overrides[p.filename] ?? {};
 
       const topicMatch = p.frontmatter.tema
-        ? meta.data.topics.find(
+        ? (meta.data.topics.find(
             (t: any) => normalizeForMatch(t.name) === normalizeForMatch(p.frontmatter.tema!),
-          ) ?? null
+          ) ?? null)
         : null;
       const topicId = o.topicId !== undefined ? o.topicId : (topicMatch?.id ?? null);
 
@@ -206,19 +213,19 @@ function AdminImportExercises() {
         ? meta.data.subtopics.filter((s: any) => s.topic_id === topicId)
         : [];
       const subtopicMatch = p.frontmatter.subtema
-        ? subtopicsForTopic.find(
+        ? (subtopicsForTopic.find(
             (s: any) => normalizeForMatch(s.name) === normalizeForMatch(p.frontmatter.subtema!),
-          ) ?? null
+          ) ?? null)
         : null;
       const subtopicId = o.subtopicId !== undefined ? o.subtopicId : (subtopicMatch?.id ?? null);
 
       const universityMatch = p.frontmatter.universidad
-        ? meta.data.universities.find(
+        ? (meta.data.universities.find(
             (u: any) =>
               u.active &&
               (normalizeForMatch(u.name) === normalizeForMatch(p.frontmatter.universidad!) ||
                 normalizeForMatch(u.short_name) === normalizeForMatch(p.frontmatter.universidad!)),
-          ) ?? null
+          ) ?? null)
         : null;
       const universityId =
         o.universityId !== undefined ? o.universityId : (universityMatch?.id ?? null);
@@ -231,7 +238,9 @@ function AdminImportExercises() {
       const statement_md = o.statementMd !== undefined ? o.statementMd : p.statement_md;
       const choices = o.choices !== undefined ? o.choices : p.choices;
       const choiceLetters =
-        o.choices !== undefined ? o.choices.map((_, i) => String.fromCharCode(65 + i)) : p.choiceLetters;
+        o.choices !== undefined
+          ? o.choices.map((_, i) => String.fromCharCode(65 + i))
+          : p.choiceLetters;
       const correctChoiceIndex =
         o.correctChoiceIndex !== undefined ? o.correctChoiceIndex : p.correctChoiceIndex;
       const solution_md = o.solutionMd !== undefined ? o.solutionMd : p.solution_md;
@@ -259,10 +268,15 @@ function AdminImportExercises() {
       const blockingErrors = [...structuralErrors];
       if (!statement_md || !statement_md.trim()) blockingErrors.push("Falta el enunciado.");
       if (choices.length < 2) blockingErrors.push("Se necesitan al menos 2 alternativas.");
-      if (correctChoiceIndex === null || correctChoiceIndex < 0 || correctChoiceIndex >= choices.length) {
+      if (
+        correctChoiceIndex === null ||
+        correctChoiceIndex < 0 ||
+        correctChoiceIndex >= choices.length
+      ) {
         blockingErrors.push("Selecciona cuál alternativa es la correcta.");
       }
-      if (!solution_md || !solution_md.trim()) blockingErrors.push("Falta la solución paso a paso.");
+      if (!solution_md || !solution_md.trim())
+        blockingErrors.push("Falta la solución paso a paso.");
       if (!topicId) {
         blockingErrors.push(
           `El tema "${p.frontmatter.tema ?? "(vacío)"}" no existe en el catálogo. Créalo abajo o selecciona uno existente.`,
@@ -270,18 +284,26 @@ function AdminImportExercises() {
       }
       if (!difficulty) blockingErrors.push("Selecciona una dificultad válida.");
       if (p.frontmatter.imagen_enunciado && !statementImageFile) {
-        blockingErrors.push(`No se encontró la imagen "${p.frontmatter.imagen_enunciado}" en los archivos seleccionados.`);
+        blockingErrors.push(
+          `No se encontró la imagen "${p.frontmatter.imagen_enunciado}" en los archivos seleccionados.`,
+        );
       }
       if (p.frontmatter.imagen_solucion && !solutionImageFile) {
-        blockingErrors.push(`No se encontró la imagen "${p.frontmatter.imagen_solucion}" en los archivos seleccionados.`);
+        blockingErrors.push(
+          `No se encontró la imagen "${p.frontmatter.imagen_solucion}" en los archivos seleccionados.`,
+        );
       }
 
       const warnings: string[] = [];
       if (p.frontmatter.subtema && !subtopicMatch && o.subtopicId === undefined) {
-        warnings.push(`Subtema "${p.frontmatter.subtema}" no reconocido — créalo abajo o se importará sin subtema.`);
+        warnings.push(
+          `Subtema "${p.frontmatter.subtema}" no reconocido — créalo abajo o se importará sin subtema.`,
+        );
       }
       if (p.frontmatter.universidad && !universityMatch && o.universityId === undefined) {
-        warnings.push(`Universidad "${p.frontmatter.universidad}" no reconocida — se importará sin universidad.`);
+        warnings.push(
+          `Universidad "${p.frontmatter.universidad}" no reconocida — se importará sin universidad.`,
+        );
       }
 
       return {
@@ -372,9 +394,9 @@ function AdminImportExercises() {
       <div className="mb-6">
         <h2 className="font-display text-xl font-bold">Importar ejercicios</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sube una carpeta (o varios archivos sueltos) con un archivo <code>.md</code> por
-          ejercicio — frontmatter YAML + enunciado/alternativas/solución en markdown. Si un
-          ejercicio referencia una imagen, inclúyela en la misma selección.
+          Sube una carpeta (o varios archivos sueltos) con un archivo <code>.md</code> por ejercicio
+          — frontmatter YAML + enunciado/alternativas/solución en markdown. Si un ejercicio
+          referencia una imagen, inclúyela en la misma selección.
         </p>
       </div>
 
@@ -422,7 +444,9 @@ function AdminImportExercises() {
           {importResult.failed.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-muted-foreground">
               {importResult.failed.map((f, i) => (
-                <li key={i}>{f.filename}: {f.message}</li>
+                <li key={i}>
+                  {f.filename}: {f.message}
+                </li>
               ))}
             </ul>
           )}
@@ -445,7 +469,11 @@ function AdminImportExercises() {
               <strong className="text-success">{validCount}</strong> listo(s) para importar
               {parsedRows.length - validCount > 0 && (
                 <>
-                  {" "}· <strong className="text-destructive">{parsedRows.length - validCount}</strong> con errores
+                  {" "}
+                  · <strong className="text-destructive">
+                    {parsedRows.length - validCount}
+                  </strong>{" "}
+                  con errores
                 </>
               )}
             </p>
@@ -469,11 +497,17 @@ function AdminImportExercises() {
                 universities={meta.data?.universities ?? []}
                 onOverride={(patch) => setOverride(r.filename, patch)}
                 onQuickCreateTopic={() => quickCreateTopic(r.frontmatter.tema!)}
-                onQuickCreateSubtopic={() => quickCreateSubtopic(r.topicId!, r.frontmatter.subtema!)}
-                creatingTopic={creatingNames.has(`topic:${normalizeForMatch(r.frontmatter.tema ?? "")}`)}
+                onQuickCreateSubtopic={() =>
+                  quickCreateSubtopic(r.topicId!, r.frontmatter.subtema!)
+                }
+                creatingTopic={creatingNames.has(
+                  `topic:${normalizeForMatch(r.frontmatter.tema ?? "")}`,
+                )}
                 creatingSubtopic={
                   r.topicId != null &&
-                  creatingNames.has(`subtopic:${r.topicId}:${normalizeForMatch(r.frontmatter.subtema ?? "")}`)
+                  creatingNames.has(
+                    `subtopic:${r.topicId}:${normalizeForMatch(r.frontmatter.subtema ?? "")}`,
+                  )
                 }
               />
             ))}
@@ -510,7 +544,9 @@ function ImportRowCard({
   const subtopicUnresolved = !row.subtopicId && !!row.frontmatter.subtema && !!row.topicId;
 
   return (
-    <div className={`rounded-xl border p-4 ${row.isValid ? "border-border bg-card" : "border-destructive/40 bg-destructive/5"}`}>
+    <div
+      className={`rounded-xl border p-4 ${row.isValid ? "border-border bg-card" : "border-destructive/40 bg-destructive/5"}`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {row.isValid ? (
@@ -522,7 +558,9 @@ function ImportRowCard({
         </div>
         <div className="flex flex-wrap gap-1">
           {row.tags.map((t) => (
-            <Badge key={t} variant="secondary">{t}</Badge>
+            <Badge key={t} variant="secondary">
+              {t}
+            </Badge>
           ))}
         </div>
       </div>
@@ -532,13 +570,19 @@ function ImportRowCard({
           <Label className="text-xs text-muted-foreground">Tema</Label>
           <Select
             value={row.topicId ?? "__none"}
-            onValueChange={(v) => onOverride({ topicId: v === "__none" ? null : v, subtopicId: null })}
+            onValueChange={(v) =>
+              onOverride({ topicId: v === "__none" ? null : v, subtopicId: null })
+            }
           >
-            <SelectTrigger><SelectValue placeholder="Sin resolver" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Sin resolver" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">— sin tema —</SelectItem>
               {topics.map((t) => (
-                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -551,7 +595,11 @@ function ImportRowCard({
               onClick={onQuickCreateTopic}
               disabled={creatingTopic}
             >
-              {creatingTopic ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+              {creatingTopic ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Plus className="mr-1 h-3 w-3" />
+              )}
               Crear tema "{row.frontmatter.tema}"
             </Button>
           )}
@@ -563,11 +611,15 @@ function ImportRowCard({
             onValueChange={(v) => onOverride({ subtopicId: v === "__none" ? null : v })}
             disabled={!row.topicId}
           >
-            <SelectTrigger><SelectValue placeholder="(ninguno)" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="(ninguno)" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">— ninguno —</SelectItem>
               {row.subtopicsForTopic.map((s: any) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -580,7 +632,11 @@ function ImportRowCard({
               onClick={onQuickCreateSubtopic}
               disabled={creatingSubtopic}
             >
-              {creatingSubtopic ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+              {creatingSubtopic ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Plus className="mr-1 h-3 w-3" />
+              )}
               Crear subtema "{row.frontmatter.subtema}"
             </Button>
           )}
@@ -591,7 +647,9 @@ function ImportRowCard({
             value={row.universityId ?? "__none"}
             onValueChange={(v) => onOverride({ universityId: v === "__none" ? null : v })}
           >
-            <SelectTrigger><SelectValue placeholder="Genérico (todas)" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Genérico (todas)" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">Genérico — todas las universidades</SelectItem>
               {universities.map((u: any) => (
@@ -607,9 +665,13 @@ function ImportRowCard({
           <Label className="text-xs text-muted-foreground">Dificultad</Label>
           <Select
             value={row.difficulty ?? "__none"}
-            onValueChange={(v) => onOverride({ difficulty: v === "__none" ? null : (v as ParsedDifficulty) })}
+            onValueChange={(v) =>
+              onOverride({ difficulty: v === "__none" ? null : (v as ParsedDifficulty) })
+            }
           >
-            <SelectTrigger><SelectValue placeholder="Sin resolver" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Sin resolver" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="facil">Fácil</SelectItem>
               <SelectItem value="medio">Medio</SelectItem>
@@ -622,7 +684,9 @@ function ImportRowCard({
       {row.blockingErrors.length > 0 && (
         <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           <ul className="list-inside list-disc">
-            {row.blockingErrors.map((e, i) => <li key={i}>{e}</li>)}
+            {row.blockingErrors.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
           </ul>
         </div>
       )}
@@ -630,7 +694,9 @@ function ImportRowCard({
         <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-400/40 bg-amber-400/10 p-3 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <ul className="list-inside list-disc">
-            {row.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            {row.warnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
           </ul>
         </div>
       )}
@@ -661,17 +727,24 @@ function ImportRowCard({
             <MathText text={row.statement_md ?? "_(vacío)_"} className="text-sm" />
           </div>
           <div>
-            <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Alternativas</p>
+            <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
+              Alternativas
+            </p>
             <ul className="space-y-1 text-sm">
               {row.choices.map((c, i) => (
-                <li key={i} className={i === row.correctChoiceIndex ? "font-semibold text-success" : ""}>
+                <li
+                  key={i}
+                  className={i === row.correctChoiceIndex ? "font-semibold text-success" : ""}
+                >
                   {row.choiceLetters[i]}. <ChoiceText text={c} />
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Solución paso a paso</p>
+            <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
+              Solución paso a paso
+            </p>
             <MathText text={row.solution_md ?? "_(vacío)_"} className="text-sm" />
           </div>
         </div>
@@ -704,7 +777,12 @@ function ExerciseEditPanel({
     onOverride({ choices, correctChoiceIndex });
   }
   function commitTags() {
-    onOverride({ tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean) });
+    onOverride({
+      tags: tagsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    });
   }
 
   return (
@@ -739,17 +817,27 @@ function ExerciseEditPanel({
                 onChange={() => onOverride({ correctChoiceIndex: i })}
                 aria-label={`Marcar alternativa ${row.choiceLetters[i] ?? i + 1} como correcta`}
               />
-              <span className="w-5 text-sm font-semibold">{row.choiceLetters[i] ?? String.fromCharCode(65 + i)}.</span>
+              <span className="w-5 text-sm font-semibold">
+                {row.choiceLetters[i] ?? String.fromCharCode(65 + i)}.
+              </span>
               <Input value={c} onChange={(e) => setChoice(i, e.target.value)} />
               {row.choices.length > 2 && (
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeChoice(i)} aria-label="Quitar">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeChoice(i)}
+                  aria-label="Quitar"
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </div>
           ))}
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">Marca con el radio la alternativa correcta.</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Marca con el radio la alternativa correcta.
+        </p>
       </div>
 
       <div>
@@ -772,7 +860,9 @@ function ExerciseEditPanel({
           <Input
             type="number"
             value={row.examYear ?? ""}
-            onChange={(e) => onOverride({ examYear: e.target.value ? Number(e.target.value) : null })}
+            onChange={(e) =>
+              onOverride({ examYear: e.target.value ? Number(e.target.value) : null })
+            }
           />
         </div>
         <div>
@@ -815,7 +905,11 @@ function LocalImagePicker({
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <div className="mt-1 flex items-center gap-2">
         {previewUrl && (
-          <img src={previewUrl} alt="" className="h-14 w-14 rounded-md border border-border object-cover" />
+          <img
+            src={previewUrl}
+            alt=""
+            className="h-14 w-14 rounded-md border border-border object-cover"
+          />
         )}
         <Button type="button" size="sm" variant="outline" onClick={() => inputRef.current?.click()}>
           {file ? "Reemplazar" : "Seleccionar imagen"}

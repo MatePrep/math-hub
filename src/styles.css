@@ -42,19 +42,19 @@
 :root {
   --radius: 0.75rem;
   /* Notebook palette */
-  --background: oklch(0.985 0.008 85);     /* paper #FBFAF6 */
-  --foreground: oklch(0.21 0.04 260);      /* deep ink */
+  --background: oklch(0.985 0.008 85); /* paper #FBFAF6 */
+  --foreground: oklch(0.21 0.04 260); /* deep ink */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.21 0.04 260);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.21 0.04 260);
-  --primary: oklch(0.34 0.13 265);         /* deep blue #1E3A8A */
+  --primary: oklch(0.34 0.13 265); /* deep blue #1E3A8A */
   --primary-foreground: oklch(0.985 0.008 85);
   --secondary: oklch(0.94 0.015 85);
   --secondary-foreground: oklch(0.25 0.05 260);
   --muted: oklch(0.95 0.012 85);
   --muted-foreground: oklch(0.48 0.025 260);
-  --accent: oklch(0.78 0.165 70);          /* amber #F59E0B */
+  --accent: oklch(0.78 0.165 70); /* amber #F59E0B */
   --accent-foreground: oklch(0.21 0.04 260);
   --destructive: oklch(0.58 0.22 27);
   --destructive-foreground: oklch(0.985 0 0);
@@ -94,6 +94,114 @@
   --ring: oklch(0.78 0.13 260);
 }
 
+/* Admi-Tec landing page — a deliberately separate visual system (marketing
+   register) from the app's "study notebook" product theme above. Scoped
+   under .at so overriding the shared shadcn color/radius/font tokens here
+   never leaks into the authenticated product UI; it works the same way the
+   .dark class re-themes the app, just with the landing's own exam-sheet
+   palette. Concept: the surface of a real answer sheet — ink-navy paper,
+   a highlighter-amber pencil mark for actions, teal for "correct". */
+.at {
+  --radius: 0.5rem;
+  --background: oklch(0.2 0.045 258);
+  --foreground: oklch(0.97 0.014 85);
+  --card: oklch(0.26 0.055 258);
+  --card-foreground: oklch(0.97 0.014 85);
+  --popover: oklch(0.26 0.055 258);
+  --popover-foreground: oklch(0.97 0.014 85);
+  --primary: oklch(0.83 0.16 92);
+  --primary-foreground: oklch(0.2 0.045 258);
+  --secondary: oklch(0.3 0.045 258);
+  --secondary-foreground: oklch(0.97 0.014 85);
+  --muted: oklch(0.27 0.045 258);
+  --muted-foreground: oklch(0.68 0.03 250);
+  --accent: oklch(0.32 0.05 258);
+  --accent-foreground: oklch(0.97 0.014 85);
+  --destructive: oklch(0.65 0.2 27);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.74 0.11 190);
+  --success-foreground: oklch(0.16 0.03 210);
+  --border: oklch(1 0 0 / 13%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.83 0.16 92);
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --at-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.at h1,
+.at h2,
+.at h3,
+.at h4 {
+  letter-spacing: -0.03em;
+}
+
+/* Score/timer/ranking figures read as instrument data, not prose. */
+.at .font-data {
+  font-family: var(--at-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Continuous university strip. Pauses on hover/focus so a name can be read;
+   a duplicated track gives the illusion of an infinite loop. */
+@keyframes at-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.at .animate-marquee {
+  animation: at-marquee 34s linear infinite;
+}
+.at .marquee-track:hover .animate-marquee,
+.at .marquee-track:focus-within .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* Hero answer-sheet widget: the one bold moment on the page. A slow ambient
+   glow behind it (not a bounce/pulse) signals it's live without being loud. */
+@keyframes at-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+.at .animate-glow {
+  animation: at-glow 5s ease-in-out infinite;
+}
+
+@keyframes at-reveal-row {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.at .animate-reveal-row {
+  animation: at-reveal-row 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .at .animate-marquee,
+  .at .animate-glow,
+  .at .animate-reveal-row {
+    animation: none !important;
+  }
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -104,14 +212,19 @@
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
 }
 
 /* KaTeX inline tweak */
-.katex { font-size: 1.02em; }
+.katex {
+  font-size: 1.02em;
+}
 
 /* Block equations ($$...$$) can render wider than the viewport (matrices,
    long fractions, aligned systems). Scroll them horizontally in place
@@ -124,7 +237,9 @@
 }
 
 @media (max-width: 640px) {
-  .katex { font-size: 0.92em; }
+  .katex {
+    font-size: 0.92em;
+  }
 }
 
 /* Horizontal chip/tab scrollers (e.g. the mobile subtopic list): hide the native
@@ -245,7 +360,8 @@
 /* Exam flow: one-shot attention flash the instant the timer crosses into "low time" —
    never a repeating pulse, which would undercut the calm-under-pressure principle. */
 @keyframes flash-once {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   30% {
@@ -259,10 +375,23 @@
 /* Form feedback: a submit button shakes once when the server refuses the change
    (validation error, failed save) — paired with .animate-icon-pop for the accepted case. */
 @keyframes shake-x {
-  10%, 90% { transform: translateX(-1px); }
-  20%, 80% { transform: translateX(2px); }
-  30%, 50%, 70% { transform: translateX(-4px); }
-  40%, 60% { transform: translateX(4px); }
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
 }
 .animate-shake {
   animation: shake-x 400ms cubic-bezier(0.25, 1, 0.5, 1) both;
