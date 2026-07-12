@@ -1,6 +1,7 @@
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, X } from "lucide-react";
+import { ArrowRight, Bell, Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -92,6 +93,16 @@ export function NotificationsBell() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{n.title}</p>
                 {n.body && <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>}
+                {/* El aviso de prueba por vencer lleva directo a Planes (es su
+                    única acción útil); el resto de avisos son informativos. */}
+                {n.kind === "trial_expiring" && (
+                  <Link
+                    to="/planes"
+                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Ver planes <ArrowRight className="h-3 w-3" />
+                  </Link>
+                )}
                 <p className="mt-1 text-[10px] text-muted-foreground">
                   {new Date(n.created_at).toLocaleString("es-PE")}
                 </p>

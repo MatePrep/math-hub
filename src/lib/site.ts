@@ -9,6 +9,10 @@
 const rawSiteUrl = import.meta.env.VITE_SITE_URL || "https://admi-tec.example.com";
 export const SITE_URL = rawSiteUrl.replace(/\/$/, "");
 export const SITE_NAME = "Admi-Tec";
+// Correo de contacto mostrado donde aún no hay flujo automatizado (ej. el
+// botón "Suscribirme" antes de integrar la pasarela de pago). Configura
+// VITE_CONTACT_EMAIL en .env con el correo real cuando exista.
+export const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || "contacto@admi-tec.pe";
 export const SITE_DESCRIPTION =
   "Exámenes oficiales, simulacros ilimitados y ranking anónimo para tu admisión a la UNI, San Marcos, PUCP, UNALM y más.";
 

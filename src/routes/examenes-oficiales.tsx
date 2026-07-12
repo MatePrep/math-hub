@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Timer, ListChecks, ArrowRight } from "lucide-react";
 import { listPublishedExams } from "@/lib/exams.functions";
 import { pageMeta } from "@/lib/site";
+import { PremiumLockChip } from "@/components/premium/premium-gate";
+import { usePlan } from "@/hooks/use-plan";
 
 const examsQO = queryOptions({
   queryKey: ["public-exams"],
@@ -53,6 +55,8 @@ function ExamsListPending() {
 
 function ExamsList() {
   const { data: exams } = useSuspenseQuery(examsQO);
+  const { isPremium, loading: planLoading } = usePlan();
+  const showLock = !isPremium && !planLoading;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -87,6 +91,7 @@ function ExamsList() {
                 <ListChecks className="mr-1 h-3 w-3" /> {e.questionCount} preguntas
               </Badge>
               <Badge variant="outline">Aprobación: {e.passing_score}%</Badge>
+              {showLock && <PremiumLockChip />}
             </div>
             <Button asChild className="press mt-4 self-start">
               <Link to="/examen/$id" params={{ id: e.id }}>

@@ -1,0 +1,179 @@
+import { BookOpenCheck, Target, Timer, type LucideIcon } from "lucide-react";
+import { useInViewOnce } from "@/hooks/use-in-view-once";
+import { cn } from "@/lib/utils";
+
+/**
+ * Los 3 pilares diferenciadores del producto, cada uno con un mini-visual de
+ * datos de ejemplo (aria-hidden) que muestra la idea antes de leerla.
+ */
+
+function ScoreMini({ visible }: { visible: boolean }) {
+  return (
+    <div aria-hidden className="flex h-full flex-col justify-center gap-2 px-4">
+      <div className="flex items-baseline justify-between">
+        <span className="font-data text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+          Tu simulacro
+        </span>
+        <span className="font-data text-sm font-bold tabular-nums">812 pts</span>
+      </div>
+      <div className="relative h-2.5 rounded-full bg-muted">
+        <div
+          className="h-2.5 rounded-full bg-primary transition-[width] duration-1000 ease-out"
+          style={{ width: visible ? "76%" : "0%" }}
+        />
+        <div className="absolute -top-1 bottom-[-4px] left-[70%] w-0.5 rounded bg-foreground/70" />
+      </div>
+      <div className="flex justify-end">
+        <span className="font-data text-[0.65rem] font-semibold text-success">
+          corte: 800 · lo pasaste
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function FrequencyMini({ visible }: { visible: boolean }) {
+  const rows = [
+    { label: "Álgebra", pct: 28, width: 84 },
+    { label: "Geometría", pct: 22, width: 66 },
+    { label: "Aritmética", pct: 14, width: 42 },
+  ];
+  return (
+    <div aria-hidden className="flex h-full flex-col justify-center gap-2.5 px-4">
+      {rows.map((r, i) => (
+        <div key={r.label} className="flex items-center gap-2">
+          <span className="w-20 shrink-0 text-[0.7rem] font-medium text-muted-foreground">
+            {r.label}
+          </span>
+          <div className="h-2.5 flex-1 rounded-full bg-muted">
+            <div
+              className="h-2.5 rounded-full bg-primary transition-[width] duration-700 ease-out"
+              style={{
+                width: visible ? `${r.width}%` : "0%",
+                transitionDelay: `${i * 140}ms`,
+              }}
+            />
+          </div>
+          <span className="font-data w-9 shrink-0 text-right text-[0.7rem] font-bold tabular-nums">
+            {r.pct}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PaceMini({ visible }: { visible: boolean }) {
+  const rows = [
+    { label: "Tú", time: "1:12", width: 46, mine: true },
+    { label: "Promedio", time: "1:38", width: 64, mine: false },
+  ];
+  return (
+    <div aria-hidden className="flex h-full flex-col justify-center gap-3 px-4">
+      {rows.map((r, i) => (
+        <div key={r.label} className="flex items-center gap-2">
+          <span
+            className={cn(
+              "w-20 shrink-0 text-[0.7rem] font-medium",
+              r.mine ? "font-bold text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {r.label}
+          </span>
+          <div className="h-2.5 flex-1 rounded-full bg-muted">
+            <div
+              className={cn(
+                "h-2.5 rounded-full transition-[width] duration-700 ease-out",
+                r.mine ? "bg-primary" : "bg-muted-foreground/40",
+              )}
+              style={{
+                width: visible ? `${r.width}%` : "0%",
+                transitionDelay: `${i * 140}ms`,
+              }}
+            />
+          </div>
+          <span className="font-data w-9 shrink-0 text-right text-[0.7rem] font-bold tabular-nums">
+            {r.time}
+          </span>
+        </div>
+      ))}
+      <p className="text-[0.65rem] font-semibold text-success">
+        26 s más rápido que el promedio en esta pregunta
+      </p>
+    </div>
+  );
+}
+
+const PILLARS: Array<{
+  icon: LucideIcon;
+  title: string;
+  text: string;
+  Visual: (props: { visible: boolean }) => React.ReactNode;
+}> = [
+  {
+    icon: Target,
+    title: "Tu puntaje real, tu meta real",
+    text: "Cada simulacro se corrige con el sistema de puntos del examen real — las buenas suman, las malas restan — y se compara con el puntaje mínimo de ingreso de tu carrera. No sabes si «vas bien»: sabes si hoy ingresarías.",
+    Visual: ScoreMini,
+  },
+  {
+    icon: BookOpenCheck,
+    title: "Estudia lo que de verdad se pregunta",
+    text: "Analizamos los exámenes oficiales de tu universidad y te mostramos los subtemas que más caen. Tus horas de estudio van donde hay puntos, no donde el índice del libro diga.",
+    Visual: FrequencyMini,
+  },
+  {
+    icon: Timer,
+    title: "Conoce tu propio ritmo",
+    text: "Medimos cuánto te toma cada pregunta y lo comparamos con el promedio de todos los que la resolvieron. La velocidad se entrena, pero primero hay que poder verla.",
+    Visual: PaceMini,
+  },
+];
+
+export function PillarsSection() {
+  const { ref, visible } = useInViewOnce<HTMLDivElement>();
+
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
+      <div className="max-w-xl">
+        <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
+          ¿Cómo se prepara alguien que sí va a ingresar?
+        </h2>
+        <p className="mt-3 text-pretty text-muted-foreground">
+          Con datos, no con sensaciones. Estas son las tres cosas que Admi-Tec te dice y ningún
+          solucionario te va a decir.
+        </p>
+      </div>
+
+      <div ref={ref} className="mt-10 grid gap-4 lg:grid-cols-3">
+        {PILLARS.map((p, i) => (
+          <article
+            key={p.title}
+            className={cn(
+              visible && "animate-fade-up",
+              "flex flex-col rounded-lg border border-border bg-card transition-colors duration-300 hover:border-primary/40",
+            )}
+            style={visible ? ({ "--i": i * 2 } as React.CSSProperties) : undefined}
+          >
+            <div className="h-32 border-b border-border bg-muted/20">
+              <p.Visual visible={visible} />
+            </div>
+            <div className="flex flex-1 flex-col p-6">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+                  <p.icon className="h-4.5 w-4.5" aria-hidden />
+                </span>
+                <h3 className="text-balance text-lg font-bold leading-snug tracking-tight">
+                  {p.title}
+                </h3>
+              </div>
+              <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">
+                {p.text}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}

@@ -17,6 +17,7 @@ import {
   getExamMinScore,
 } from "@/lib/leaderboard.functions";
 import { getFullProfile } from "@/lib/profile.functions";
+import { PremiumOverlay } from "@/components/premium/premium-gate";
 
 export const Route = createFileRoute("/_authenticated/ranking")({
   head: () => ({ meta: [{ title: "Ranking · MatePre" }] }),
@@ -89,102 +90,114 @@ function RankingPage() {
         </div>
       )}
 
-      {/* Your standing is always visible up front, whether or not you land
+      {/* El ranking completo (tu puesto + top 100 + puntaje mínimo por carrera)
+          es Premium: para el plan gratuito queda visible pero bloqueado, con el
+          desbloqueo encima — nunca oculto sin explicación. */}
+      {examId ? (
+        <PremiumOverlay
+          feature="el ranking completo"
+          title="El ranking completo es parte de Premium"
+        >
+          {/* Your standing is always visible up front, whether or not you land
           inside the top-100 rows the table actually renders. */}
-      {examId && optedOut && (
-        <div className="mt-6 flex items-start gap-3 rounded-lg border border-dashed border-border bg-secondary/30 p-4 text-sm">
-          <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-          <div>
-            <p className="font-medium">No apareces en el ranking</p>
-            <p className="mt-1 text-muted-foreground">
-              Tus intentos sí se registran, pero no participas en el ranking porque no activaste esa
-              opción (o no tienes un pseudónimo) en tu perfil.
-            </p>
-            <Link
-              to="/perfil"
-              className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-            >
-              Activar en mi perfil →
-            </Link>
-          </div>
-        </div>
-      )}
-      {examId && !optedOut && examBoardQ.isLoading && <StatTilesSkeleton />}
-
-      {!optedOut && examMe && (
-        <div className="mt-6">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile
-              icon={<Trophy className="h-4 w-4" />}
-              label="Tu puesto"
-              value={`#${examMe.rank}`}
-              caption={
-                examTotal > 0 && examMe.rank > 1
-                  ? `Mejor que el ${Math.round(((examTotal - examMe.rank) / examTotal) * 100)}%`
-                  : examMe.rank === 1
-                    ? "¡El mejor puntaje!"
-                    : undefined
-              }
-            />
-            <StatTile
-              icon={<Star className="h-4 w-4" />}
-              label="Tu mejor puntaje"
-              value={`${examMe.best_score}${examMe.max_score != null ? ` / ${examMe.max_score}` : ""}`}
-            />
-            <StatTile
-              icon={<Users className="h-4 w-4" />}
-              label="Participantes"
-              value={examTotal}
-            />
-          </div>
-          {examMe.rank > 100 ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              No apareces en la tabla porque solo se muestran los 100 mejores puestos.
-            </p>
-          ) : (
-            <a
-              href={`#rank-row-${examMe.rank}`}
-              onClick={(e) => {
-                e.preventDefault();
-                const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                document.getElementById(`rank-row-${examMe.rank}`)?.scrollIntoView({
-                  behavior: reduceMotion ? "auto" : "smooth",
-                  block: "center",
-                });
-              }}
-              className="press mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-            >
-              <ArrowDown className="h-3.5 w-3.5" /> Ver tu fila en la tabla
-            </a>
+          {examId && optedOut && (
+            <div className="mt-6 flex items-start gap-3 rounded-lg border border-dashed border-border bg-secondary/30 p-4 text-sm">
+              <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <p className="font-medium">No apareces en el ranking</p>
+                <p className="mt-1 text-muted-foreground">
+                  Tus intentos sí se registran, pero no participas en el ranking porque no activaste
+                  esa opción (o no tienes un pseudónimo) en tu perfil.
+                </p>
+                <Link
+                  to="/perfil"
+                  className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+                >
+                  Activar en mi perfil →
+                </Link>
+              </div>
+            </div>
           )}
-        </div>
-      )}
+          {examId && !optedOut && examBoardQ.isLoading && <StatTilesSkeleton />}
 
-      {examId && (
-        <ExamMinScoreCard
-          examId={examId}
-          myBestScore={examMe?.best_score ?? null}
-          optedOut={optedOut}
-        />
-      )}
+          {!optedOut && examMe && (
+            <div className="mt-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <StatTile
+                  icon={<Trophy className="h-4 w-4" />}
+                  label="Tu puesto"
+                  value={`#${examMe.rank}`}
+                  caption={
+                    examTotal > 0 && examMe.rank > 1
+                      ? `Mejor que el ${Math.round(((examTotal - examMe.rank) / examTotal) * 100)}%`
+                      : examMe.rank === 1
+                        ? "¡El mejor puntaje!"
+                        : undefined
+                  }
+                />
+                <StatTile
+                  icon={<Star className="h-4 w-4" />}
+                  label="Tu mejor puntaje"
+                  value={`${examMe.best_score}${examMe.max_score != null ? ` / ${examMe.max_score}` : ""}`}
+                />
+                <StatTile
+                  icon={<Users className="h-4 w-4" />}
+                  label="Participantes"
+                  value={examTotal}
+                />
+              </div>
+              {examMe.rank > 100 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No apareces en la tabla porque solo se muestran los 100 mejores puestos.
+                </p>
+              ) : (
+                <a
+                  href={`#rank-row-${examMe.rank}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const reduceMotion = window.matchMedia(
+                      "(prefers-reduced-motion: reduce)",
+                    ).matches;
+                    document.getElementById(`rank-row-${examMe.rank}`)?.scrollIntoView({
+                      behavior: reduceMotion ? "auto" : "smooth",
+                      block: "center",
+                    });
+                  }}
+                  className="press mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <ArrowDown className="h-3.5 w-3.5" /> Ver tu fila en la tabla
+                </a>
+              )}
+            </div>
+          )}
 
-      {examId &&
-        (examBoardQ.isLoading ? (
-          <BoardTableSkeleton />
-        ) : (
-          <BoardTable
-            rows={examRows
-              .filter((r: any) => r.rank <= 100)
-              .map((r: any) => ({
-                rank: r.rank,
-                pseudonym: r.pseudonym,
-                scoreText: `${r.best_score}${r.max_score != null ? ` / ${r.max_score}` : ""} pts`,
-                subtitle: `${r.attempts_count} intentos`,
-                is_me: r.is_me,
-              }))}
-            scoreLabel="Mejor puntaje"
-          />
-        ))}
+          {examId && (
+            <ExamMinScoreCard
+              examId={examId}
+              myBestScore={examMe?.best_score ?? null}
+              optedOut={optedOut}
+            />
+          )}
+
+          {examId &&
+            (examBoardQ.isLoading ? (
+              <BoardTableSkeleton />
+            ) : (
+              <BoardTable
+                rows={examRows
+                  .filter((r: any) => r.rank <= 100)
+                  .map((r: any) => ({
+                    rank: r.rank,
+                    pseudonym: r.pseudonym,
+                    scoreText: `${r.best_score}${r.max_score != null ? ` / ${r.max_score}` : ""} pts`,
+                    subtitle: `${r.attempts_count} intentos`,
+                    is_me: r.is_me,
+                  }))}
+                scoreLabel="Mejor puntaje"
+              />
+            ))}
+        </PremiumOverlay>
+      ) : null}
     </div>
   );
 }

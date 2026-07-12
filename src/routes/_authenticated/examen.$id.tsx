@@ -10,6 +10,7 @@ import {
   Play,
   RotateCcw,
   Loader2,
+  Lock,
   Shuffle,
   VolumeX,
   Save,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { getExamPreview, getMyExamAttempts, startExamSession } from "@/lib/exams.functions";
 import { ExamAttemptRow } from "@/components/exam-attempt-row";
+import { PremiumLockChip, usePremiumGate } from "@/components/premium/premium-gate";
 
 export const Route = createFileRoute("/_authenticated/examen/$id")({
   component: ExamPreview,
@@ -31,6 +33,10 @@ function ExamPreview() {
   const startFn = useServerFn(startExamSession);
   const [starting, setStarting] = useState(false);
   const [showAttempts, setShowAttempts] = useState(false);
+  // Los exámenes oficiales completos son parte de Premium (gating visual de
+  // esta fase: la puerta de entrada es este botón de inicio).
+  const premium = usePremiumGate("los exámenes oficiales");
+  const showLock = premium.locked && !premium.loading;
 
   const preview = useQuery({
     queryKey: ["exam-preview", id],
@@ -131,6 +137,7 @@ function ExamPreview() {
         <Badge variant="outline" className="capitalize">
           Orden: {e.question_order === "random" ? "aleatorio" : "fijo"}
         </Badge>
+        {showLock && <PremiumLockChip />}
       </div>
 
       <div className="animate-card-swap mt-6 rounded-xl border border-border bg-card p-5">
@@ -203,9 +210,16 @@ function ExamPreview() {
               <RotateCcw className="mr-2 h-4 w-4" /> Reanudar intento
             </Button>
           ) : (
-            <Button size="lg" className="press" onClick={onStart} disabled={starting || reachedMax}>
+            <Button
+              size="lg"
+              className="press"
+              onClick={() => premium.gate(onStart)}
+              disabled={starting || reachedMax}
+            >
               {starting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : showLock ? (
+                <Lock className="mr-2 h-4 w-4" />
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
@@ -213,7 +227,14 @@ function ExamPreview() {
             </Button>
           )}
         </div>
+        {showLock && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Los exámenes oficiales completos son parte de Premium. Puedes activar tu prueba
+            gratuita de 7 días al iniciar.
+          </p>
+        )}
       </div>
+      {premium.gateDialog}
 
       {done.length > 0 && (
         <div className="mt-8">

@@ -7,6 +7,8 @@ import { getUniversityBySlug } from "@/lib/exercises.functions";
 import { listPublishedExams } from "@/lib/exams.functions";
 import { pageMeta, absoluteUrl } from "@/lib/site";
 import { JsonLd } from "@/components/json-ld";
+import { PremiumLockChip } from "@/components/premium/premium-gate";
+import { usePlan } from "@/hooks/use-plan";
 
 const uniQO = (slug: string) =>
   queryOptions({
@@ -83,6 +85,10 @@ function UniPage() {
   const { slug } = Route.useParams();
   const { data: u } = useSuspenseQuery(uniQO(slug));
   const { data: exams } = useSuspenseQuery(examsQO(slug));
+  // Los exámenes oficiales son Premium: el chip lo anticipa aquí y el
+  // desbloqueo real ocurre en la página del examen, al iniciar.
+  const { isPremium, loading: planLoading } = usePlan();
+  const showLock = !isPremium && !planLoading;
 
   if (!u) return null;
 
@@ -152,6 +158,7 @@ function UniPage() {
                   <Badge variant="outline">
                     <ListChecks className="mr-1 h-3 w-3" /> {exam.questionCount} preguntas
                   </Badge>
+                  {showLock && <PremiumLockChip />}
                 </div>
                 <Button asChild size="sm" className="press mt-4 self-start">
                   <Link to="/examen/$id" params={{ id: exam.id }}>

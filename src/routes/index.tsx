@@ -1,26 +1,19 @@
-import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  FileText,
-  Shuffle,
-  BookOpen,
-  Target,
-  Trophy,
-  Check,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, Sparkles, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listTopics, listUniversities } from "@/lib/exercises.functions";
 import { listPublishedExams } from "@/lib/exams.functions";
 import { AnswerSheetWidget } from "@/components/landing/answer-sheet-widget";
+import { HeroVisual } from "@/components/landing/hero-visual";
+import { PillarsSection } from "@/components/landing/pillars";
 import { dailyExerciseQO } from "@/lib/daily-exercise.functions";
 import { UniversityMarquee } from "@/components/landing/university-marquee";
 import { TrustPill } from "@/components/landing/trust-pill";
 import { cn } from "@/lib/utils";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { pageMeta, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+import { PLAN_PRICES, TRIAL_DAYS } from "@/lib/plan";
 
 const topicsQO = queryOptions({ queryKey: ["topics"], queryFn: () => listTopics() });
 const uniQO = queryOptions({ queryKey: ["universities"], queryFn: () => listUniversities() });
@@ -64,38 +57,6 @@ export const Route = createFileRoute("/")({
   ),
 });
 
-const FEATURES: Array<{
-  letter: "A" | "B" | "C" | "D";
-  icon: LucideIcon;
-  title: string;
-  text: string;
-}> = [
-  {
-    letter: "A",
-    icon: FileText,
-    title: "Exámenes oficiales",
-    text: "Preguntas reales de procesos de admisión anteriores, ordenadas por universidad y año exacto.",
-  },
-  {
-    letter: "B",
-    icon: Shuffle,
-    title: "Simulacros ilimitados",
-    text: "Preguntas aleatorias generadas según la distribución real de temas de tu examen. Repite las veces que quieras.",
-  },
-  {
-    letter: "C",
-    icon: BookOpen,
-    title: "Práctica por tema",
-    text: "Sin cronómetro. Resuelve a tu ritmo y revisa la solución paso a paso apenas respondes.",
-  },
-  {
-    letter: "D",
-    icon: Target,
-    title: "Seguimiento de progreso",
-    text: "Metas semanales, tu historial completo y los subtemas que más caen en el examen de tu universidad.",
-  },
-];
-
 const LEADERBOARD = [
   { rank: 1, handle: "Vector_123", score: 96 },
   { rank: 2, handle: "RaízDe2", score: 94 },
@@ -110,18 +71,7 @@ function Index() {
   const { data: exams } = useSuspenseQuery(examsQO);
   const totalExercises = topics.reduce((s, t) => s + t.exerciseCount, 0);
   const { ref: rankingRef, visible: rankingVisible } = useInViewOnce<HTMLDivElement>();
-  const { ref: featuresRef, visible: featuresVisible } = useInViewOnce<HTMLDivElement>();
-  const [checkedFeatures, setCheckedFeatures] = useState<Set<string>>(new Set());
-  const allFeaturesChecked = checkedFeatures.size === FEATURES.length;
-
-  function toggleFeature(letter: string) {
-    setCheckedFeatures((prev) => {
-      const next = new Set(prev);
-      if (next.has(letter)) next.delete(letter);
-      else next.add(letter);
-      return next;
-    });
-  }
+  const { ref: retoRef, visible: retoVisible } = useInViewOnce<HTMLDivElement>();
 
   return (
     <div className="at">
@@ -159,8 +109,8 @@ function Index() {
             </div>
           </div>
 
-          <div className="mx-auto w-full max-w-sm lg:max-w-none">
-            <AnswerSheetWidget />
+          <div className="px-2 pb-8 pt-6 lg:px-0">
+            <HeroVisual />
           </div>
         </div>
       </section>
@@ -175,72 +125,39 @@ function Index() {
         </div>
       </section>
 
-      {/* Features A/B/C/D */}
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-        <div className="max-w-xl">
-          <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
-            ¿Cómo se prepara alguien que sí va a ingresar?
-          </h2>
-          <p className="mt-3 text-pretty text-muted-foreground">
-            Marca todas las que apliquen — porque en Admi-Tec, las cuatro son parte del mismo plan.
-          </p>
-        </div>
+      {/* Los 3 pilares */}
+      <PillarsSection />
 
-        <div ref={featuresRef} className="mt-10 grid gap-4 sm:grid-cols-2">
-          {FEATURES.map((f, i) => {
-            const checked = checkedFeatures.has(f.letter);
-            return (
-              <button
-                type="button"
-                key={f.letter}
-                onClick={() => toggleFeature(f.letter)}
-                aria-pressed={checked}
-                className={cn(
-                  featuresVisible && "animate-fade-up",
-                  "press flex gap-4 rounded-lg border p-6 text-left transition-colors duration-300",
-                  checked
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-card hover:border-primary/40",
-                )}
-                style={featuresVisible ? ({ "--i": i } as React.CSSProperties) : undefined}
-              >
-                <span
-                  className={cn(
-                    "font-data grid h-10 w-10 shrink-0 place-items-center rounded-full border text-base font-bold transition-colors duration-300",
-                    checked
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-primary/40 text-primary",
-                  )}
-                >
-                  {checked ? <Check className="h-5 w-5" strokeWidth={3} /> : f.letter}
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <f.icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-                    <h3 className="text-lg font-bold tracking-tight">{f.title}</h3>
-                  </div>
-                  <p className="mt-2 text-pretty text-sm text-muted-foreground">{f.text}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {allFeaturesChecked && (
-          <div className="animate-alert-in mt-6 flex items-center gap-3 rounded-lg border border-success/40 bg-success/10 px-5 py-4">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-success text-success-foreground">
-              <Check className="h-4 w-4" strokeWidth={3} />
+      {/* Reto del día */}
+      <section className="border-y border-border bg-card/50">
+        <div
+          ref={retoRef}
+          className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1fr_1.1fr] lg:items-center"
+        >
+          <div className={cn(retoVisible && "animate-fade-up")}>
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+              <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden /> Reto del
+              día
             </span>
-            <p className="text-sm font-semibold text-foreground">
-              Las 4 son ciertas. Así se prepara alguien que sí va a ingresar — y las 4 están en
-              Admi-Tec.
+            <h2 className="mt-3 text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
+              Ponte a prueba ahora mismo.
+            </h2>
+            <p className="mt-3 max-w-md text-pretty text-muted-foreground">
+              Cada día publicamos un ejercicio real del banco — el mismo para todos. Resuélvelo
+              contra el reloj y compara tus aciertos con los de todos los que lo intentaron hoy.
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Sin cuenta y sin excusas: el cronómetro ya está corriendo.
             </p>
           </div>
-        )}
+          <div className="mx-auto w-full max-w-sm lg:max-w-none">
+            <AnswerSheetWidget />
+          </div>
+        </div>
       </section>
 
       {/* Stats */}
-      <section className="border-y border-border bg-card/50">
+      <section className="border-b border-border">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-4 py-14 sm:grid-cols-4">
           <BigStat value={totalExercises} label="Ejercicios resueltos y explicados" />
           <BigStat value={exams.length} label="Exámenes oficiales" />
@@ -317,6 +234,29 @@ function Index() {
         </div>
       </section>
 
+      {/* Planes teaser */}
+      <section className="mx-auto max-w-6xl px-4 pb-16 sm:pb-24">
+        <div className="rounded-lg border border-border bg-card px-6 py-12 text-center sm:px-10">
+          <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            <Sparkles className="h-4 w-4" /> Planes
+          </span>
+          <h2 className="mx-auto mt-3 max-w-xl text-balance text-[clamp(1.5rem,1.3rem+1.2vw,2.25rem)] font-bold tracking-[-0.03em]">
+            Empieza gratis. Desbloquea todo cuando lo necesites.
+          </h2>
+          <p className="mx-auto mt-3 max-w-lg text-pretty text-muted-foreground">
+            El plan gratuito es tuyo para siempre. Premium abre los exámenes oficiales, los
+            simulacros de tu universidad y el ranking completo — desde ≈ S/{" "}
+            {PLAN_PRICES.quarterly.monthlyEquivalent} al mes, con {TRIAL_DAYS} días de prueba
+            gratis.
+          </p>
+          <Button asChild size="lg" className="press mt-6 min-h-11">
+            <Link to="/planes">
+              Ver planes y precios <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="border-t border-border bg-card/50">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center">
@@ -353,7 +293,7 @@ function HeroStat({ label, value }: { label: string; value: number }) {
 
 function BigStat({ value, label }: { value: number; label: string }) {
   return (
-    <div className={cn("text-center sm:text-left")}>
+    <div className="text-center sm:text-left">
       <div className="font-data text-4xl font-bold tabular-nums tracking-tight sm:text-5xl">
         {value}
       </div>

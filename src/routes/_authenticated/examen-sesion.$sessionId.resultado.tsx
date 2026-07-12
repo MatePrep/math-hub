@@ -12,6 +12,8 @@ import { InfoTooltip } from "@/components/info-tooltip";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
 import { DeleteExamAttemptButton } from "@/components/delete-exam-attempt-button";
+import { PremiumOverlay } from "@/components/premium/premium-gate";
+import { usePlan } from "@/hooks/use-plan";
 
 export const Route = createFileRoute("/_authenticated/examen-sesion/$sessionId/resultado")({
   component: ResultPage,
@@ -70,6 +72,9 @@ function ResultPage() {
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const score: number = q.data?.session?.score ?? 0;
   const displayScore = useCountUp(score);
+  // La comparación con el promedio (de puntaje y de tiempo por pregunta) es
+  // Premium; el resultado propio y la revisión completa siguen siendo libres.
+  const { isPremium } = usePlan();
 
   if (q.isLoading) {
     return (
@@ -183,7 +188,12 @@ function ResultPage() {
       </div>
 
       {statsQ.data && statsQ.data.sessions_count > 0 && (
-        <div className="animate-alert-in mt-4 rounded-xl border border-border bg-card p-5">
+        <PremiumOverlay
+          feature="la comparación con otros postulantes"
+          title="Compararte con el resto es parte de Premium"
+          className="mt-4"
+        >
+        <div className="animate-alert-in rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">
@@ -224,6 +234,7 @@ function ResultPage() {
             {statsQ.data.sessions_count !== 1 ? "s" : ""} de este examen. La comparación es anónima.
           </p>
         </div>
+        </PremiumOverlay>
       )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -292,7 +303,11 @@ function ResultPage() {
                 {selectedQuestion.time_spent_ms !== null &&
                   selectedQuestion.time_spent_ms !== undefined &&
                   (() => {
+                    // El "Lento" compara contra el tiempo promedio de todos los
+                    // estudiantes — parte del análisis Premium. El tiempo propio
+                    // siempre se muestra.
                     const isSlow =
+                      isPremium &&
                       !!selectedQuestion.avg_time_ms &&
                       selectedQuestion.time_spent_ms > selectedQuestion.avg_time_ms * 1.5;
                     return (

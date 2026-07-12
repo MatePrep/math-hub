@@ -12,11 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Timer, Shuffle, Play, ChevronDown, History, LogIn } from "lucide-react";
+import { Timer, Shuffle, Play, ChevronDown, History, Lock, LogIn } from "lucide-react";
 import { listPublishedTemplates, listMyTemplateSessions } from "@/lib/exams.functions";
 import { getFullProfile, listAllUniversities } from "@/lib/profile.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { ExamAttemptRow } from "@/components/exam-attempt-row";
+import { PremiumLockChip, usePremiumGate } from "@/components/premium/premium-gate";
 import { pageMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/simulacros/")({
@@ -63,6 +64,9 @@ function SimulacrosPage() {
     enabled: signedIn === true,
   });
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+  // Plantillas generales: gratis. Plantillas de una universidad específica:
+  // Premium (gating visual — el candado explica en vez de ocultar).
+  const premium = usePremiumGate("los simulacros específicos por universidad");
 
   useEffect(() => {
     if (universityId === "" && signedIn !== null) {
@@ -165,6 +169,8 @@ function SimulacrosPage() {
         {(q.data ?? []).map((t: any, i: number) => {
           const attempts = sessionsByExam.get(t.id) ?? [];
           const isExpanded = expandedHistory.has(t.id);
+          const isUniTemplate = !!t.university;
+          const locked = isUniTemplate && premium.locked && !premium.loading;
           return (
             <article
               key={t.id}
@@ -178,6 +184,7 @@ function SimulacrosPage() {
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {t.university && <Badge variant="secondary">{t.university.short_name}</Badge>}
+                  {locked && <PremiumLockChip />}
                   <Badge variant="outline">
                     <Timer className="mr-1 h-3 w-3" /> {t.time_limit_min} min
                   </Badge>
@@ -186,11 +193,29 @@ function SimulacrosPage() {
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   {signedIn === true ? (
-                    <Button asChild className="press">
-                      <Link to="/simulacro/$id" params={{ id: t.id }}>
-                        <Play className="mr-2 h-4 w-4" /> Generar nuevo simulacro
-                      </Link>
-                    </Button>
+                    isUniTemplate ? (
+                      <Button
+                        className="press"
+                        onClick={() =>
+                          premium.gate(() =>
+                            navigate({ to: "/simulacro/$id", params: { id: t.id } }),
+                          )
+                        }
+                      >
+                        {locked ? (
+                          <Lock className="mr-2 h-4 w-4" />
+                        ) : (
+                          <Play className="mr-2 h-4 w-4" />
+                        )}
+                        Generar nuevo simulacro
+                      </Button>
+                    ) : (
+                      <Button asChild className="press">
+                        <Link to="/simulacro/$id" params={{ id: t.id }}>
+                          <Play className="mr-2 h-4 w-4" /> Generar nuevo simulacro
+                        </Link>
+                      </Button>
+                    )
                   ) : (
                     <Button className="press" onClick={onGenerateClick}>
                       <LogIn className="mr-2 h-4 w-4" /> Ingresar para generar
@@ -239,6 +264,7 @@ function SimulacrosPage() {
           );
         })}
       </div>
+      {premium.gateDialog}
     </div>
   );
 }

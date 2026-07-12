@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RestablecerPasswordRouteImport } from './routes/restablecer-password'
+import { Route as PlanesRouteImport } from './routes/planes'
 import { Route as ExamenesOficialesRouteImport } from './routes/examenes-oficiales'
 import { Route as BuscarRouteImport } from './routes/buscar'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -63,6 +64,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const RestablecerPasswordRoute = RestablecerPasswordRouteImport.update({
   id: '/restablecer-password',
   path: '/restablecer-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanesRoute = PlanesRouteImport.update({
+  id: '/planes',
+  path: '/planes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExamenesOficialesRoute = ExamenesOficialesRouteImport.update({
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/planes': typeof PlanesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/planes': typeof PlanesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/planes': typeof PlanesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -398,6 +407,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/planes'
     | '/restablecer-password'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/planes'
     | '/restablecer-password'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -480,6 +491,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/planes'
     | '/restablecer-password'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -523,6 +535,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BuscarRoute: typeof BuscarRoute
   ExamenesOficialesRoute: typeof ExamenesOficialesRoute
+  PlanesRoute: typeof PlanesRoute
   RestablecerPasswordRoute: typeof RestablecerPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -557,6 +570,13 @@ declare module '@tanstack/react-router' {
       path: '/restablecer-password'
       fullPath: '/restablecer-password'
       preLoaderRoute: typeof RestablecerPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planes': {
+      id: '/planes'
+      path: '/planes'
+      fullPath: '/planes'
+      preLoaderRoute: typeof PlanesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/examenes-oficiales': {
@@ -914,6 +934,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BuscarRoute: BuscarRoute,
   ExamenesOficialesRoute: ExamenesOficialesRoute,
+  PlanesRoute: PlanesRoute,
   RestablecerPasswordRoute: RestablecerPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

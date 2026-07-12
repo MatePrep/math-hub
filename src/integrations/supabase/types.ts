@@ -635,10 +635,13 @@ export type Database = {
           leaderboard_opt_in: boolean;
           onboarding_completed: boolean;
           onboarding_completed_at: string | null;
+          plan_type: string;
           prep_method: string | null;
           prep_time: string | null;
           pseudonym: string | null;
           target_university: string | null;
+          trial_ends_at: string | null;
+          trial_used: boolean;
           weekly_goal_exams: number;
           weekly_goal_questions: number;
           weekly_study_hours: number | null;
@@ -653,10 +656,13 @@ export type Database = {
           leaderboard_opt_in?: boolean;
           onboarding_completed?: boolean;
           onboarding_completed_at?: string | null;
+          plan_type?: string;
           prep_method?: string | null;
           prep_time?: string | null;
           pseudonym?: string | null;
           target_university?: string | null;
+          trial_ends_at?: string | null;
+          trial_used?: boolean;
           weekly_goal_exams?: number;
           weekly_goal_questions?: number;
           weekly_study_hours?: number | null;
@@ -671,10 +677,13 @@ export type Database = {
           leaderboard_opt_in?: boolean;
           onboarding_completed?: boolean;
           onboarding_completed_at?: string | null;
+          plan_type?: string;
           prep_method?: string | null;
           prep_time?: string | null;
           pseudonym?: string | null;
           target_university?: string | null;
+          trial_ends_at?: string | null;
+          trial_used?: boolean;
           weekly_goal_exams?: number;
           weekly_goal_questions?: number;
           weekly_study_hours?: number | null;
@@ -844,6 +853,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      activate_premium_trial: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       get_daily_exercise: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -901,6 +914,10 @@ export type Database = {
           subtopic_name: string;
           topic_name: string;
         }[];
+      };
+      get_plan_status: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
       };
       has_role: {
         Args: {

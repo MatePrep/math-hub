@@ -28,12 +28,14 @@ import { getFullProfile } from "@/lib/profile.functions";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { PlanBadge } from "@/components/premium/plan-badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 const publicNav = [
   { to: "/temas", label: "Temas" },
   { to: "/examenes", label: "Exámenes" },
   { to: "/simulacros", label: "Simulacros" },
+  { to: "/planes", label: "Planes" },
 ];
 
 const accountNav = [
@@ -77,13 +79,10 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
       <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:gap-6">
         <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="Admi-Tec — inicio">
-          <span
-            aria-hidden
-            className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display text-base font-bold tracking-tight"
-          >
-            A/T
+          <img src="/brand/icon.svg" alt="" aria-hidden className="h-9 w-9" />
+          <span className="font-display text-xl font-bold tracking-tight">
+            Admi<span className="text-accent">-</span>Tec
           </span>
-          <span className="font-display text-xl font-bold tracking-tight">Admi-Tec</span>
         </Link>
 
         <form onSubmit={submitSearch} className="hidden min-w-0 items-center md:flex" role="search">
@@ -133,6 +132,7 @@ export function SiteHeader() {
                   <Shield className="h-4 w-4" /> Admin
                 </Link>
               )}
+              <PlanBadge className="ml-1" />
               <NotificationsBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -211,6 +211,7 @@ export function SiteHeader() {
 
               {signedIn === true && (
                 <>
+                  <PlanBadge className="self-start" />
                   <div className="my-1 h-px bg-border" aria-hidden />
                   {accountNav.map((item) => (
                     <Link

@@ -9,6 +9,7 @@ import { MathText } from "@/lib/math-render";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { PremiumOverlay } from "@/components/premium/premium-gate";
 import {
   Flame,
   Target,
@@ -139,34 +140,39 @@ function PanelPage() {
           </div>
         </section>
 
-        <aside className="rounded-xl border border-border bg-card p-5">
-          <h2 className="font-display text-xl font-bold">Recomendación</h2>
-          {weakest ? (
-            <>
+        <PremiumOverlay
+          feature="las recomendaciones personalizadas"
+          title="Las recomendaciones personalizadas son Premium"
+        >
+          <aside className="h-full rounded-xl border border-border bg-card p-5">
+            <h2 className="font-display text-xl font-bold">Recomendación</h2>
+            {weakest ? (
+              <>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Tu tema más débil es <strong className="text-foreground">{weakest.name}</strong>{" "}
+                  con {weakest.accuracy}% de aciertos.
+                </p>
+                <Link
+                  to="/temas/$slug"
+                  params={{ slug: weakest.slug }}
+                  className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  Practicar {weakest.name}
+                </Link>
+              </>
+            ) : (
               <p className="mt-2 text-sm text-muted-foreground">
-                Tu tema más débil es <strong className="text-foreground">{weakest.name}</strong> con{" "}
-                {weakest.accuracy}% de aciertos.
+                Resuelve algunos ejercicios para recibir recomendaciones.
               </p>
-              <Link
-                to="/temas/$slug"
-                params={{ slug: weakest.slug }}
-                className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Practicar {weakest.name}
-              </Link>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Resuelve algunos ejercicios para recibir recomendaciones.
-            </p>
-          )}
-          <Link
-            to="/perfil"
-            className="mt-6 block text-sm font-medium text-primary hover:underline"
-          >
-            Editar perfil →
-          </Link>
-        </aside>
+            )}
+            <Link
+              to="/perfil"
+              className="mt-6 block text-sm font-medium text-primary hover:underline"
+            >
+              Editar perfil →
+            </Link>
+          </aside>
+        </PremiumOverlay>
       </div>
 
       <section className="mt-10 rounded-xl border border-border bg-card p-5">

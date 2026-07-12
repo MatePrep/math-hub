@@ -94,7 +94,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:description", content: SITE_DESCRIPTION },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: absoluteUrl("/og-image.svg") },
+      { property: "og:image", content: absoluteUrl("/og-image.png") },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { property: "og:locale", content: "es_PE" },
       { name: "twitter:card", content: "summary_large_image" },
       {
@@ -102,11 +104,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: `${SITE_NAME} — Exámenes oficiales, simulacros y ranking para tu admisión`,
       },
       { name: "twitter:description", content: SITE_DESCRIPTION },
-      { name: "twitter:image", content: absoluteUrl("/og-image.svg") },
+      { name: "twitter:image", content: absoluteUrl("/og-image.png") },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       // Fraunces + Inter run everywhere (header, footer, and every page outside

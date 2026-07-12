@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Loader2,
   ListChecks,
+  Lock,
   VolumeX,
   Shuffle,
   Save,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import { getTemplatePreview, getMyExamAttempts, startExamSession } from "@/lib/exams.functions";
 import { ExamAttemptRow } from "@/components/exam-attempt-row";
+import { PremiumLockChip, usePremiumGate } from "@/components/premium/premium-gate";
 
 export const Route = createFileRoute("/_authenticated/simulacro/$id")({
   component: SimulacroPreview,
@@ -32,6 +34,9 @@ function SimulacroPreview() {
   const startFn = useServerFn(startExamSession);
   const [starting, setStarting] = useState(false);
   const [showAttempts, setShowAttempts] = useState(false);
+  // Las plantillas generales son gratis; las específicas de una universidad
+  // (t.university presente) son parte de Premium.
+  const premium = usePremiumGate("los simulacros específicos de tu universidad");
 
   const preview = useQuery({
     queryKey: ["template-preview", id],
@@ -98,6 +103,8 @@ function SimulacroPreview() {
   }
 
   const t = preview.data;
+  const isUniTemplate = !!t.university;
+  const showLock = isUniTemplate && premium.locked && !premium.loading;
   const done = (attempts.data ?? []).filter(
     (a: any) => a.status === "graded" || a.status === "submitted",
   );
@@ -115,6 +122,7 @@ function SimulacroPreview() {
       {t.description && <p className="mt-2 text-muted-foreground">{t.description}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
         {t.university && <Badge variant="secondary">{t.university.short_name}</Badge>}
+        {showLock && <PremiumLockChip />}
         <Badge variant="outline">
           <Timer className="mr-1 h-3 w-3" /> {t.time_limit_min} min
         </Badge>
@@ -173,7 +181,7 @@ function SimulacroPreview() {
             Preguntas por tema
           </p>
           <ul className="mt-2 space-y-1.5 text-sm">
-            {t.topicBreakdown.map((tb, i) => (
+            {t.topicBreakdown.map((tb: { name: string; count: number }, i: number) => (
               <li
                 key={`${tb.name}-${i}`}
                 className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2"
@@ -197,9 +205,16 @@ function SimulacroPreview() {
               <RotateCcw className="mr-2 h-4 w-4" /> Reanudar intento
             </Button>
           ) : (
-            <Button size="lg" className="press" onClick={onStart} disabled={starting}>
+            <Button
+              size="lg"
+              className="press"
+              onClick={() => (isUniTemplate ? premium.gate(onStart) : onStart())}
+              disabled={starting}
+            >
               {starting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : showLock ? (
+                <Lock className="mr-2 h-4 w-4" />
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
@@ -207,7 +222,14 @@ function SimulacroPreview() {
             </Button>
           )}
         </div>
+        {showLock && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Los simulacros específicos de {t.university!.short_name} son parte de Premium. Puedes
+            activar tu prueba gratuita de 7 días al comenzar.
+          </p>
+        )}
       </div>
+      {premium.gateDialog}
 
       {done.length > 0 && (
         <div className="mt-8">
