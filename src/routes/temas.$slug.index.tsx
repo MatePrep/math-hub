@@ -9,7 +9,7 @@ import { getTopicBySlug, listExercises, getSubtopicFrequency } from "@/lib/exerc
 import { getFullProfile } from "@/lib/profile.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { ExerciseCard } from "@/components/exercise-card";
-import { ExerciseCardSkeleton } from "@/components/skeletons";
+import { ExerciseCardSkeleton, LoadingNotice } from "@/components/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/temas/$slug/")({
       title: name,
       description:
         loaderData?.topic?.description ??
-        `Ejercicios de ${name} resueltos paso a paso, organizados por subtema y dificultad.`,
+        `Ejercicios de ${name} resueltos paso a paso, organizados por tema y dificultad.`,
     });
   },
   component: TopicPage,
@@ -78,9 +78,9 @@ export const Route = createFileRoute("/temas/$slug/")({
   ),
   notFoundComponent: () => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-      <h2 className="font-display text-2xl font-bold">Tema no encontrado</h2>
+      <h2 className="font-display text-2xl font-bold">Curso no encontrado</h2>
       <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
-        Volver a temas
+        Volver a cursos
       </Link>
     </div>
   ),
@@ -91,7 +91,10 @@ function TopicPagePending() {
     <div className="mx-auto max-w-6xl px-4 py-10">
       <div className="h-3.5 w-24 animate-pulse rounded bg-muted motion-reduce:animate-none" />
       <div className="mt-3 h-9 w-64 animate-pulse rounded bg-muted motion-reduce:animate-none sm:h-10" />
-      <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
+      <div className="mt-5">
+        <LoadingNotice label="Cargando temas" />
+      </div>
+      <div className="mt-5 grid gap-8 lg:grid-cols-[220px_1fr]">
         <aside className="hidden space-y-2 lg:block">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
@@ -175,7 +178,7 @@ function TopicPage() {
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Temas", item: absoluteUrl("/temas") },
+            { "@type": "ListItem", position: 1, name: "Cursos", item: absoluteUrl("/temas") },
             {
               "@type": "ListItem",
               position: 2,
@@ -187,7 +190,7 @@ function TopicPage() {
       />
       <nav className="text-xs text-muted-foreground" aria-label="Migas">
         <Link to="/temas" className="hover:underline">
-          Temas
+          Cursos
         </Link>{" "}
         / <span className="text-foreground">{topic.name}</span>
       </nav>
@@ -206,12 +209,12 @@ function TopicPage() {
             <DropdownMenuLabel>¿Qué quieres practicar?</DropdownMenuLabel>
             <DropdownMenuItem asChild>
               <Link to="/practica/$topicSlug" params={{ topicSlug: topic.slug }}>
-                Todo el tema
+                Todo el curso
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="font-normal text-muted-foreground">
-              Un subtema en específico
+              Un tema en específico
             </DropdownMenuLabel>
             {subtopicsRanked.map((s) => (
               <DropdownMenuItem key={s.id} asChild>
@@ -233,7 +236,7 @@ function TopicPage() {
         <aside className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Subtemas
+              Temas
             </h2>
             {hasTargetUniversity && (
               <TooltipProvider>
@@ -241,14 +244,14 @@ function TopicPage() {
                   <TooltipTrigger
                     type="button"
                     className="text-muted-foreground/70 hover:text-foreground"
-                    aria-label="¿Cómo están ordenados los subtemas?"
+                    aria-label="¿Cómo están ordenados los temas?"
                   >
                     <HelpCircle className="h-3.5 w-3.5" />
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-64 text-left">
-                    Los subtemas están ordenados de mayor a menor frecuencia según los exámenes
-                    reales (con año conocido) de los últimos 10 años en la universidad seleccionada.
-                    Los 3 más frecuentes están marcados con 🔥, como sugerencia de en qué enfocar tu
+                    Los temas están ordenados de mayor a menor frecuencia según los exámenes reales
+                    (con año conocido) de los últimos 10 años en la universidad seleccionada. Los 3
+                    más frecuentes están marcados con 🔥, como sugerencia de en qué enfocar tu
                     estudio.
                   </TooltipContent>
                 </Tooltip>
@@ -316,7 +319,7 @@ function TopicPage() {
               <Link to="/perfil" className="text-primary hover:underline">
                 tu perfil
               </Link>{" "}
-              para ver qué tan frecuente es cada subtema en sus exámenes reales.
+              para ver qué tan frecuente es cada tema en sus exámenes reales.
             </p>
           )}
         </aside>

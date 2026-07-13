@@ -26,7 +26,7 @@ export const Route = createFileRoute("/simulacros/")({
       path: "/simulacros",
       title: "Simulacros de admisión",
       description:
-        "Genera simulacros ilimitados con la distribución real de temas de tu examen de admisión, cronometrados y con revisión detallada.",
+        "Genera simulacros ilimitados con la distribución real de cursos de tu examen de admisión, cronometrados y con revisión detallada.",
     }),
   component: SimulacrosPage,
 });
@@ -189,7 +189,7 @@ function SimulacrosPage() {
                     <Timer className="mr-1 h-3 w-3" /> {t.time_limit_min} min
                   </Badge>
                   <Badge variant="outline">{t.totalQuestions} preguntas</Badge>
-                  <Badge variant="outline">{t.ruleCount} materia(s)</Badge>
+                  <Badge variant="outline">{t.ruleCount} curso(s)</Badge>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   {signedIn === true ? (

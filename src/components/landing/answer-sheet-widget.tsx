@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, X } from "lucide-react";
+import { Check, Timer, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { dailyExerciseQO, submitDailyExerciseAnswer } from "@/lib/daily-exercise.functions";
@@ -61,6 +62,9 @@ export function AnswerSheetWidget() {
   const [selected, setSelected] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [alreadyResolved, setAlreadyResolved] = useState(false);
+  // The exercise stays blurred behind an invitation panel until the visitor
+  // explicitly starts — the clock must never run before they've read the deal.
+  const [covered, setCovered] = useState(true);
   const [result, setResult] = useState<{
     isCorrect: boolean;
     correctChoice: number;
@@ -72,7 +76,7 @@ export function AnswerSheetWidget() {
   // Resume where this visitor left off for today's exercise: already answered
   // (freeze the clock, show the "ya resuelto" message), mid-attempt (keep the
   // clock counting from the real start time instead of resetting on refresh),
-  // or brand new (start a fresh, persisted clock).
+  // or brand new (stay covered until they press "Comenzar el reto").
   useEffect(() => {
     if (!daily) return;
     const stored = readStoredDaily(daily.exerciseId);
@@ -86,12 +90,10 @@ export function AnswerSheetWidget() {
       });
       setElapsedSeconds(stored.answer.elapsedSeconds);
       setAlreadyResolved(true);
+      setCovered(false);
     } else if (stored) {
       setStartedAt(stored.startedAt);
-    } else {
-      const now = Date.now();
-      writeStoredDaily({ exerciseId: daily.exerciseId, startedAt: now });
-      setStartedAt(now);
+      setCovered(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daily?.exerciseId]);
@@ -107,6 +109,14 @@ export function AnswerSheetWidget() {
   }, [startedAt, result]);
 
   if (!daily) return null;
+
+  function handleStart() {
+    if (!daily || !covered) return;
+    const now = Date.now();
+    writeStoredDaily({ exerciseId: daily.exerciseId, startedAt: now });
+    setStartedAt(now);
+    setCovered(false);
+  }
 
   async function handleSelect(i: number) {
     if (result || submitting || !daily || startedAt === null) return;
@@ -177,73 +187,100 @@ export function AnswerSheetWidget() {
 
       {/* Question */}
       <div className="relative px-5 py-5">
-        <p className="font-data text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
-          {difficultyLabel[daily.difficulty]}
-        </p>
-        <MathText
-          text={daily.statementMd}
-          className="mt-2 text-pretty text-sm font-medium leading-snug text-foreground"
-        />
+        {/* Invitation panel: the exercise waits blurred underneath until the
+            visitor starts, and only then does the clock begin. */}
+        {covered && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-b-lg bg-card/60 px-6 text-center backdrop-blur-[2px]">
+            <span className="grid h-11 w-11 place-items-center rounded-full border border-primary/40 bg-primary/10 text-primary">
+              <Timer className="h-5 w-5" aria-hidden />
+            </span>
+            <p className="max-w-xs text-balance text-sm font-semibold text-foreground">
+              Un ejercicio real de examen, el mismo para todos los postulantes de hoy.
+            </p>
+            <Button type="button" onClick={handleStart} className="press min-h-10">
+              Comenzar el reto del día
+            </Button>
+            <p className="max-w-xs text-xs text-muted-foreground">
+              Al comenzar se revela el ejercicio y el cronómetro empieza a correr.
+            </p>
+          </div>
+        )}
 
-        <ul className="mt-5 flex flex-col gap-2" role="radiogroup" aria-label="Alternativas">
-          {daily.choices.map((choiceText, i) => {
-            const isPicked = selected === i;
-            const isAnswerRow = result && i === result.correctChoice;
-            const isWrongPick = result && isPicked && !result.isCorrect;
-            return (
-              <li key={i}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={isPicked}
-                  disabled={!!result || submitting}
-                  onClick={() => handleSelect(i)}
-                  className={cn(
-                    visible && "animate-reveal-row",
-                    "press flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors duration-300 disabled:cursor-default",
-                    isAnswerRow
-                      ? "border-success/60 bg-success/10"
-                      : isWrongPick
-                        ? "border-destructive/60 bg-destructive/10"
-                        : isPicked
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-transparent hover:border-primary/40",
-                  )}
-                  style={visible ? { animationDelay: `${i * 70}ms` } : undefined}
-                >
-                  <span
+        <div
+          aria-hidden={covered}
+          className={cn(
+            "transition-[filter,opacity] duration-500",
+            covered && "pointer-events-none select-none opacity-60 blur-md",
+          )}
+        >
+          <p className="font-data text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
+            {difficultyLabel[daily.difficulty]}
+          </p>
+          <MathText
+            text={daily.statementMd}
+            className="mt-2 text-pretty text-sm font-medium leading-snug text-foreground"
+          />
+
+          <ul className="mt-5 flex flex-col gap-2" role="radiogroup" aria-label="Alternativas">
+            {daily.choices.map((choiceText, i) => {
+              const isPicked = selected === i;
+              const isAnswerRow = result && i === result.correctChoice;
+              const isWrongPick = result && isPicked && !result.isCorrect;
+              return (
+                <li key={i}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={isPicked}
+                    disabled={!!result || submitting}
+                    onClick={() => handleSelect(i)}
                     className={cn(
-                      "font-data grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-colors duration-300",
+                      visible && "animate-reveal-row",
+                      "press flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors duration-300 disabled:cursor-default",
                       isAnswerRow
-                        ? "border-success bg-success text-success-foreground"
+                        ? "border-success/60 bg-success/10"
                         : isWrongPick
-                          ? "border-destructive bg-destructive text-destructive-foreground"
-                          : "border-border text-muted-foreground",
+                          ? "border-destructive/60 bg-destructive/10"
+                          : isPicked
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-transparent hover:border-primary/40",
                     )}
+                    style={visible ? { animationDelay: `${i * 70}ms` } : undefined}
                   >
-                    {isAnswerRow ? (
-                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                    ) : isWrongPick ? (
-                      <X className="h-3.5 w-3.5" strokeWidth={3} />
-                    ) : (
-                      String.fromCharCode(65 + i)
-                    )}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs",
-                      isAnswerRow || isWrongPick
-                        ? "font-semibold text-foreground"
-                        : "text-foreground/85",
-                    )}
-                  >
-                    <ChoiceText text={choiceText} />
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+                    <span
+                      className={cn(
+                        "font-data grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-colors duration-300",
+                        isAnswerRow
+                          ? "border-success bg-success text-success-foreground"
+                          : isWrongPick
+                            ? "border-destructive bg-destructive text-destructive-foreground"
+                            : "border-border text-muted-foreground",
+                      )}
+                    >
+                      {isAnswerRow ? (
+                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                      ) : isWrongPick ? (
+                        <X className="h-3.5 w-3.5" strokeWidth={3} />
+                      ) : (
+                        String.fromCharCode(65 + i)
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs",
+                        isAnswerRow || isWrongPick
+                          ? "font-semibold text-foreground"
+                          : "text-foreground/85",
+                      )}
+                    >
+                      <ChoiceText text={choiceText} />
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
 
       {/* Score readout */}

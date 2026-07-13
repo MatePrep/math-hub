@@ -17,7 +17,7 @@ export const PLAN_PRICES = {
 export const TRIAL_DAYS = 7;
 
 export const FREE_FEATURES = [
-  "Práctica por tema con solución paso a paso",
+  "Práctica por curso con solución paso a paso",
   "Simulacros con plantillas generales",
   "Historial básico de tus resultados",
   "Cuenta regresiva a tu fecha de examen",
@@ -40,7 +40,7 @@ export const PLAN_COMPARISON: Array<{
   free: boolean | "partial";
   freeNote?: string;
 }> = [
-  { feature: "Práctica por tema, sin cronómetro", free: true },
+  { feature: "Práctica por curso, sin cronómetro", free: true },
   { feature: "Reto del día", free: true },
   { feature: "Metas semanales y racha", free: true },
   { feature: "Cuenta regresiva a tu examen", free: true },

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +55,7 @@ const profileQO = (fetchProfile: () => Promise<any>) =>
 
 function OnboardingPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fetchProfile = useServerFn(getFullProfile);
   const save = useServerFn(updateFullProfile);
   const universitiesFn = useServerFn(listAllUniversities);
@@ -92,11 +93,18 @@ function OnboardingPage() {
   const [weeklyStudyHours, setWeeklyStudyHours] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Seed the form from the server exactly once. The ["full-profile"] query
+  // refetches on window refocus once it goes stale (60s), and re-running the
+  // setters below mid-flow would wipe the student's in-progress answers back
+  // to the (empty) server values right before they submit.
+  const seededRef = useRef(false);
   useEffect(() => {
     if (data?.profile?.onboarding_completed) {
       navigate({ to: "/panel", replace: true });
       return;
     }
+    if (seededRef.current) return;
+    seededRef.current = true;
     setUniversities(
       (data?.universities ?? []).map((u: any) => ({
         universityId: u.university_id,
@@ -149,6 +157,12 @@ function OnboardingPage() {
           onboardingCompleted: true,
         },
       });
+      // These caches were seeded with the pre-save (empty) profile while the
+      // student filled the form; left as-is, /perfil, /panel and /practica
+      // keep showing that snapshot for up to staleTime after finishing.
+      queryClient.invalidateQueries({ queryKey: ["full-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["full-profile-mini"] });
+      queryClient.invalidateQueries({ queryKey: ["weekly-progress"] });
       toast.success("¡Listo! Ya puedes empezar a practicar.");
       navigate({ to: "/panel", replace: true });
     } catch (err: any) {
@@ -342,7 +356,7 @@ function OnboardingPage() {
         {step === 5 && (
           <div>
             <h2 className="font-display text-lg font-bold">
-              ¿En qué temas sientes que necesitas más refuerzo?
+              ¿En qué cursos sientes que necesitas más refuerzo?
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Nos ayuda a sugerirte por dónde empezar mientras acumulas tu propio historial.

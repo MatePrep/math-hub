@@ -81,7 +81,5 @@ export function MathText({
 }
 
 export function ChoiceText({ text }: { text: string }) {
-  const looksLikeMath = /[\\^_{}]|\\[a-zA-Z]+/.test(text);
-  const normalizedText = looksLikeMath && !/^\$.*\$$/.test(text.trim()) ? `$${text.trim()}$` : text;
-  return <MarkdownMath text={normalizedText} inline />;
+  return <MarkdownMath text={text} inline />;
 }

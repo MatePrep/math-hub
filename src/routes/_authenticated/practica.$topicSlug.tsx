@@ -21,6 +21,7 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
 import { ZoomableImage } from "@/components/zoomable-image";
+import { ExercisePlayerSkeleton, LoadingNotice } from "@/components/skeletons";
 
 const searchSchema = z.object({
   subtopic: z.string().optional(),
@@ -46,9 +47,9 @@ export const Route = createFileRoute("/_authenticated/practica/$topicSlug")({
   ),
   notFoundComponent: () => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-      <h2 className="font-display text-2xl font-bold">Tema no encontrado</h2>
+      <h2 className="font-display text-2xl font-bold">Curso no encontrado</h2>
       <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
-        Volver a temas
+        Volver a cursos
       </Link>
     </div>
   ),
@@ -134,14 +135,33 @@ function PracticePage() {
 
   if (q.isLoading)
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-muted-foreground">Cargando…</div>
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <nav className="text-xs text-muted-foreground">
+          <Link to="/temas" className="hover:underline">
+            Cursos
+          </Link>
+          {" / "}
+          <Link to="/temas/$slug" params={{ slug: topicSlug }} className="hover:underline">
+            {topic.name}
+          </Link>
+          {" / "}
+          <span className="text-foreground">Práctica</span>
+        </nav>
+        <h1 className="mt-3 font-display text-2xl font-bold">Práctica: {topic.name}</h1>
+        <div className="mt-2">
+          <LoadingNotice label="Cargando ejercicios" />
+        </div>
+        <div className="mt-5">
+          <ExercisePlayerSkeleton />
+        </div>
+      </div>
     );
   if (!q.data || q.data.length === 0) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <p className="text-muted-foreground">No hay preguntas disponibles para este tema.</p>
         <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
-          Volver a temas
+          Volver a cursos
         </Link>
       </div>
     );
@@ -182,7 +202,7 @@ function PracticePage() {
     <div className="mx-auto max-w-3xl px-4 py-10">
       <nav className="text-xs text-muted-foreground">
         <Link to="/temas" className="hover:underline">
-          Temas
+          Cursos
         </Link>
         {" / "}
         <Link to="/temas/$slug" params={{ slug: topicSlug }} className="hover:underline">

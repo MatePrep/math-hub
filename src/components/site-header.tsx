@@ -32,7 +32,7 @@ import { PlanBadge } from "@/components/premium/plan-badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 const publicNav = [
-  { to: "/temas", label: "Temas" },
+  { to: "/temas", label: "Cursos" },
   { to: "/examenes", label: "Exámenes" },
   { to: "/simulacros", label: "Simulacros" },
   { to: "/planes", label: "Planes" },
@@ -96,7 +96,7 @@ export function SiteHeader() {
               onChange={(e) => setQ(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              placeholder="Buscar ejercicios, temas..."
+              placeholder="Buscar ejercicios, cursos..."
               className="pl-9 pr-9"
               aria-label="Buscar ejercicios"
             />

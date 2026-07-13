@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
 import { ZoomableImage } from "@/components/zoomable-image";
+import { ExercisePagePending } from "@/components/skeletons";
 import { pageMeta } from "@/lib/site";
 
 const exQO = (id: string) =>
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/ejercicio/$id")({
     return pageMeta({ path: `/ejercicio/${params.id}`, title, description });
   },
   component: ExercisePage,
+  pendingComponent: ExercisePagePending,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
       {error.message}
@@ -55,7 +57,7 @@ export const Route = createFileRoute("/ejercicio/$id")({
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
       <h2 className="font-display text-2xl font-bold">Ejercicio no encontrado</h2>
       <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
-        Ver temas
+        Ver cursos
       </Link>
     </div>
   ),
@@ -144,7 +146,7 @@ function ExercisePage() {
         {ex.topic && (
           <>
             <Link to="/temas" className="hover:underline">
-              Temas
+              Cursos
             </Link>{" "}
             /{" "}
             <Link to="/temas/$slug" params={{ slug: ex.topic.slug }} className="hover:underline">

@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { routeTree } from "./routeTree.gen";
+import { PagePending } from "./components/skeletons";
 
 export const getRouter = () => {
   // Loaders call queryClient.ensureQueryData(...) to populate this cache during
@@ -20,6 +21,12 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
+    // Never leave the user staring at a frozen/blank page while a loader runs:
+    // after 300ms of pending navigation show a skeleton fallback, and once it
+    // appears keep it up ≥300ms so fast loads don't flash.
+    defaultPendingComponent: PagePending,
+    defaultPendingMs: 300,
+    defaultPendingMinMs: 300,
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient });

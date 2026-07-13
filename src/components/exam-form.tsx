@@ -226,7 +226,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       v.exam_type === "template" &&
       v.template_rules.some((r) => !r.topic_id || Number(r.question_count) < 1)
     ) {
-      toast.error("Cada regla necesita materia y cantidad ≥ 1");
+      toast.error("Cada regla necesita curso y cantidad ≥ 1");
       flashSaveFeedback("refused");
       return;
     }
@@ -335,7 +335,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="standard">Estándar (preguntas fijas)</SelectItem>
-              <SelectItem value="template">Plantilla (aleatorio por materia)</SelectItem>
+              <SelectItem value="template">Plantilla (aleatorio por curso)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -502,8 +502,8 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
             </div>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Cada regla escoge N ejercicios aleatorios de una materia y (opcionalmente) una
-            dificultad. Al iniciar, todas las preguntas se mezclan.
+            Cada regla escoge N ejercicios aleatorios de un curso y (opcionalmente) una dificultad.
+            Al iniciar, todas las preguntas se mezclan.
           </p>
           <div className="mt-3 space-y-2">
             {v.template_rules.length === 0 && (
@@ -525,7 +525,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                       onValueChange={(x) => updateRule(i, { topic_id: x })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Materia" />
+                        <SelectValue placeholder="Curso" />
                       </SelectTrigger>
                       <SelectContent>
                         {allTopics.map((t) => (
@@ -667,7 +667,7 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los temas</SelectItem>
+                  <SelectItem value="all">Todos los cursos</SelectItem>
                   {bankTopics.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}

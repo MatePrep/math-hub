@@ -13,6 +13,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RestablecerPasswordRouteImport } from './routes/restablecer-password'
 import { Route as PlanesRouteImport } from './routes/planes'
+import { Route as LibroDeReclamacionesRouteImport } from './routes/libro-de-reclamaciones'
 import { Route as ExamenesOficialesRouteImport } from './routes/examenes-oficiales'
 import { Route as BuscarRouteImport } from './routes/buscar'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -69,6 +70,11 @@ const RestablecerPasswordRoute = RestablecerPasswordRouteImport.update({
 const PlanesRoute = PlanesRouteImport.update({
   id: '/planes',
   path: '/planes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibroDeReclamacionesRoute = LibroDeReclamacionesRouteImport.update({
+  id: '/libro-de-reclamaciones',
+  path: '/libro-de-reclamaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExamenesOficialesRoute = ExamenesOficialesRouteImport.update({
@@ -278,6 +284,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/libro-de-reclamaciones': typeof LibroDeReclamacionesRoute
   '/planes': typeof PlanesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -320,6 +327,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/libro-de-reclamaciones': typeof LibroDeReclamacionesRoute
   '/planes': typeof PlanesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -363,6 +371,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/buscar': typeof BuscarRoute
   '/examenes-oficiales': typeof ExamenesOficialesRoute
+  '/libro-de-reclamaciones': typeof LibroDeReclamacionesRoute
   '/planes': typeof PlanesRoute
   '/restablecer-password': typeof RestablecerPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -407,6 +416,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/libro-de-reclamaciones'
     | '/planes'
     | '/restablecer-password'
     | '/robots.txt'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/libro-de-reclamaciones'
     | '/planes'
     | '/restablecer-password'
     | '/robots.txt'
@@ -491,6 +502,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/buscar'
     | '/examenes-oficiales'
+    | '/libro-de-reclamaciones'
     | '/planes'
     | '/restablecer-password'
     | '/robots.txt'
@@ -535,6 +547,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BuscarRoute: typeof BuscarRoute
   ExamenesOficialesRoute: typeof ExamenesOficialesRoute
+  LibroDeReclamacionesRoute: typeof LibroDeReclamacionesRoute
   PlanesRoute: typeof PlanesRoute
   RestablecerPasswordRoute: typeof RestablecerPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -577,6 +590,13 @@ declare module '@tanstack/react-router' {
       path: '/planes'
       fullPath: '/planes'
       preLoaderRoute: typeof PlanesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/libro-de-reclamaciones': {
+      id: '/libro-de-reclamaciones'
+      path: '/libro-de-reclamaciones'
+      fullPath: '/libro-de-reclamaciones'
+      preLoaderRoute: typeof LibroDeReclamacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/examenes-oficiales': {
@@ -934,6 +954,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BuscarRoute: BuscarRoute,
   ExamenesOficialesRoute: ExamenesOficialesRoute,
+  LibroDeReclamacionesRoute: LibroDeReclamacionesRoute,
   PlanesRoute: PlanesRoute,
   RestablecerPasswordRoute: RestablecerPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

@@ -155,13 +155,46 @@ const bulkImportItemSchema = exerciseBase
 
 export const bulkImportExercises = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.array(z.record(z.string(), z.any())).min(1).max(200).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        exam_id: z.string().uuid().nullable().optional(),
+        items: z.array(z.record(z.string(), z.any())).min(1).max(200),
+      })
+      .parse(d),
+  )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
 
+    // If the batch should land in an exam, fail fast (before inserting any
+    // exercise) so a bad exam choice doesn't leave half the work done.
+    if (data.exam_id) {
+      const { data: exam, error: examErr } = await context.supabase
+        .from("exams")
+        .select("id, exam_type")
+        .eq("id", data.exam_id)
+        .maybeSingle();
+      if (examErr) throw new Error(examErr.message);
+      if (!exam) throw new Error("El examen seleccionado no existe.");
+      if ((exam.exam_type ?? "standard") !== "standard") {
+        throw new Error(
+          "Solo se pueden agregar preguntas a exámenes estándar (los de plantilla se generan por reglas).",
+        );
+      }
+      const { count: existingCount } = await context.supabase
+        .from("exam_questions")
+        .select("id", { head: true, count: "exact" })
+        .eq("exam_id", data.exam_id);
+      if ((existingCount ?? 0) + data.items.length > 200) {
+        throw new Error(
+          `El examen ya tiene ${existingCount ?? 0} pregunta(s); agregar ${data.items.length} superaría el máximo de 200.`,
+        );
+      }
+    }
+
     const valid: Array<ReturnType<typeof bulkImportItemSchema.parse>> = [];
     const failed: Array<{ filename: string; message: string }> = [];
-    for (const raw of data) {
+    for (const raw of data.items) {
       const parsed = bulkImportItemSchema.safeParse(raw);
       if (!parsed.success) {
         failed.push({
@@ -173,7 +206,7 @@ export const bulkImportExercises = createServerFn({ method: "POST" })
       valid.push(parsed.data);
     }
 
-    if (valid.length === 0) return { insertedCount: 0, failed };
+    if (valid.length === 0) return { insertedCount: 0, failed, linkedToExamCount: 0 };
 
     const payload = valid.map((d) => ({
       topic_id: d.topic_id,
@@ -194,7 +227,40 @@ export const bulkImportExercises = createServerFn({ method: "POST" })
       .insert(payload)
       .select("id");
     if (error) throw new Error(error.message);
-    return { insertedCount: rows?.length ?? 0, failed };
+
+    // Append the freshly created exercises to the chosen exam, after its
+    // current last question. If this step fails the exercises are already in
+    // the bank, so report it as a partial success instead of throwing.
+    let linkedToExamCount = 0;
+    let examLinkError: string | null = null;
+    const examId = data.exam_id;
+    if (examId && rows && rows.length > 0) {
+      const { data: maxRow } = await context.supabase
+        .from("exam_questions")
+        .select("position")
+        .eq("exam_id", examId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const startPos = (maxRow?.position ?? -1) + 1;
+      const { data: linked, error: linkErr } = await context.supabase
+        .from("exam_questions")
+        .insert(
+          rows.map((r: any, i: number) => ({
+            exam_id: examId,
+            exercise_id: r.id,
+            position: startPos + i,
+            points: 1,
+          })),
+        )
+        .select("id");
+      if (linkErr) {
+        examLinkError = `Los ejercicios se importaron, pero no se pudieron agregar al examen: ${linkErr.message}`;
+      } else {
+        linkedToExamCount = linked?.length ?? 0;
+      }
+    }
+    return { insertedCount: rows?.length ?? 0, failed, linkedToExamCount, examLinkError };
   });
 
 export const updateExercise = createServerFn({ method: "POST" })
@@ -254,15 +320,34 @@ export const listAdminTopics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { data, error } = await context.supabase
-      .from("topics")
-      .select("id, name, slug, description, color, active, order")
-      .order("order");
+    const [{ data, error }, subtopicsRes, countsRes] = await Promise.all([
+      context.supabase
+        .from("topics")
+        .select("id, name, slug, description, color, active, order")
+        .order("order"),
+      context.supabase.from("subtopics").select("id, name, topic_id").order("order"),
+      context.supabase.from("exercises").select("topic_id, subtopic_id"),
+    ]);
     if (error) throw new Error(error.message);
-    const { data: counts } = await context.supabase.from("exercises").select("topic_id");
-    const map = new Map<string, number>();
-    (counts ?? []).forEach((r: any) => map.set(r.topic_id, (map.get(r.topic_id) ?? 0) + 1));
-    return (data ?? []).map((t: any) => ({ ...t, exerciseCount: map.get(t.id) ?? 0 }));
+    if (subtopicsRes.error) throw new Error(subtopicsRes.error.message);
+    const topicCounts = new Map<string, number>();
+    const subtopicCounts = new Map<string, number>();
+    (countsRes.data ?? []).forEach((r: any) => {
+      topicCounts.set(r.topic_id, (topicCounts.get(r.topic_id) ?? 0) + 1);
+      if (r.subtopic_id)
+        subtopicCounts.set(r.subtopic_id, (subtopicCounts.get(r.subtopic_id) ?? 0) + 1);
+    });
+    return (data ?? []).map((t: any) => ({
+      ...t,
+      exerciseCount: topicCounts.get(t.id) ?? 0,
+      subtopics: (subtopicsRes.data ?? [])
+        .filter((s: any) => s.topic_id === t.id)
+        .map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          exerciseCount: subtopicCounts.get(s.id) ?? 0,
+        })),
+    }));
   });
 
 export const createTopic = createServerFn({ method: "POST" })
@@ -368,6 +453,61 @@ export const createSubtopic = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return { id: row.id as string, duplicated: false };
+  });
+
+export const renameSubtopic = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        name: z.string().trim().min(2).max(60),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: current, error: curErr } = await context.supabase
+      .from("subtopics")
+      .select("id, topic_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (curErr) throw new Error(curErr.message);
+    if (!current) throw new Error("El subtema no existe.");
+    const { data: existing } = await context.supabase
+      .from("subtopics")
+      .select("id")
+      .eq("topic_id", current.topic_id)
+      .ilike("name", data.name)
+      .neq("id", data.id)
+      .maybeSingle();
+    if (existing) throw new Error("Ya existe otro subtema con ese nombre en esta materia.");
+    const { data: rows, error } = await context.supabase
+      .from("subtopics")
+      .update({ name: data.name })
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el subtema");
+    return { ok: true };
+  });
+
+// Deleting a subtopic never orphans exercises: exercises.subtopic_id is
+// ON DELETE SET NULL, so referencing exercises just lose their subtopic
+// classification (the UI confirms this with the admin, showing the count).
+export const deleteSubtopic = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { data: rows, error } = await context.supabase
+      .from("subtopics")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(error.message);
+    assertRowsAffected(rows, "el subtema");
+    return { ok: true };
   });
 
 export const renameTopic = createServerFn({ method: "POST" })

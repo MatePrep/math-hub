@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { listTopics } from "@/lib/exercises.functions";
-import { TopicCardSkeleton } from "@/components/skeletons";
+import { LoadingNotice, TopicCardSkeleton } from "@/components/skeletons";
 import { pageMeta } from "@/lib/site";
 
 const topicsQO = queryOptions({ queryKey: ["topics"], queryFn: () => listTopics() });
@@ -10,9 +10,9 @@ export const Route = createFileRoute("/temas/")({
   head: () =>
     pageMeta({
       path: "/temas",
-      title: "Temas de práctica",
+      title: "Cursos de práctica",
       description:
-        "Explora ejercicios resueltos paso a paso, organizados por tema y subtema, para todos los cursos de tu examen de admisión.",
+        "Explora ejercicios resueltos paso a paso, organizados por curso y tema, para tu examen de admisión.",
     }),
   loader: ({ context }) => context.queryClient.ensureQueryData(topicsQO),
   component: TopicsIndex,
@@ -30,12 +30,15 @@ function TopicsIndexPending() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <header>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Temas</h1>
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">Cursos</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Elige un tema para ver sus subtemas y practicar ejercicios.
+          Elige un curso para ver sus temas y practicar ejercicios.
         </p>
       </header>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6">
+        <LoadingNotice label="Cargando cursos" />
+      </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <TopicCardSkeleton key={i} />
         ))}
@@ -49,9 +52,9 @@ function TopicsIndex() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <header>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Temas</h1>
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">Cursos</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Elige un tema para ver sus subtemas y practicar ejercicios.
+          Elige un curso para ver sus temas y practicar ejercicios.
         </p>
       </header>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -69,7 +72,7 @@ function TopicsIndex() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">{t.description}</p>
             <span className="mt-3 inline-block text-sm font-medium text-primary group-hover:underline">
-              Ver subtemas →
+              Ver temas →
             </span>
           </Link>
         ))}

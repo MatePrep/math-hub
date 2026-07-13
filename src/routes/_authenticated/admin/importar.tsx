@@ -29,6 +29,7 @@ import {
 import { MathText, ChoiceText } from "@/lib/math-render";
 import {
   listAdminMeta,
+  listAdminExams,
   bulkImportExercises,
   createTopic,
   createSubtopic,
@@ -65,6 +66,8 @@ type Override = {
 interface ImportResult {
   insertedCount: number;
   failed: Array<{ filename: string; message: string }>;
+  linkedToExamCount?: number;
+  examLinkError?: string | null;
 }
 
 interface ResolvedRow extends ParsedExercise {
@@ -113,8 +116,15 @@ function findImageFile(files: File[], refPath: string | null): File | null {
 
 function AdminImportExercises() {
   const fetchMeta = useServerFn(listAdminMeta);
+  const fetchExams = useServerFn(listAdminExams);
   const importFn = useServerFn(bulkImportExercises);
   const meta = useQuery({ queryKey: ["admin-meta"], queryFn: () => fetchMeta() });
+  const exams = useQuery({ queryKey: ["admin-exams"], queryFn: () => fetchExams() });
+  // Only standard exams have a fixed question list; template exams generate
+  // questions per attempt from rules, so there's nothing to append to.
+  const standardExams = (exams.data ?? []).filter(
+    (e: any) => (e.exam_type ?? "standard") === "standard" && e.status !== "archived",
+  );
 
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +135,7 @@ function AdminImportExercises() {
   const [rawFiles, setRawFiles] = useState<File[]>([]);
   const [parsedRows, setParsedRows] = useState<ParsedExercise[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
+  const [examId, setExamId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   // Tracks in-flight quick-create requests (keyed by normalized name) so
@@ -143,11 +154,11 @@ function AdminImportExercises() {
     try {
       const res = await createTopicFn({ data: { name } });
       toast[res.duplicated ? "info" : "success"](
-        res.duplicated ? `El tema "${name}" ya existía — aplicado.` : `Tema "${name}" creado.`,
+        res.duplicated ? `El curso "${name}" ya existía — aplicado.` : `Curso "${name}" creado.`,
       );
       await meta.refetch();
     } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo crear el tema");
+      toast.error(e?.message ?? "No se pudo crear el curso");
     } finally {
       setCreatingNames((s) => {
         const n = new Set(s);
@@ -164,13 +175,11 @@ function AdminImportExercises() {
     try {
       const res = await createSubtopicFn({ data: { topic_id: topicId, name } });
       toast[res.duplicated ? "info" : "success"](
-        res.duplicated
-          ? `El subtema "${name}" ya existía — aplicado.`
-          : `Subtema "${name}" creado.`,
+        res.duplicated ? `El tema "${name}" ya existía — aplicado.` : `Tema "${name}" creado.`,
       );
       await meta.refetch();
     } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo crear el subtema");
+      toast.error(e?.message ?? "No se pudo crear el tema");
     } finally {
       setCreatingNames((s) => {
         const n = new Set(s);
@@ -279,7 +288,7 @@ function AdminImportExercises() {
         blockingErrors.push("Falta la solución paso a paso.");
       if (!topicId) {
         blockingErrors.push(
-          `El tema "${p.frontmatter.tema ?? "(vacío)"}" no existe en el catálogo. Créalo abajo o selecciona uno existente.`,
+          `El curso "${p.frontmatter.tema ?? "(vacío)"}" no existe en el catálogo. Créalo abajo o selecciona uno existente.`,
         );
       }
       if (!difficulty) blockingErrors.push("Selecciona una dificultad válida.");
@@ -297,7 +306,7 @@ function AdminImportExercises() {
       const warnings: string[] = [];
       if (p.frontmatter.subtema && !subtopicMatch && o.subtopicId === undefined) {
         warnings.push(
-          `Subtema "${p.frontmatter.subtema}" no reconocido — créalo abajo o se importará sin subtema.`,
+          `Tema "${p.frontmatter.subtema}" no reconocido — créalo abajo o se importará sin tema.`,
         );
       }
       if (p.frontmatter.universidad && !universityMatch && o.universityId === undefined) {
@@ -368,10 +377,16 @@ function AdminImportExercises() {
           tags: r.tags,
         });
       }
-      const result = await importFn({ data: payload });
+      const result = await importFn({ data: { items: payload, exam_id: examId } });
       setImportResult(result);
-      if (result.failed.length === 0) {
-        toast.success(`${result.insertedCount} ejercicio(s) importado(s) correctamente.`);
+      if (result.examLinkError) {
+        toast.warning(result.examLinkError);
+      } else if (result.failed.length === 0) {
+        toast.success(
+          `${result.insertedCount} ejercicio(s) importado(s) correctamente${
+            result.linkedToExamCount ? ` y agregado(s) al examen` : ""
+          }.`,
+        );
       } else {
         toast.warning(`${result.insertedCount} importado(s), ${result.failed.length} con errores.`);
       }
@@ -439,8 +454,16 @@ function AdminImportExercises() {
         >
           <p className="font-semibold">
             {importResult.insertedCount} ejercicio(s) importado(s) correctamente
+            {importResult.linkedToExamCount
+              ? `, ${importResult.linkedToExamCount} agregado(s) al examen "${
+                  standardExams.find((e: any) => e.id === examId)?.title ?? ""
+                }"`
+              : ""}
             {importResult.failed.length > 0 ? `, ${importResult.failed.length} con errores` : ""}.
           </p>
+          {importResult.examLinkError && (
+            <p className="mt-1 text-amber-700 dark:text-amber-400">{importResult.examLinkError}</p>
+          )}
           {importResult.failed.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-muted-foreground">
               {importResult.failed.map((f, i) => (
@@ -454,6 +477,13 @@ function AdminImportExercises() {
             <Button asChild size="sm">
               <Link to="/admin/ejercicios">Ver ejercicios</Link>
             </Button>
+            {!!importResult.linkedToExamCount && examId && (
+              <Button asChild size="sm" variant="outline">
+                <Link to="/admin/examenes/$id" params={{ id: examId }}>
+                  Ver examen
+                </Link>
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={reset}>
               Importar otro lote
             </Button>
@@ -463,29 +493,57 @@ function AdminImportExercises() {
 
       {!importResult && parsedRows.length > 0 && (
         <>
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
-            <p className="text-sm">
-              <strong>{parsedRows.length}</strong> ejercicio(s) detectado(s) ·{" "}
-              <strong className="text-success">{validCount}</strong> listo(s) para importar
-              {parsedRows.length - validCount > 0 && (
-                <>
-                  {" "}
-                  · <strong className="text-destructive">
-                    {parsedRows.length - validCount}
-                  </strong>{" "}
-                  con errores
-                </>
-              )}
-            </p>
-            <Button
-              type="button"
-              className="press"
-              onClick={onImport}
-              disabled={validCount === 0 || importing || meta.isLoading}
-            >
-              {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {importing ? "Importando…" : `Importar ${validCount} ejercicio(s)`}
-            </Button>
+          <div className="mt-6 space-y-3 rounded-xl border border-border bg-card p-4">
+            <div className="grid gap-1.5 sm:max-w-md">
+              <Label className="text-xs text-muted-foreground">
+                Agregar a un examen (opcional)
+              </Label>
+              <Select
+                value={examId ?? "__none"}
+                onValueChange={(v) => setExamId(v === "__none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="— ninguno —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">— ninguno (solo al banco) —</SelectItem>
+                  {standardExams.map((e: any) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.title} · {e.questionCount} pregunta(s)
+                      {e.status === "draft" ? " · borrador" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Los ejercicios importados se añadirán como preguntas al final del examen elegido
+                (solo exámenes estándar).
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm">
+                <strong>{parsedRows.length}</strong> ejercicio(s) detectado(s) ·{" "}
+                <strong className="text-success">{validCount}</strong> listo(s) para importar
+                {parsedRows.length - validCount > 0 && (
+                  <>
+                    {" "}
+                    · <strong className="text-destructive">
+                      {parsedRows.length - validCount}
+                    </strong>{" "}
+                    con errores
+                  </>
+                )}
+              </p>
+              <Button
+                type="button"
+                className="press"
+                onClick={onImport}
+                disabled={validCount === 0 || importing || meta.isLoading}
+              >
+                {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {importing ? "Importando…" : `Importar ${validCount} ejercicio(s)`}
+              </Button>
+            </div>
           </div>
 
           <div className="mt-4 space-y-3">
@@ -567,7 +625,7 @@ function ImportRowCard({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Label className="text-xs text-muted-foreground">Tema</Label>
+          <Label className="text-xs text-muted-foreground">Curso</Label>
           <Select
             value={row.topicId ?? "__none"}
             onValueChange={(v) =>
@@ -578,7 +636,7 @@ function ImportRowCard({
               <SelectValue placeholder="Sin resolver" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none">— sin tema —</SelectItem>
+              <SelectItem value="__none">— sin curso —</SelectItem>
               {topics.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.name}
@@ -600,12 +658,12 @@ function ImportRowCard({
               ) : (
                 <Plus className="mr-1 h-3 w-3" />
               )}
-              Crear tema "{row.frontmatter.tema}"
+              Crear curso "{row.frontmatter.tema}"
             </Button>
           )}
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">Subtema</Label>
+          <Label className="text-xs text-muted-foreground">Tema</Label>
           <Select
             value={row.subtopicId ?? "__none"}
             onValueChange={(v) => onOverride({ subtopicId: v === "__none" ? null : v })}
@@ -637,7 +695,7 @@ function ImportRowCard({
               ) : (
                 <Plus className="mr-1 h-3 w-3" />
               )}
-              Crear subtema "{row.frontmatter.subtema}"
+              Crear tema "{row.frontmatter.subtema}"
             </Button>
           )}
         </div>

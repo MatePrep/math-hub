@@ -51,9 +51,9 @@ export function NewTopicDialog({
   const qc = useQueryClient();
 
   const isSubtopic = type === "subtopic";
-  const title = isSubtopic ? "Nuevo subtema" : "Nueva materia";
-  const submitLabel = isSubtopic ? "Crear subtema" : "Crear materia";
-  const triggerText = triggerLabel ?? (isSubtopic ? "Nuevo subtema" : "Nueva materia");
+  const title = isSubtopic ? "Nuevo tema" : "Nuevo curso";
+  const submitLabel = isSubtopic ? "Crear tema" : "Crear curso";
+  const triggerText = triggerLabel ?? (isSubtopic ? "Nuevo tema" : "Nuevo curso");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,7 +63,7 @@ export function NewTopicDialog({
       return;
     }
     if (isSubtopic && !topicId) {
-      toast.error("Selecciona primero una materia");
+      toast.error("Selecciona primero un curso");
       flashSaveFeedback("refused");
       return;
     }
@@ -78,11 +78,11 @@ export function NewTopicDialog({
       if (res.duplicated) {
         toast.info(
           isSubtopic
-            ? "Ese subtema ya existía; se seleccionó el existente."
-            : "Esa materia ya existía; se seleccionó la existente.",
+            ? "Ese tema ya existía; se seleccionó el existente."
+            : "Ese curso ya existía; se seleccionó el existente.",
         );
       } else {
-        toast.success(isSubtopic ? "Subtema creado" : "Materia creada");
+        toast.success(isSubtopic ? "Tema creado" : "Curso creado");
       }
       flashSaveFeedback("accepted");
       await qc.invalidateQueries({ queryKey: ["admin-meta"] });

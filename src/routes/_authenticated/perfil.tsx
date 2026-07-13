@@ -518,7 +518,7 @@ function PerfilPage() {
 
             <div>
               <Label className="text-xs text-muted-foreground">
-                ¿En qué temas sientes que necesitas más refuerzo?
+                ¿En qué cursos sientes que necesitas más refuerzo?
               </Label>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {allTopics.map((t: any) => (

@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getTopicBySlug, listExercises } from "@/lib/exercises.functions";
 import { ExerciseCard } from "@/components/exercise-card";
-import { ExerciseCardSkeleton } from "@/components/skeletons";
+import { ExerciseCardSkeleton, LoadingNotice } from "@/components/skeletons";
 import { pageMeta, absoluteUrl } from "@/lib/site";
 import { JsonLd } from "@/components/json-ld";
 
@@ -44,9 +44,9 @@ export const Route = createFileRoute("/temas/$slug/$subtopic")({
   ),
   notFoundComponent: () => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-      <h2 className="font-display text-2xl font-bold">Subtema no encontrado</h2>
+      <h2 className="font-display text-2xl font-bold">Tema no encontrado</h2>
       <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
-        Volver a temas
+        Volver a cursos
       </Link>
     </div>
   ),
@@ -58,7 +58,10 @@ function SubtopicPagePending() {
       <div className="h-3.5 w-48 animate-pulse rounded bg-muted motion-reduce:animate-none" />
       <div className="mt-3 h-9 w-72 animate-pulse rounded bg-muted motion-reduce:animate-none sm:h-10" />
       <div className="mt-2 h-4 w-24 animate-pulse rounded bg-muted motion-reduce:animate-none" />
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5">
+        <LoadingNotice label="Cargando ejercicios" />
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <ExerciseCardSkeleton key={i} />
         ))}
@@ -81,7 +84,7 @@ function SubtopicPage() {
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Temas", item: absoluteUrl("/temas") },
+            { "@type": "ListItem", position: 1, name: "Cursos", item: absoluteUrl("/temas") },
             {
               "@type": "ListItem",
               position: 2,
@@ -99,7 +102,7 @@ function SubtopicPage() {
       />
       <nav className="text-xs text-muted-foreground" aria-label="Migas">
         <Link to="/temas" className="hover:underline">
-          Temas
+          Cursos
         </Link>{" "}
         /{" "}
         <Link to="/temas/$slug" params={{ slug: topic.slug }} className="hover:underline">
@@ -123,7 +126,7 @@ function SubtopicPage() {
         ))}
         {exercises.length === 0 && (
           <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            Aún no hay ejercicios en este subtema.
+            Aún no hay ejercicios en este tema.
           </p>
         )}
       </div>

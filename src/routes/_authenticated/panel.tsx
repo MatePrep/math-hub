@@ -116,13 +116,13 @@ function PanelPage() {
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="rounded-xl border border-border bg-card p-5">
-          <h2 className="font-display text-xl font-bold">Aciertos por tema</h2>
+          <h2 className="font-display text-xl font-bold">Aciertos por curso</h2>
           <div className="mt-4 h-64">
             {stats.topicStats.length === 0 ? (
               <p className="grid h-full place-items-center text-sm text-muted-foreground">
                 Aún no tienes intentos. Empieza practicando un{" "}
                 <Link to="/temas" className="ml-1 text-primary hover:underline">
-                  tema
+                  curso
                 </Link>
                 .
               </p>
@@ -149,7 +149,7 @@ function PanelPage() {
             {weakest ? (
               <>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Tu tema más débil es <strong className="text-foreground">{weakest.name}</strong>{" "}
+                  Tu curso más débil es <strong className="text-foreground">{weakest.name}</strong>{" "}
                   con {weakest.accuracy}% de aciertos.
                 </p>
                 <Link

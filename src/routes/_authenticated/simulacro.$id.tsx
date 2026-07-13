@@ -146,7 +146,7 @@ function SimulacroPreview() {
           </li>
           <li className="flex items-start gap-2">
             <Shuffle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            Las preguntas se eligen al azar según el banco de cada tema — si repites el simulacro,
+            Las preguntas se eligen al azar según el banco de cada curso — si repites el simulacro,
             obtendrás una combinación distinta.
           </li>
           <li className="flex items-start gap-2">
@@ -178,7 +178,7 @@ function SimulacroPreview() {
 
         <div className="mt-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Preguntas por tema
+            Preguntas por curso
           </p>
           <ul className="mt-2 space-y-1.5 text-sm">
             {t.topicBreakdown.map((tb: { name: string; count: number }, i: number) => (

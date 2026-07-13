@@ -182,7 +182,7 @@ function ExamPreview() {
         {e.topicBreakdown?.length > 0 && (
           <div className="mt-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Preguntas por tema
+              Preguntas por curso
             </p>
             <ul className="mt-2 space-y-1.5 text-sm">
               {e.topicBreakdown.map((tb: any, i: number) => (
@@ -229,8 +229,8 @@ function ExamPreview() {
         </div>
         {showLock && (
           <p className="mt-3 text-xs text-muted-foreground">
-            Los exámenes oficiales completos son parte de Premium. Puedes activar tu prueba
-            gratuita de 7 días al iniciar.
+            Los exámenes oficiales completos son parte de Premium. Puedes activar tu prueba gratuita
+            de 7 días al iniciar.
           </p>
         )}
       </div>

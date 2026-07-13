@@ -135,7 +135,7 @@ function AdminExercisesList() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos los temas</SelectItem>
+            <SelectItem value="all">Todos los cursos</SelectItem>
             {allTopics.map((t) => (
               <SelectItem key={t.id} value={t.id}>
                 {t.name}
@@ -175,7 +175,7 @@ function AdminExercisesList() {
           <TableHeader>
             <TableRow>
               <TableHead>Enunciado</TableHead>
-              <TableHead>Tema</TableHead>
+              <TableHead>Curso</TableHead>
               <TableHead>Universidad</TableHead>
               <TableHead>Dificultad</TableHead>
               <TableHead>Año</TableHead>

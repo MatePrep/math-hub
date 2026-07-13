@@ -13,6 +13,15 @@ export const SITE_NAME = "Admi-Tec";
 // botón "Suscribirme" antes de integrar la pasarela de pago). Configura
 // VITE_CONTACT_EMAIL en .env con el correo real cuando exista.
 export const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || "contacto@admi-tec.pe";
+// Redes sociales y WhatsApp de contacto. Igual que CONTACT_EMAIL: valores
+// placeholder hasta que existan las cuentas reales — configura las VITE_* en
+// .env y en el entorno de deploy y todo el sitio las toma automáticamente.
+export const SOCIAL_LINKS = {
+  instagram: import.meta.env.VITE_INSTAGRAM_URL || "https://instagram.com/admitec.pe",
+  tiktok: import.meta.env.VITE_TIKTOK_URL || "https://tiktok.com/@admitec.pe",
+  // Número en formato internacional sin "+" (51 = Perú) para el enlace wa.me.
+  whatsapp: import.meta.env.VITE_WHATSAPP_URL || "https://wa.me/51999999999",
+} as const;
 export const SITE_DESCRIPTION =
   "Exámenes oficiales, simulacros ilimitados y ranking anónimo para tu admisión a la UNI, San Marcos, PUCP, UNALM y más.";
 

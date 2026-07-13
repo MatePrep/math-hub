@@ -111,7 +111,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!v.topic_id) {
-      toast.error("Selecciona un tema");
+      toast.error("Selecciona un curso");
       flashSaveFeedback("refused");
       return;
     }
@@ -151,7 +151,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>Tema *</Label>
+            <Label>Curso *</Label>
             <Select
               value={v.topic_id}
               onValueChange={(val) => {
@@ -166,7 +166,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
                 <SelectValue placeholder="Selecciona…" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__new_topic__">+ Agregar nuevo tema</SelectItem>
+                <SelectItem value="__new_topic__">+ Agregar nuevo curso</SelectItem>
                 <SelectSeparator />
                 {meta.data?.topics.map((t: any) => (
                   <SelectItem key={t.id} value={t.id}>
@@ -184,7 +184,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
             />
           </div>
           <div>
-            <Label>Subtema</Label>
+            <Label>Tema</Label>
             <Select
               value={v.subtopic_id ?? "__none"}
               onValueChange={(val) => {
@@ -202,7 +202,7 @@ export function ExerciseForm({ initial }: { initial?: ExerciseFormValues }) {
               <SelectContent>
                 <SelectItem value="__none">— ninguno —</SelectItem>
                 <SelectItem value="__new_subtopic__" disabled={!v.topic_id}>
-                  + Agregar nuevo subtema
+                  + Agregar nuevo tema
                 </SelectItem>
                 <SelectSeparator />
                 {subtopicsForTopic.map((s: any) => (

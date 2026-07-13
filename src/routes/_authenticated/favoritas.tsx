@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { listMyFavorites } from "@/lib/favorites.functions";
 import { ExerciseCard } from "@/components/exercise-card";
+import { ExerciseCardSkeleton, LoadingNotice } from "@/components/skeletons";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
@@ -58,7 +59,14 @@ function FavoritesPage() {
       )}
 
       {q.isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando…</p>
+        <div>
+          <LoadingNotice label="Cargando tus favoritas" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2" aria-hidden="true">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <ExerciseCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
           <p className="text-muted-foreground">
@@ -66,7 +74,7 @@ function FavoritesPage() {
             <Star className="inline h-4 w-4" /> mientras practicas.
           </p>
           <Link to="/temas" className="mt-4 inline-block text-primary hover:underline">
-            Explorar temas →
+            Explorar cursos →
           </Link>
         </div>
       ) : (

@@ -25,7 +25,7 @@ function ScoreMini({ visible }: { visible: boolean }) {
       </div>
       <div className="flex justify-end">
         <span className="font-data text-[0.65rem] font-semibold text-success">
-          corte: 800 · lo pasaste
+          mínimo de ingreso: 800 · lo superaste
         </span>
       </div>
     </div>
@@ -104,28 +104,50 @@ function PaceMini({ visible }: { visible: boolean }) {
   );
 }
 
+// Una sola frase resaltada por pilar — la afirmación que el visitante debe
+// retener — en tinta clara semibold, nunca en ámbar (reservado para el hero).
+const em = "font-semibold text-foreground";
+
 const PILLARS: Array<{
   icon: LucideIcon;
   title: string;
-  text: string;
+  text: React.ReactNode;
   Visual: (props: { visible: boolean }) => React.ReactNode;
 }> = [
   {
     icon: Target,
     title: "Tu puntaje real, tu meta real",
-    text: "Cada simulacro se corrige con el sistema de puntos del examen real — las buenas suman, las malas restan — y se compara con el puntaje mínimo de ingreso de tu carrera. No sabes si «vas bien»: sabes si hoy ingresarías.",
+    text: (
+      <>
+        Cada simulacro se corrige con el sistema de puntos del examen real — las buenas suman, las
+        malas restan — y se compara con el puntaje mínimo de ingreso de tu carrera. No sabes si «vas
+        bien»: <strong className={em}>sabes si hoy ingresarías</strong>.
+      </>
+    ),
     Visual: ScoreMini,
   },
   {
     icon: BookOpenCheck,
     title: "Estudia lo que de verdad se pregunta",
-    text: "Analizamos los exámenes oficiales de tu universidad y te mostramos los subtemas que más caen. Tus horas de estudio van donde hay puntos, no donde el índice del libro diga.",
+    text: (
+      <>
+        Analizamos los exámenes oficiales de tu universidad y te mostramos{" "}
+        <strong className={em}>los temas que más se repiten en el examen</strong>. Tus horas de
+        estudio van donde hay puntos, no donde el índice del libro diga.
+      </>
+    ),
     Visual: FrequencyMini,
   },
   {
     icon: Timer,
     title: "Conoce tu propio ritmo",
-    text: "Medimos cuánto te toma cada pregunta y lo comparamos con el promedio de todos los que la resolvieron. La velocidad se entrena, pero primero hay que poder verla.",
+    text: (
+      <>
+        Medimos <strong className={em}>cuánto te toma cada pregunta</strong> y lo comparamos con el
+        promedio de todos los que la resolvieron. La velocidad se entrena, pero primero hay que
+        poder verla.
+      </>
+    ),
     Visual: PaceMini,
   },
 ];
@@ -135,14 +157,29 @@ export function PillarsSection() {
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-      <div className="max-w-xl">
-        <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
-          ¿Cómo se prepara alguien que sí va a ingresar?
-        </h2>
-        <p className="mt-3 text-pretty text-muted-foreground">
-          Con datos, no con sensaciones. Estas son las tres cosas que Admi-Tec te dice y ningún
-          solucionario te va a decir.
-        </p>
+      <div className="grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-center">
+        <div className="max-w-xl">
+          <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
+            ¿Cómo se prepara alguien que sí va a ingresar?
+          </h2>
+          <p className="mt-3 text-pretty text-muted-foreground">
+            <strong className="font-semibold text-foreground">
+              Con datos, no con sensaciones.
+            </strong>{" "}
+            Estas son las tres cosas que Admi-Tec te dice y ningún solucionario te va a decir.
+          </p>
+        </div>
+        {/* Real students, desaturated + navy tint so the photo sits in the register */}
+        <div className="relative hidden overflow-hidden rounded-lg border border-border lg:block">
+          <img
+            src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80"
+            alt="Grupo de estudiantes preparándose juntos"
+            loading="lazy"
+            decoding="async"
+            className="h-44 w-full object-cover saturate-[0.55]"
+          />
+          <div aria-hidden className="absolute inset-0 bg-background/35" />
+        </div>
       </div>
 
       <div ref={ref} className="mt-10 grid gap-4 lg:grid-cols-3">
@@ -151,7 +188,7 @@ export function PillarsSection() {
             key={p.title}
             className={cn(
               visible && "animate-fade-up",
-              "flex flex-col rounded-lg border border-border bg-card transition-colors duration-300 hover:border-primary/40",
+              "group flex flex-col rounded-lg border border-border bg-card transition-[border-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-2 hover:border-primary/60 hover:shadow-[0_20px_40px_-18px_rgba(0,0,0,0.65)]",
             )}
             style={visible ? ({ "--i": i * 2 } as React.CSSProperties) : undefined}
           >
@@ -160,7 +197,7 @@ export function PillarsSection() {
             </div>
             <div className="flex flex-1 flex-col p-6">
               <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary transition-[transform,background-color] duration-300 ease-out group-hover:scale-110 group-hover:bg-primary/20">
                   <p.icon className="h-4.5 w-4.5" aria-hidden />
                 </span>
                 <h3 className="text-balance text-lg font-bold leading-snug tracking-tight">
