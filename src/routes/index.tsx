@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowRight, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, Check, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listTopics, listUniversities } from "@/lib/exercises.functions";
 import { AnswerSheetWidget } from "@/components/landing/answer-sheet-widget";
-import { HeroVisual } from "@/components/landing/hero-visual";
 import { PillarsSection } from "@/components/landing/pillars";
 import { dailyExerciseQO } from "@/lib/daily-exercise.functions";
 import { UniversityMarquee } from "@/components/landing/university-marquee";
@@ -68,6 +67,7 @@ function Index() {
   const { data: unis } = useSuspenseQuery(uniQO);
   const totalExercises = topics.reduce((s, t) => s + t.exerciseCount, 0);
   const { ref: rankingRef, visible: rankingVisible } = useInViewOnce<HTMLDivElement>();
+  const { ref: rankingIntroRef, visible: rankingIntroVisible } = useInViewOnce<HTMLDivElement>();
   const { ref: retoRef, visible: retoVisible } = useInViewOnce<HTMLDivElement>();
   const { ref: planesRef, visible: planesVisible } = useInViewOnce<HTMLDivElement>(0.3);
   const { ref: ctaRef, visible: ctaVisible } = useInViewOnce<HTMLDivElement>(0.3);
@@ -89,29 +89,28 @@ function Index() {
           aria-hidden
           className="pointer-events-none absolute -bottom-48 left-[-12rem] h-[26rem] w-[26rem] rounded-full bg-success/[0.12] blur-[110px]"
         />
-        <div className="relative mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:py-24 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+        <div className="relative mx-auto grid max-w-6xl gap-8 px-4 pb-8 pt-12 sm:pb-10 sm:pt-16 lg:grid-cols-[1.2fr_1fr] lg:items-start lg:gap-12 lg:pb-12 lg:pt-20">
           <div>
-            <div className="animate-fade-up" style={{ "--i": 0 } as React.CSSProperties}>
-              <TrustPill>Preparación para todas las universidades</TrustPill>
-            </div>
-            <h1 className="mt-5 text-balance text-[clamp(2.5rem,1.9rem+3.2vw,4.5rem)] font-bold leading-[1.02] tracking-[-0.03em]">
-              <StaggeredWords text="Cuando llegues a tu examen," startIndex={1} />{" "}
+            <h1 className="text-balance text-[clamp(2.5rem,1.9rem+3.2vw,4.5rem)] font-bold leading-[1.02] tracking-[-0.03em]">
+              <StaggeredWords text="Cuando llegues a tu examen," startIndex={0} />{" "}
               <span className="text-primary">
-                <StaggeredWords text="ya lo habrás resuelto." startIndex={6} />
+                <StaggeredWords text="ya lo habrás resuelto." startIndex={5} />
               </span>
             </h1>
             <p
               className="animate-fade-up mt-6 max-w-md text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg"
               style={{ "--i": 11 } as React.CSSProperties}
             >
-              Admi-Tec convierte los{" "}
+              No hay cupos para todos:{" "}
               <strong className="font-semibold text-foreground">
-                exámenes oficiales de admisión
+                Admi-Tec te dice si hoy ingresarías
               </strong>{" "}
-              en práctica diaria:{" "}
-              <strong className="font-semibold text-foreground">simulacros cronometrados</strong>,
-              ejercicios resueltos paso a paso y el avance exacto que necesitas para llegar a la
-              UNI, San Marcos, PUCP o tu universidad.
+              con los exámenes oficiales de tu universidad, simulacros que se corrigen como el
+              examen real y{" "}
+              <strong className="font-semibold text-foreground">
+                el puntaje exacto que te falta
+              </strong>{" "}
+              para tu carrera.
             </p>
             <div
               className="animate-fade-up mt-8 flex flex-wrap gap-3"
@@ -141,9 +140,28 @@ function Index() {
             </div>
           </div>
 
-          {/* Extra vertical room for the arrowed annotations above/below the visual */}
-          <div className="px-2 pb-24 pt-24 lg:px-0">
-            <HeroVisual />
+          {/* Postulante real de cuerpo presente: solo aparece cuando la
+              grilla tiene espacio para ponerlo junto al texto (lg+). Debajo
+              de eso el texto manda solo — nunca se apila la foto bajo la
+              copy en celulares/tablets. */}
+          <div className="relative mx-auto hidden w-full max-w-[24rem] items-end justify-center lg:-mb-16 lg:flex">
+            {/* Único destello ámbar detrás del postulante: respira lento
+                (mismo animate-glow que el widget del reto del día) para
+                darle dinamismo sin la línea de contorno que antes lo
+                enjaulaba. */}
+            <div
+              aria-hidden
+              className="animate-glow absolute -inset-x-[16%] -inset-y-[6%] rounded-[50%] bg-primary/[0.18] blur-2xl"
+            />
+            <img
+              src="/landing/estudiante-hero.png"
+              alt="Postulante preuniversitario sonriendo, listo para su examen de admisión"
+              width={900}
+              height={1468}
+              fetchPriority="high"
+              decoding="async"
+              className="relative w-full object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.45)]"
+            />
           </div>
         </div>
       </section>
@@ -194,7 +212,21 @@ function Index() {
       <PillarsSection />
 
       {/* Reto del día */}
-      <section className="relative overflow-hidden border-y border-border bg-card/50">
+      <section className="relative overflow-hidden border-b border-border">
+        {/* Momento real de estudio (postulante resolviendo en su cuaderno),
+            hundido en el navy para que el widget conserve todo el contraste. */}
+        <img
+          src="https://images.unsplash.com/photo-1650477250300-805cde98ec21?auto=format&fit=crop&w=1600&q=80"
+          alt=""
+          aria-hidden
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover object-[center_30%] opacity-25 saturate-[0.35]"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/70 to-background/85"
+        />
         <div
           aria-hidden
           className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/10 blur-[100px]"
@@ -232,13 +264,30 @@ function Index() {
       </section>
 
       {/* Ranking / community */}
-      <section className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24">
+      <section className="relative overflow-hidden">
+        {/* Los rivales existen: grupo de postulantes como fondo de toda la
+            sección, oscurecido hacia la izquierda donde vive el texto. */}
+        <img
+          src="https://images.unsplash.com/photo-1760574740270-067dc14bf164?auto=format&fit=crop&w=1600&q=80"
+          alt=""
+          aria-hidden
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.22] saturate-[0.35]"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/55"
+        />
         <div
           aria-hidden
           className="pointer-events-none absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-success/[0.12] blur-[100px]"
         />
-        <div className="relative grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center">
-          <div>
+        <div
+          ref={rankingIntroRef}
+          className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1fr_1.1fr] lg:items-center"
+        >
+          <div className={cn(rankingIntroVisible && "animate-fade-up")}>
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
               <Trophy className="h-4 w-4" /> Ranking anónimo
             </span>
@@ -259,17 +308,6 @@ function Index() {
                 Ver ranking completo <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            {/* Real study moment, sunk into the navy (desaturated + tint) */}
-            <div className="relative mt-8 hidden overflow-hidden rounded-lg border border-border sm:block">
-              <img
-                src="https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=1200&q=80"
-                alt="Postulante concentrado estudiando con audífonos"
-                loading="lazy"
-                decoding="async"
-                className="h-44 w-full object-cover saturate-[0.55]"
-              />
-              <div aria-hidden className="absolute inset-0 bg-background/35" />
-            </div>
           </div>
 
           <div ref={rankingRef} className="overflow-hidden rounded-lg border border-border bg-card">
@@ -320,37 +358,74 @@ function Index() {
         </div>
       </section>
 
-      {/* Planes teaser */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:pb-24">
+      {/* Planes: banda ámbar de borde a borde — el único bloque drenched de la
+          página, para que el precio no se pierda entre el navy. */}
+      <section className="relative overflow-hidden bg-primary text-primary-foreground">
         <div
           ref={planesRef}
-          className={cn(
-            planesVisible && "animate-fade-up",
-            "relative overflow-hidden rounded-lg border border-border bg-card px-6 py-12 text-center sm:px-10",
-          )}
+          className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:py-20 lg:grid-cols-[1.15fr_1fr]"
         >
+          <div className={cn(planesVisible && "animate-fade-up")}>
+            <span className="font-data text-[0.7rem] font-bold uppercase tracking-[0.14em]">
+              Planes y precios
+            </span>
+            <h2 className="mt-3 max-w-xl text-balance text-[clamp(1.5rem,1.3rem+1.2vw,2.25rem)] font-bold tracking-[-0.03em]">
+              Empieza gratis. Desbloquea todo cuando lo necesites.
+            </h2>
+            <p className="mt-3 max-w-lg text-pretty font-medium text-primary-foreground/85">
+              El plan gratuito es tuyo para siempre. Premium abre todo lo demás cuando decidas ir en
+              serio — y puedes probarlo {TRIAL_DAYS} días sin pagar.
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="press mt-6 min-h-11 bg-background text-foreground hover:bg-background/90"
+            >
+              <Link to="/planes">
+                Ver planes y precios <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+
+          {/* Tarjeta de precio en navy sobre el ámbar: el contraste invertido
+              hace que el número se lea como dato de instrumento, no como oferta. */}
           <div
-            aria-hidden
-            className="pointer-events-none absolute -top-28 left-1/2 h-56 w-[28rem] -translate-x-1/2 rounded-full bg-primary/15 blur-[90px]"
-          />
-          <span className="relative inline-flex items-center gap-2 text-sm font-semibold text-primary">
-            <Sparkles className="h-4 w-4" /> Planes
-          </span>
-          <h2 className="mx-auto mt-3 max-w-xl text-balance text-[clamp(1.5rem,1.3rem+1.2vw,2.25rem)] font-bold tracking-[-0.03em]">
-            Empieza gratis. Desbloquea todo cuando lo necesites.
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-pretty text-muted-foreground">
-            El plan gratuito es{" "}
-            <strong className="font-semibold text-foreground">tuyo para siempre</strong>. Premium
-            abre los exámenes oficiales, los simulacros de tu universidad y el ranking completo —
-            desde ≈ S/ {PLAN_PRICES.quarterly.monthlyEquivalent} al mes, con {TRIAL_DAYS} días de
-            prueba gratis.
-          </p>
-          <Button asChild size="lg" className="press mt-6 min-h-11">
-            <Link to="/planes">
-              Ver planes y precios <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+            className={cn(
+              planesVisible && "animate-fade-up",
+              "relative rounded-lg border border-primary-foreground/15 bg-background p-6 text-foreground shadow-[0_32px_64px_-32px_rgba(15,23,42,0.55)] sm:p-8",
+            )}
+            style={planesVisible ? ({ "--i": 2 } as React.CSSProperties) : undefined}
+          >
+            <p className="font-data text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Premium desde
+            </p>
+            <p className="font-data mt-2 text-5xl font-bold tabular-nums">
+              S/ {PLAN_PRICES.quarterly.monthlyEquivalent.split(".")[0]}
+              <span className="text-2xl">
+                .{PLAN_PRICES.quarterly.monthlyEquivalent.split(".")[1]}
+              </span>{" "}
+              <span className="text-base font-normal text-muted-foreground">/ mes</span>
+            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              con el plan trimestral · {TRIAL_DAYS} días de prueba gratis
+            </p>
+            <ul className="mt-5 space-y-2.5 border-t border-border pt-5 text-sm">
+              {[
+                "Exámenes oficiales de admisión completos",
+                "Simulacros ilimitados de tu universidad",
+                "Ranking completo frente a otros postulantes",
+              ].map((f) => (
+                <li key={f} className="flex items-start gap-2.5">
+                  <Check
+                    className="mt-0.5 h-4 w-4 shrink-0 text-success"
+                    strokeWidth={3}
+                    aria-hidden
+                  />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 

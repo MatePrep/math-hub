@@ -1,10 +1,12 @@
-import { BookOpenCheck, Target, Timer, type LucideIcon } from "lucide-react";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
+import { SimulacroShowcase } from "@/components/landing/simulacro-showcase";
 import { cn } from "@/lib/utils";
 
 /**
- * Los 3 pilares diferenciadores del producto, cada uno con un mini-visual de
- * datos de ejemplo (aria-hidden) que muestra la idea antes de leerla.
+ * Los 3 pilares diferenciadores del producto sobre papel claro (.at-paper):
+ * la sección rompe el navy de la página como una hoja de examen real. Cada
+ * pilar lleva su número 1·2·3 y, debajo, el resultado de simulacro de
+ * ejemplo repite esos números donde cada pilar aparece de verdad.
  */
 
 function ScoreMini({ visible }: { visible: boolean }) {
@@ -105,17 +107,15 @@ function PaceMini({ visible }: { visible: boolean }) {
 }
 
 // Una sola frase resaltada por pilar — la afirmación que el visitante debe
-// retener — en tinta clara semibold, nunca en ámbar (reservado para el hero).
+// retener — en tinta semibold, nunca en ámbar (reservado para acciones).
 const em = "font-semibold text-foreground";
 
 const PILLARS: Array<{
-  icon: LucideIcon;
   title: string;
   text: React.ReactNode;
   Visual: (props: { visible: boolean }) => React.ReactNode;
 }> = [
   {
-    icon: Target,
     title: "Tu puntaje real, tu meta real",
     text: (
       <>
@@ -127,7 +127,6 @@ const PILLARS: Array<{
     Visual: ScoreMini,
   },
   {
-    icon: BookOpenCheck,
     title: "Estudia lo que de verdad se pregunta",
     text: (
       <>
@@ -139,7 +138,6 @@ const PILLARS: Array<{
     Visual: FrequencyMini,
   },
   {
-    icon: Timer,
     title: "Conoce tu propio ritmo",
     text: (
       <>
@@ -156,8 +154,8 @@ export function PillarsSection() {
   const { ref, visible } = useInViewOnce<HTMLDivElement>();
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-      <div className="grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-center">
+    <section className="at-paper border-y border-border">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
         <div className="max-w-xl">
           <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
             ¿Cómo se prepara alguien que sí va a ingresar?
@@ -169,47 +167,46 @@ export function PillarsSection() {
             Estas son las tres cosas que Admi-Tec te dice y ningún solucionario te va a decir.
           </p>
         </div>
-        {/* Real students, desaturated + navy tint so the photo sits in the register */}
-        <div className="relative hidden overflow-hidden rounded-lg border border-border lg:block">
-          <img
-            src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80"
-            alt="Grupo de estudiantes preparándose juntos"
-            loading="lazy"
-            decoding="async"
-            className="h-44 w-full object-cover saturate-[0.55]"
-          />
-          <div aria-hidden className="absolute inset-0 bg-background/35" />
-        </div>
-      </div>
 
-      <div ref={ref} className="mt-10 grid gap-4 lg:grid-cols-3">
-        {PILLARS.map((p, i) => (
-          <article
-            key={p.title}
-            className={cn(
-              visible && "animate-fade-up",
-              "group flex flex-col rounded-lg border border-border bg-card transition-[border-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-2 hover:border-primary/60 hover:shadow-[0_20px_40px_-18px_rgba(0,0,0,0.65)]",
-            )}
-            style={visible ? ({ "--i": i * 2 } as React.CSSProperties) : undefined}
-          >
-            <div className="h-32 border-b border-border bg-muted/20">
-              <p.Visual visible={visible} />
-            </div>
-            <div className="flex flex-1 flex-col p-6">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary transition-[transform,background-color] duration-300 ease-out group-hover:scale-110 group-hover:bg-primary/20">
-                  <p.icon className="h-4.5 w-4.5" aria-hidden />
-                </span>
-                <h3 className="text-balance text-lg font-bold leading-snug tracking-tight">
-                  {p.title}
-                </h3>
+        <div ref={ref} className="mt-10 grid gap-4 lg:grid-cols-3">
+          {PILLARS.map((p, i) => (
+            <article
+              key={p.title}
+              className={cn(
+                visible && "animate-fade-up",
+                "group flex flex-col rounded-lg border border-border bg-card transition-[border-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-2 hover:border-primary/70 hover:shadow-[0_20px_40px_-20px_rgba(15,23,42,0.35)]",
+              )}
+              style={visible ? ({ "--i": i * 2 } as React.CSSProperties) : undefined}
+            >
+              <div className="h-32 border-b border-border bg-muted/40">
+                <p.Visual visible={visible} />
               </div>
-              <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">
-                {p.text}
-              </p>
-            </div>
-          </article>
-        ))}
+              <div className="flex flex-1 flex-col p-6">
+                <div className="flex items-center gap-3">
+                  <span className="font-data grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-base font-bold text-primary-foreground transition-transform duration-300 ease-out group-hover:scale-110">
+                    {i + 1}
+                  </span>
+                  <h3 className="text-balance text-lg font-bold leading-snug tracking-tight">
+                    {p.title}
+                  </h3>
+                </div>
+                <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">
+                  {p.text}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {/* El mismo 1·2·3, ahora dentro de un resultado real */}
+        <div className="mt-14">
+          <p className="mx-auto max-w-md text-balance text-center font-semibold">
+            Y así se ven los tres juntos al terminar un simulacro:
+          </p>
+          <div className="mt-6">
+            <SimulacroShowcase />
+          </div>
+        </div>
       </div>
     </section>
   );

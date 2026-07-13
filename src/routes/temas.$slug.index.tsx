@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { InfoTooltip } from "@/components/info-tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { pageMeta, absoluteUrl } from "@/lib/site";
 import { JsonLd } from "@/components/json-ld";
 
@@ -239,23 +239,11 @@ function TopicPage() {
               Temas
             </h2>
             {hasTargetUniversity && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger
-                    type="button"
-                    className="text-muted-foreground/70 hover:text-foreground"
-                    aria-label="¿Cómo están ordenados los temas?"
-                  >
-                    <HelpCircle className="h-3.5 w-3.5" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-64 text-left">
-                    Los temas están ordenados de mayor a menor frecuencia según los exámenes reales
-                    (con año conocido) de los últimos 10 años en la universidad seleccionada. Los 3
-                    más frecuentes están marcados con 🔥, como sugerencia de en qué enfocar tu
-                    estudio.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <InfoTooltip>
+                Los temas están ordenados de mayor a menor frecuencia según los exámenes reales
+                (con año conocido) de los últimos 10 años en la universidad seleccionada. Los 3 más
+                frecuentes están marcados con 🔥, como sugerencia de en qué enfocar tu estudio.
+              </InfoTooltip>
             )}
           </div>
 

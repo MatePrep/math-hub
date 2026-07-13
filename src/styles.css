@@ -140,6 +140,34 @@
   letter-spacing: -0.03em;
 }
 
+/* Landing "paper" sections — the answer-sheet flipped: cream paper with navy
+   ink, so alternating sections read as sheet vs. ink and the page stops being
+   a single navy wall. Same token names as .at, so shared components (cards,
+   pills, bars) keep working; re-nest .at inside to return to navy. */
+.at .at-paper {
+  --background: oklch(0.955 0.016 88);
+  --foreground: oklch(0.22 0.045 258);
+  --card: oklch(0.99 0.007 88);
+  --card-foreground: oklch(0.22 0.045 258);
+  --popover: oklch(0.99 0.007 88);
+  --popover-foreground: oklch(0.22 0.045 258);
+  --primary: oklch(0.83 0.16 92);
+  --primary-foreground: oklch(0.2 0.045 258);
+  --secondary: oklch(0.9 0.02 88);
+  --secondary-foreground: oklch(0.22 0.045 258);
+  --muted: oklch(0.89 0.02 88);
+  --muted-foreground: oklch(0.42 0.03 258);
+  --accent: oklch(0.9 0.02 88);
+  --accent-foreground: oklch(0.22 0.045 258);
+  --success: oklch(0.42 0.08 190);
+  --success-foreground: oklch(0.97 0.014 85);
+  --border: oklch(0.22 0.045 258 / 14%);
+  --input: oklch(0.22 0.045 258 / 18%);
+
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 /* Score/timer/ranking figures read as instrument data, not prose. */
 .at .font-data {
   font-family: var(--at-font-mono);
@@ -204,56 +232,10 @@
   animation-play-state: paused;
 }
 
-/* Hero explanation bubbles: an alternating spotlight — one bubble lights up
-   (amber border + glow + slight scale) while its caption brightens, then the
-   other takes its turn. Sequential, never simultaneous; captions stay readable
-   even without the highlight. */
-@keyframes at-bubble-spot {
-  0%,
-  42%,
-  100% {
-    border-color: var(--border);
-    box-shadow: 0 6px 16px -8px rgb(0 0 0 / 50%);
-    transform: scale(1);
-  }
-  8%,
-  32% {
-    border-color: oklch(0.83 0.16 92 / 70%);
-    box-shadow:
-      0 0 26px -2px oklch(0.83 0.16 92 / 32%),
-      0 6px 16px -8px rgb(0 0 0 / 50%);
-    transform: scale(1.05);
-  }
-}
-@keyframes at-bubble-caption-spot {
-  0%,
-  42%,
-  100% {
-    color: var(--muted-foreground);
-  }
-  8%,
-  32% {
-    color: var(--primary);
-  }
-}
-.at .at-bubble {
-  animation: at-bubble-spot 9s ease-in-out infinite;
-}
-.at .at-bubble .at-bubble-caption {
-  animation: at-bubble-caption-spot 9s ease-in-out infinite;
-}
-/* Second bubble starts half a cycle later, so the highlights alternate. */
-.at .at-bubble-alt,
-.at .at-bubble-alt .at-bubble-caption {
-  animation-delay: 4.5s;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .at .animate-marquee,
   .at .animate-marquee-reverse,
   .at .animate-glow,
-  .at .at-bubble,
-  .at .at-bubble .at-bubble-caption,
   .at .animate-reveal-row {
     animation: none !important;
   }

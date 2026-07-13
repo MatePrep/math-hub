@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Check, GraduationCap } from "lucide-react";
 import {
   getFullProfile,
   updateFullProfile,
@@ -26,6 +26,7 @@ import {
 import { listTopics } from "@/lib/exercises.functions";
 import { listCareersForUniversities } from "@/lib/careers.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({ meta: [{ title: "Bienvenido · MatePre" }] }),
@@ -33,6 +34,8 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
 });
 
 const TOTAL_STEPS = 5;
+
+const STEP_LABELS = ["Universidad", "Tiempo", "Método", "Carrera", "Refuerzo"];
 
 const PREP_TIME_OPTIONS: Array<{ value: (typeof PREP_TIME_VALUES)[number]; label: string }> = [
   { value: "recien_empiezo", label: "Recién empiezo" },
@@ -191,11 +194,45 @@ function OnboardingPage() {
         </button>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Unas preguntas rápidas para personalizar tu experiencia. Paso {step} de {TOTAL_STEPS}.
+        5 preguntas rápidas — con esto armamos tu plan de estudio y tu cuenta regresiva. No hay
+        respuestas incorrectas.
       </p>
-      <Progress value={(step / TOTAL_STEPS) * 100} className="mt-4" />
 
-      <div className="mt-8 rounded-xl border border-border bg-card p-6">
+      <Progress value={(step / TOTAL_STEPS) * 100} className="mt-5" />
+      <div className="mt-2.5 flex items-start justify-between gap-1">
+        {STEP_LABELS.map((label, i) => {
+          const idx = i + 1;
+          const done = idx < step;
+          const active = idx === step;
+          return (
+            <div key={label} className="flex flex-1 flex-col items-center gap-1.5">
+              <div
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.7rem] font-semibold transition-colors duration-200",
+                  done && "bg-primary text-primary-foreground",
+                  active && "border-2 border-primary text-primary",
+                  !done && !active && "border border-border text-muted-foreground",
+                )}
+              >
+                {done ? <Check className="animate-icon-pop h-3.5 w-3.5" /> : idx}
+              </div>
+              <span
+                className={cn(
+                  "hidden text-center text-[0.65rem] leading-tight sm:block",
+                  active ? "font-semibold text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        key={step}
+        className="animate-card-swap mt-8 rounded-xl border border-border bg-card p-6"
+      >
         {step === 1 && (
           <div>
             <h2 className="font-display text-lg font-bold">
@@ -207,12 +244,19 @@ function OnboardingPage() {
             </p>
             <div className="mt-4 space-y-2">
               {universities.length === 0 && (
-                <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                  Aún no agregaste ninguna universidad.
-                </p>
+                <div className="flex flex-col items-center gap-2 rounded-md border border-dashed border-border p-6 text-center">
+                  <GraduationCap className="h-5 w-5 text-muted-foreground" aria-hidden />
+                  <p className="text-sm text-muted-foreground">
+                    Empieza agregando la universidad a la que quieres postular.
+                  </p>
+                </div>
               )}
               {universities.map((row, i) => (
-                <div key={i} className="flex items-center gap-2">
+                <div
+                  key={i}
+                  className="animate-fade-up flex items-center gap-2"
+                  style={{ "--i": i } as React.CSSProperties}
+                >
                   <Select
                     value={row.universityId}
                     onValueChange={(v) => updateUniversityRow(i, { universityId: v })}
@@ -240,6 +284,7 @@ function OnboardingPage() {
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="press"
                     onClick={() => removeUniversityRow(i)}
                     aria-label="Quitar"
                   >
@@ -252,7 +297,7 @@ function OnboardingPage() {
               type="button"
               size="sm"
               variant="outline"
-              className="mt-3"
+              className="press mt-3"
               onClick={addUniversityRow}
             >
               <Plus className="mr-1 h-3 w-3" /> Agregar universidad
@@ -264,20 +309,25 @@ function OnboardingPage() {
           <div>
             <h2 className="font-display text-lg font-bold">¿Cuánto tiempo llevas preparándote?</h2>
             <div className="mt-4 space-y-2">
-              {PREP_TIME_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setPrepTime(opt.value)}
-                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
-                    prepTime === opt.value
-                      ? "border-primary bg-primary/10 font-medium"
-                      : "border-border bg-background hover:border-primary/40"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {PREP_TIME_OPTIONS.map((opt) => {
+                const selected = prepTime === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setPrepTime(opt.value)}
+                    className={cn(
+                      "press flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm transition-colors duration-150",
+                      selected
+                        ? "border-primary bg-primary/10 font-medium"
+                        : "border-border bg-background hover:border-primary/40",
+                    )}
+                  >
+                    {opt.label}
+                    {selected && <Check className="animate-icon-pop h-4 w-4 text-primary" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -286,20 +336,25 @@ function OnboardingPage() {
           <div>
             <h2 className="font-display text-lg font-bold">¿Cómo te has preparado hasta ahora?</h2>
             <div className="mt-4 space-y-2">
-              {PREP_METHOD_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setPrepMethod(opt.value)}
-                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
-                    prepMethod === opt.value
-                      ? "border-primary bg-primary/10 font-medium"
-                      : "border-border bg-background hover:border-primary/40"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {PREP_METHOD_OPTIONS.map((opt) => {
+                const selected = prepMethod === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setPrepMethod(opt.value)}
+                    className={cn(
+                      "press flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm transition-colors duration-150",
+                      selected
+                        ? "border-primary bg-primary/10 font-medium"
+                        : "border-border bg-background hover:border-primary/40",
+                    )}
+                  >
+                    {opt.label}
+                    {selected && <Check className="animate-icon-pop h-4 w-4 text-primary" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -308,7 +363,8 @@ function OnboardingPage() {
           <div>
             <h2 className="font-display text-lg font-bold">¿A qué carrera te gustaría postular?</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Opcional. Cada universidad tiene sus propias carreras, así que elige una por cada una.
+              Opcional — puedes cambiarlo después desde tu perfil. Cada universidad tiene sus
+              propias carreras, así que elige una por cada una.
             </p>
             <div className="mt-4 space-y-4">
               {universities.map((row, i) => {
@@ -362,18 +418,23 @@ function OnboardingPage() {
               Nos ayuda a sugerirte por dónde empezar mientras acumulas tu propio historial.
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {allTopics.map((t: any) => (
-                <label
-                  key={t.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm hover:border-primary/40"
-                >
-                  <Checkbox
-                    checked={weakTopicIds.includes(t.id)}
-                    onCheckedChange={() => toggleWeakTopic(t.id)}
-                  />
-                  {t.name}
-                </label>
-              ))}
+              {allTopics.map((t: any) => {
+                const selected = weakTopicIds.includes(t.id);
+                return (
+                  <label
+                    key={t.id}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors duration-150",
+                      selected
+                        ? "border-primary bg-primary/10 font-medium"
+                        : "border-border bg-background hover:border-primary/40",
+                    )}
+                  >
+                    <Checkbox checked={selected} onCheckedChange={() => toggleWeakTopic(t.id)} />
+                    {t.name}
+                  </label>
+                );
+              })}
             </div>
 
             <div className="mt-6">
@@ -399,6 +460,7 @@ function OnboardingPage() {
             <Button
               type="button"
               variant="outline"
+              className="press"
               onClick={() => setStep((s) => s - 1)}
               disabled={submitting}
             >
@@ -411,6 +473,7 @@ function OnboardingPage() {
             <Button
               type="button"
               variant="ghost"
+              className="press"
               onClick={() => setStep((s) => s + 1)}
               disabled={submitting}
             >
@@ -420,6 +483,7 @@ function OnboardingPage() {
           {step < TOTAL_STEPS ? (
             <Button
               type="button"
+              className="press"
               onClick={() => setStep((s) => s + 1)}
               disabled={step === 1 && !canProceedStep1}
             >
@@ -427,10 +491,16 @@ function OnboardingPage() {
             </Button>
           ) : (
             <>
-              <Button type="button" variant="ghost" onClick={finish} disabled={submitting}>
+              <Button
+                type="button"
+                variant="ghost"
+                className="press"
+                onClick={finish}
+                disabled={submitting}
+              >
                 Omitir y terminar
               </Button>
-              <Button type="button" onClick={finish} disabled={submitting}>
+              <Button type="button" className="press" onClick={finish} disabled={submitting}>
                 {submitting ? "Guardando…" : "Empezar a practicar"}
               </Button>
             </>
