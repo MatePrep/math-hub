@@ -33,7 +33,7 @@ Bold and competitive rather than purely warm — "modo examen": the public site'
 
 ## Anti-references
 
-No specific named anti-references given. The explicit boundary carries over unchanged even with the bolder tone: no confetti, no cartoon mascots, no game-like badges or achievement pop-ups. Competitive/urgent ≠ gamified/toy-like — the ranking and countdowns should read as real instrumentation (exam timers, a leaderboard), not playful game mechanics.
+No specific named anti-references given. Most of the boundary carries over unchanged even with the bolder tone: no cartoon mascots, no game-like badges or achievement pop-ups. Competitive/urgent ≠ gamified/toy-like — the ranking and countdowns should read as real instrumentation (exam timers, a leaderboard), not playful game mechanics. One deliberate exception (added when the landing page's motion was revisited): a brand-colored confetti burst and a springy button/card overshoot are allowed specifically on the primary "Crear cuenta gratis" conversion action and its surrounding interactive elements — celebrating the one moment that matters (signup), not decorating the page. This doesn't extend to the ranking or countdown, which stay competitive-not-gamified as before. See DESIGN.md's "CTA Bounce Exception."
 
 ## Design Principles
 

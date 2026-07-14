@@ -23,7 +23,7 @@ export const SOCIAL_LINKS = {
   whatsapp: import.meta.env.VITE_WHATSAPP_URL || "https://wa.me/51999999999",
 } as const;
 export const SITE_DESCRIPTION =
-  "Exámenes oficiales, simulacros ilimitados y ranking anónimo para tu admisión a la UNI, San Marcos, PUCP, UNALM y más.";
+  "Exámenes oficiales, simulacros ilimitados de todos tus cursos y ranking anónimo para tu admisión a la UNI, San Marcos, PUCP, UNALM y más.";
 
 export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;

@@ -232,11 +232,203 @@
   animation-play-state: paused;
 }
 
+/* Bigger section entrances: content "assembles" with a springy overshoot
+   (scale/translate settle past their target before resting) rather than
+   just fading — scoped to .at so the calmer product-surface fade-up
+   elsewhere in the app is untouched. The overshoot lives in the keyframe
+   stops themselves (not the easing curve), so it reads as a settle, never
+   an elastic wobble loop. */
+@keyframes at-rise-in {
+  0% {
+    opacity: 0;
+    transform: translateY(32px) scale(0.92);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.03);
+  }
+  80% {
+    transform: translateY(2px) scale(0.99);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+.at .animate-rise-in {
+  animation: at-rise-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Section-boundary sweep: a thin amber gradient line crosses the section's
+   top edge, then loops on a slow cycle for as long as the section has been
+   revealed — a recurring "something's alive here" cue between sections,
+   distinct from the hero widget's ambient glow (a line, not a blur) so it
+   never competes with the One Glow Rule. */
+@keyframes at-sweep-line {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  35% {
+    transform: translateX(320%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(320%);
+    opacity: 0;
+  }
+}
+.at .animate-sweep-line {
+  animation: at-sweep-line 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Continuous ambient float for the hero's background glows — independent of
+   scroll/parallax, so the page has a little life even at rest. Lives on a
+   wrapper around the parallax-driven glow (parallax already owns
+   `transform` on the inner element via an imperative CSS var, so float gets
+   its own element to animate instead of fighting for the same property).
+   Per-instance amplitude/duration/delay via custom properties so multiple
+   glows drift out of sync rather than in lockstep. */
+@keyframes at-float {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(var(--float-x, 14px), var(--float-y, -18px));
+  }
+}
+.at .animate-float {
+  animation: at-float var(--float-duration, 9s) ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+/* Ranking's "Tú" row: a slow, quiet breathing tint so the row that matters
+   reads as live data, not a static highlight — paired with a separate
+   overlay element so it never fights the row's own fade-up animation. */
+@keyframes at-pulse-row {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.at .animate-pulse-row {
+  animation: at-pulse-row 2.8s ease-in-out infinite;
+}
+
+/* Ambient background layer (AmbientBackground component): a fixed backdrop
+   behind every section — aurora-style mesh blobs, a few light particles,
+   and a static noise texture. Brand-constrained on purpose: only amber and
+   teal (the page's two allowed hues, per the One Pencil Rule) at very low
+   opacity, so "premium ambient" never becomes a second decorative color. */
+@keyframes at-blob-morph {
+  0%,
+  100% {
+    border-radius: 42% 58% 65% 35% / 45% 40% 60% 55%;
+  }
+  33% {
+    border-radius: 58% 42% 35% 65% / 55% 60% 40% 45%;
+  }
+  66% {
+    border-radius: 50% 50% 40% 60% / 35% 55% 45% 65%;
+  }
+}
+.at .animate-blob-morph {
+  animation: at-blob-morph var(--blob-duration, 18s) ease-in-out infinite;
+  animation-delay: var(--blob-delay, 0s);
+}
+
+@keyframes at-twinkle {
+  0%,
+  100% {
+    opacity: var(--twinkle-min, 0.15);
+  }
+  50% {
+    opacity: var(--twinkle-max, 0.6);
+  }
+}
+.at .animate-twinkle {
+  animation: at-twinkle var(--twinkle-duration, 4s) ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+
+/* Static grain — reads as texture immediately, no motion involved, so it
+   stays untouched by prefers-reduced-motion. Inline SVG feTurbulence, kept
+   to ~4% opacity via mix-blend-mode so it never adds visible color. */
+.at .noise-texture {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.035;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .at .animate-blob-morph,
+  .at .animate-twinkle {
+    animation: none !important;
+  }
+}
+
+/* CTA Bounce Exception (see DESIGN.md): a springy overshoot confined to
+   buttons and interactive cards' own hover/press states — never to
+   scroll-triggered section entrances, which stay ease-out via
+   animate-rise-in/fade-up. The back-ease curve overshoots past the target
+   scale before settling, which reads as "springy" without an explicit
+   bounce keyframe. */
+.at .cta-overshoot {
+  transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.at .cta-overshoot:hover {
+  transform: scale(1.06);
+}
+.at .cta-overshoot:active {
+  transform: scale(0.95);
+}
+
+/* Pillar cards (Pillars section, "¿Cómo se prepara alguien que sí va a
+   ingresar?"): cursor-follow 3D tilt (--tilt-x/--tilt-y, set imperatively by
+   usePointerTilt) composed with the hover lift in one `transform` chain —
+   two Tailwind hover utilities would otherwise fight over the same
+   property. Local `perspective()` keeps this self-contained per card. */
+.at .pillar-card {
+  transform: perspective(900px) translateY(0) rotateX(var(--tilt-y, 0deg))
+    rotateY(var(--tilt-x, 0deg));
+  transition:
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 300ms ease-out,
+    box-shadow 300ms ease-out;
+}
+.at .pillar-card:hover {
+  transform: perspective(900px) translateY(-0.75rem) rotateX(var(--tilt-y, 0deg))
+    rotateY(var(--tilt-x, 0deg));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .at .cta-overshoot,
+  .at .cta-overshoot:hover,
+  .at .cta-overshoot:active {
+    transition: none !important;
+    transform: none !important;
+  }
+  .at .pillar-card,
+  .at .pillar-card:hover {
+    transition: none !important;
+    transform: none !important;
+  }
   .at .animate-marquee,
   .at .animate-marquee-reverse,
   .at .animate-glow,
-  .at .animate-reveal-row {
+  .at .animate-reveal-row,
+  .at .animate-rise-in,
+  .at .animate-sweep-line,
+  .at .animate-pulse-row,
+  .at .animate-float {
     animation: none !important;
   }
 }

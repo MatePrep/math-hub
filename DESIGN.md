@@ -116,8 +116,8 @@ Every other screen — header, footer, temas/exámenes/simulacros, and the signe
 - The homepage hero only: dark ink-navy canvas (`oklch(0.20 0.045 258)`), one amber-gold primary, one teal "correct" accent — never a second decorative hue.
 - Bricolage Grotesque (blunt geometric display) against Public Sans (clean exam-manual body) on the hero — a weight contrast, not two similar geometrics.
 - JetBrains Mono + tabular figures for every number that is actually being measured (timers, scores, ranks, stats), homepage hero only.
-- Flat cards, whisper borders, ambient (never bouncy) motion; the hero widget's amber glow is the one deliberate exception to "flat by default."
-- No confetti, no cartoon badges, no mascots — competitive energy is expressed as real instrumentation, never gamified toy UI.
+- Flat cards, whisper borders, ambient (never bouncy) motion for scroll-triggered section entrances; the hero widget's amber glow is the one deliberate exception to "flat by default."
+- No cartoon badges, no mascots — competitive energy is expressed as real instrumentation, never gamified toy UI. The one exception is the **CTA Bounce Exception** (see Motion, below): buttons and interactive cards get a springy overshoot on hover/press, and the primary "Crear cuenta gratis" click fires a brand-colored confetti burst — both scoped to the actual conversion moment, not page decoration.
 - Everywhere else — header, footer, temas/exámenes/simulacros, and the authenticated app — runs the light "study notebook" system (Fraunces/Inter, warm paper, blue + amber) described under Product Surface. This is the site's default, not a secondary fallback.
 
 ## 2. Colors
@@ -182,7 +182,7 @@ Flat by default, ink-navy depth conveyed through the card-vs-canvas lightness st
 
 ### Named Rules
 
-**The One Glow Rule.** The ambient amber glow appears exactly once, on the hero's answer-sheet widget. Every other card, table, and section stays flat with a border only — adding a second glow anywhere else would cancel the effect that makes the hero moment read as special.
+**The One Glow Rule.** The ambient amber glow appears exactly once, on the hero's answer-sheet widget. Every other card, table, and section stays flat with a border only — adding a second glow anywhere else would cancel the effect that makes the hero moment read as special. This is distinct from the `AmbientBackground` mesh (see Motion) — that's a fixed, page-wide backdrop of very-low-opacity drifting blobs, not a pulsing "this is live" signal, so it doesn't compete with or dilute the widget's one glow.
 
 ## 5. Components
 
@@ -221,11 +221,19 @@ The header, footer, and mobile nav sheet always run the Product Surface palette 
 
 ### Motion
 
+The landing page's motion register was deliberately turned up (per a direct product decision) to read as energetic and alive throughout, not just at isolated moments — scroll entrances now carry a springy overshoot too, not only buttons.
+
 - **Tactile press** (`.press`, 100ms scale-to-0.97 on `:active`): every button and clickable pill.
 - **Ambient glow** (`animate-glow`, 5s ease-in-out): the hero widget only, see Elevation.
-- **Marquee** (`animate-marquee`, 34s linear infinite, pauses on hover/focus): the university strip only.
+- **Ambient float** (`animate-float`, 9-12s ease-in-out infinite, per-instance `--float-x`/`--float-y`/`--float-duration`/`--float-delay`): the hero's two background glows drift continuously at rest, out of sync with each other, independent of the scroll-driven parallax on the same elements (float lives on an outer wrapper so it doesn't fight parallax for the `transform` property).
+- **AmbientBackground** (`src/components/landing/ambient-background.tsx`): a `fixed`, page-wide backdrop behind every section (contained via `isolate` on the page root so it stacks correctly instead of escaping to the document root) — three large `blur-[100px]` mesh blobs (`animate-float` + `animate-blob-morph`, 16-24s cycles, border-radius drifting through a few organic shapes) at 5-7% opacity, ten small twinkling particles (`animate-twinkle`, 3.6-6s, opacity 0.1↔0.55), and a static SVG-noise `.noise-texture` overlay (`mix-blend-mode: overlay`, ~3.5% opacity, no animation). Amber/teal only, per the One Pencil Rule — this is ambiance, not a second decorative hue.
+- **Marquee** (`animate-marquee`, 34s linear infinite, pauses on hover/focus): the university strip; course chips additionally bounce on hover (`hover:scale-110`, back-ease).
 - **Reveal row** (`animate-reveal-row`, 260ms cubic-bezier(0.16,1,0.3,1)): staggered entrance for the answer-sheet widget's option rows as they resolve.
-- All public-site motion has a `prefers-reduced-motion` fallback (marquee/glow/reveal disabled outright); this is enforced at the CSS layer, not per-component.
+- **Rise-in** (`animate-rise-in`, 560ms, overshoot baked into the keyframe stops — scale 0.92→1.03→0.99→1, translateY 32px→-6px→2px→0): the section-entrance animation, applied broadly (headline blocks, cards, the ranking table, the pricing card, most of the final CTA) so most of a section's content visibly "pops" as it scrolls in, not just one element.
+- **Section sweep** (`animate-sweep-line`, 3.6s cubic-bezier(0.4,0,0.2,1) infinite): a thin gradient line crosses a section's top edge, then loops on a slow cycle for as long as the section is visible — a recurring "something's alive" cue between sections.
+- **CTA overshoot** (`.cta-overshoot`, 350ms `cubic-bezier(0.34,1.56,0.64,1)` back-ease, scale to 1.06 on hover / 0.95 on `:active`): every primary and secondary button, plus the same back-ease curve on Pillars/"Cómo empezar" card hover-lift and their number-badge wiggle (`rotate-12 scale-110` on hover).
+- **Confetti burst** (`fireConfetti`, `canvas-confetti`, brand colors — amber/teal/ink, not rainbow): fires once, only on the primary "Crear cuenta gratis" click — the actual signup action.
+- All public-site motion has a `prefers-reduced-motion` fallback (marquee/glow/float/blob-morph/twinkle/reveal/rise-in/sweep/pulse-row/cta-overshoot disabled outright, confetti skipped entirely); this is enforced at the CSS layer (or an explicit `matchMedia` check for confetti), not per-component. The noise texture is static and unaffected — it's a texture, not motion.
 
 ### Product Surface: Components
 
@@ -240,13 +248,6 @@ Buttons, cards, badges, inputs, stat tiles, and the favorite-star pattern on the
 - **Do** keep the ambient glow to the hero `AnswerSheetWidget` only — the One Glow Rule.
 - **Do** keep the ranking and countdown mechanics reading as real instrumentation (a scoreboard, a stopwatch) per PRODUCT.md's "competitive, not gamified" principle.
 - **Do** keep the `.at` navy/amber system scoped to the homepage's own landing sections only — header, footer, temas/exámenes/simulacros, and the authenticated app always use the Product Surface palette. Study-facing pages stay light on purpose.
-- **Do** provide a `prefers-reduced-motion` fallback for every homepage-hero animation (marquee, glow, reveal-row), matching what's already implemented.
+- **Do** provide a `prefers-reduced-motion` fallback for every homepage-hero animation (marquee, glow, float, reveal-row, rise-in, sweep, pulse-row, cta-overshoot, confetti), matching what's already implemented.
+- **Do** keep the confetti burst confined to the primary "Crear cuenta gratis" click — it's a celebration of the actual signup action, not ambient decoration, even though the rest of the page's motion (rise-in, sweep, float, cta-overshoot) is now deliberately energetic throughout. The ranking and countdown *mechanics* (how scores/ranks are computed and shown) still read as real instrumentation, not gamified — only their entrance motion got livelier, not their substance.
 
-### Don't:
-
-- **Don't** introduce a second saturated accent hue on the homepage hero; teal (`at-success`) is reserved for "correct/positive," amber for emphasis/action — never interchange them.
-- **Don't** add confetti, cartoon badges, mascots, or bouncy/elastic motion anywhere — even the competitive ranking and countdown stay dressed as real exam instrumentation (carried over from PRODUCT.md's anti-references, unchanged by the bolder tone).
-- **Don't** use `border-left`/`border-right` accent stripes on cards or list rows; the ranking table's "Tú" row uses a full top border plus background tint, not a side stripe.
-- **Don't** use gradient text or `background-clip: text`; emphasis on the homepage hero comes from the amber color or Bricolage Grotesque weight, never a gradient.
-- **Don't** darken or enlarge shadows on hover/active; the `.press` scale-down and background-opacity shifts carry all interaction feedback.
-- **Don't** set Fraunces below ~18px on the product surface, and don't let Bricolage Grotesque or the `.at` navy/amber palette leak outside the homepage's own hero sections — not into the header, footer, temas/exámenes/simulacros, or the authenticated app.
