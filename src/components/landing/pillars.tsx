@@ -1,124 +1,19 @@
+import { useRef, useState } from "react";
 import { Gauge, ListChecks, Target } from "lucide-react";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { usePointerTilt } from "@/hooks/use-pointer-tilt";
-import { useCountUp } from "@/hooks/use-count-up";
 import { SimulacroShowcase } from "@/components/landing/simulacro-showcase";
+import { FeatureCarousel } from "@/components/landing/feature-carousel";
 import { cn } from "@/lib/utils";
 
 /**
- * Los 3 pilares diferenciadores del producto sobre papel claro (.at-paper):
- * la sección rompe el navy de la página como una hoja de examen real. Cada
- * pilar lleva su número 1·2·3 y, debajo, el resultado de simulacro de
- * ejemplo repite esos números donde cada pilar aparece de verdad.
+ * Los 3 pilares diferenciadores del producto sobre papel claro (.at-paper).
+ * El simulacro de ejemplo (SimulacroShowcase) es el centro de atención de la
+ * sección; a la derecha, un carrusel arrastrable (FeatureCarousel) deja al
+ * estudiante deslizar entre los 3 pilares — el pilar centrado resalta el
+ * bloque que le corresponde dentro del simulacro real, haciendo visible la
+ * relación "esto que lees es exactamente lo que verás".
  */
-
-function ScoreMini({ visible }: { visible: boolean }) {
-  const score = useCountUp(812, visible, 1200);
-  return (
-    <div aria-hidden className="flex h-full flex-col justify-center gap-2 px-4">
-      <div className="flex items-baseline justify-between">
-        <span className="font-data text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-          Tu simulacro
-        </span>
-        <span className="font-data text-sm font-bold tabular-nums">{score} pts</span>
-      </div>
-      <div className="relative h-2.5 rounded-full bg-muted">
-        <div
-          className="h-2.5 rounded-full bg-primary transition-[width] duration-1000 ease-out"
-          style={{ width: visible ? "76%" : "0%" }}
-        />
-        <div className="absolute -top-1 bottom-[-4px] left-[70%] w-0.5 rounded bg-foreground/70" />
-      </div>
-      <div className="flex justify-end">
-        <span className="font-data text-[0.65rem] font-semibold text-success">
-          mínimo de ingreso: 800 · lo superaste
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function FrequencyRow({ label, pct, width, delay, visible }: FrequencyRowProps) {
-  const shown = useCountUp(pct, visible, 900);
-  return (
-    <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-[0.7rem] font-medium text-muted-foreground">{label}</span>
-      <div className="h-2.5 flex-1 rounded-full bg-muted">
-        <div
-          className="h-2.5 rounded-full bg-primary transition-[width] duration-700 ease-out"
-          style={{ width: visible ? `${width}%` : "0%", transitionDelay: `${delay}ms` }}
-        />
-      </div>
-      <span className="font-data w-9 shrink-0 text-right text-[0.7rem] font-bold tabular-nums">
-        {shown}%
-      </span>
-    </div>
-  );
-}
-
-type FrequencyRowProps = {
-  label: string;
-  pct: number;
-  width: number;
-  delay: number;
-  visible: boolean;
-};
-
-function FrequencyMini({ visible }: { visible: boolean }) {
-  const rows = [
-    { label: "Álgebra", pct: 28, width: 84 },
-    { label: "Geometría", pct: 22, width: 66 },
-    { label: "Aritmética", pct: 14, width: 42 },
-  ];
-  return (
-    <div aria-hidden className="flex h-full flex-col justify-center gap-2.5 px-4">
-      {rows.map((r, i) => (
-        <FrequencyRow key={r.label} {...r} delay={i * 140} visible={visible} />
-      ))}
-    </div>
-  );
-}
-
-function PaceMini({ visible }: { visible: boolean }) {
-  const rows = [
-    { label: "Tú", time: "1:12", width: 46, mine: true },
-    { label: "Promedio", time: "1:38", width: 64, mine: false },
-  ];
-  return (
-    <div aria-hidden className="flex h-full flex-col justify-center gap-3 px-4">
-      {rows.map((r, i) => (
-        <div key={r.label} className="flex items-center gap-2">
-          <span
-            className={cn(
-              "w-20 shrink-0 text-[0.7rem] font-medium",
-              r.mine ? "font-bold text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {r.label}
-          </span>
-          <div className="h-2.5 flex-1 rounded-full bg-muted">
-            <div
-              className={cn(
-                "h-2.5 rounded-full transition-[width] duration-700 ease-out",
-                r.mine ? "bg-primary" : "bg-muted-foreground/40",
-              )}
-              style={{
-                width: visible ? `${r.width}%` : "0%",
-                transitionDelay: `${i * 140}ms`,
-              }}
-            />
-          </div>
-          <span className="font-data w-9 shrink-0 text-right text-[0.7rem] font-bold tabular-nums">
-            {r.time}
-          </span>
-        </div>
-      ))}
-      <p className="text-[0.65rem] font-semibold text-success">
-        26 s más rápido que el promedio en esta pregunta
-      </p>
-    </div>
-  );
-}
 
 // Una sola frase resaltada por pilar — la afirmación que el visitante debe
 // retener — en tinta semibold, nunca en ámbar (reservado para acciones).
@@ -127,7 +22,6 @@ const em = "font-semibold text-foreground";
 const PILLARS: Array<{
   title: string;
   text: React.ReactNode;
-  Visual: (props: { visible: boolean }) => React.ReactNode;
   Icon: typeof Target;
 }> = [
   {
@@ -139,7 +33,6 @@ const PILLARS: Array<{
         bien»: <strong className={em}>sabes si hoy ingresarías</strong>.
       </>
     ),
-    Visual: ScoreMini,
     Icon: Target,
   },
   {
@@ -151,7 +44,6 @@ const PILLARS: Array<{
         estudio van donde hay puntos, no donde el índice del libro diga.
       </>
     ),
-    Visual: FrequencyMini,
     Icon: ListChecks,
   },
   {
@@ -163,70 +55,39 @@ const PILLARS: Array<{
         poder verla.
       </>
     ),
-    Visual: PaceMini,
     Icon: Gauge,
   },
 ];
 
-// Tarjeta con tilt 3D que sigue el cursor (usePointerTilt) — cada instancia
-// necesita su propio ref/estado, así que vive en su propio componente en vez
-// de llamar el hook dentro del .map() del padre.
-function PillarCard({
-  index,
-  title,
-  text,
-  Visual,
-  Icon,
-  visible,
-}: {
-  index: number;
-  title: string;
-  text: React.ReactNode;
-  Visual: (props: { visible: boolean }) => React.ReactNode;
-  Icon: typeof Target;
-  visible: boolean;
-}) {
-  const { ref, handleMove, handleLeave } = usePointerTilt<HTMLElement>(5);
-
-  return (
-    <article
-      ref={ref}
-      onMouseMove={handleMove}
-      onMouseLeave={handleLeave}
-      className={cn(
-        visible && "animate-rise-in",
-        "pillar-card group flex flex-col rounded-lg border border-border bg-card hover:border-primary/70 hover:shadow-[0_20px_40px_-20px_rgba(15,23,42,0.35)]",
-      )}
-      style={visible ? ({ "--i": index * 2 } as React.CSSProperties) : undefined}
-    >
-      <div className="relative h-32 overflow-hidden border-b border-border bg-muted/40">
-        {/* Marca de agua del ícono: refuerza el concepto del pilar sin competir
-            con los datos — puramente decorativa. */}
-        <Icon
-          aria-hidden
-          className="pointer-events-none absolute -right-3 -top-3 h-20 w-20 text-primary/[0.08]"
-          strokeWidth={1.5}
-        />
-        <Visual visible={visible} />
-      </div>
-      <div className="flex flex-1 flex-col p-6">
-        <div className="flex items-center gap-3">
-          <span className="font-data grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-base font-bold text-primary-foreground transition-transform duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-12 group-hover:scale-110">
-            {index + 1}
-          </span>
-          <h3 className="text-balance text-lg font-bold leading-snug tracking-tight">{title}</h3>
-        </div>
-        <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">{text}</p>
-      </div>
-    </article>
-  );
-}
-
 export function PillarsSection() {
   const { ref, visible } = useInViewOnce<HTMLDivElement>();
+  // El carrusel reporta qué pilar queda centrado al arrastrar — controla el
+  // resaltado dentro del simulacro real de al lado, así que deslizar una
+  // tarjeta y ver su bloque iluminarse en el resultado son el mismo gesto.
+  // El sentido inverso también existe: hacer clic en un bloque del
+  // simulacro mueve el carrusel hasta esa tarjeta (ver activeIndex más abajo).
+  const [active, setActive] = useState(1);
+  const { ref: tiltRef, handleMove, handleLeave } = usePointerTilt<HTMLDivElement>(4);
+  const carouselWrapRef = useRef<HTMLDivElement>(null);
+
+  // En mobile el simulacro y el carrusel quedan apilados — un clic en el
+  // simulacro puede dejar la explicación fuera de pantalla, así que además
+  // de cambiar el pilar activo, lo llevamos a la vista ("nearest" no mueve
+  // nada si ya es visible, como en desktop donde ambos están lado a lado).
+  const handleSelectPillar = (n: number) => {
+    setActive(n);
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    carouselWrapRef.current?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "nearest",
+    });
+  };
 
   return (
-    <section className="at-paper border-y border-border">
+    <section
+      data-snap-section
+      className="flex min-h-dvh snap-start flex-col justify-center at-paper border-y border-border"
+    >
       <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
         <div className="max-w-xl">
           <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
@@ -240,27 +101,33 @@ export function PillarsSection() {
           </p>
         </div>
 
-        <div ref={ref} className="mt-10 grid gap-4 lg:grid-cols-3">
-          {PILLARS.map((p, i) => (
-            <PillarCard
-              key={p.title}
-              index={i}
-              title={p.title}
-              text={p.text}
-              Visual={p.Visual}
-              Icon={p.Icon}
-              visible={visible}
-            />
-          ))}
-        </div>
+        <div
+          ref={ref}
+          className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start lg:gap-10"
+        >
+          {/* Centro de atención: el simulacro real, con un tilt 3D sutil que
+              sigue el cursor — el mismo lenguaje de "objeto vivo" que antes
+              llevaban las tarjetas, ahora reservado para lo único que
+              importa mostrar de verdad. */}
+          <div
+            ref={tiltRef}
+            onMouseMove={handleMove}
+            onMouseLeave={handleLeave}
+            className={cn(
+              visible && "animate-rise-in",
+              "showcase-tilt min-w-0 lg:sticky lg:top-24",
+            )}
+            style={visible ? ({ "--i": 2 } as React.CSSProperties) : undefined}
+          >
+            <SimulacroShowcase highlightPillar={active} onSelectPillar={handleSelectPillar} />
+          </div>
 
-        {/* El mismo 1·2·3, ahora dentro de un resultado real */}
-        <div className="mt-14">
-          <p className="mx-auto max-w-md text-balance text-center font-semibold">
-            Y así se ven los tres juntos al terminar un simulacro:
-          </p>
-          <div className="mt-6">
-            <SimulacroShowcase />
+          <div
+            ref={carouselWrapRef}
+            className={cn(visible && "animate-rise-in", "flex min-w-0 flex-col")}
+            style={visible ? ({ "--i": 4 } as React.CSSProperties) : undefined}
+          >
+            <FeatureCarousel items={PILLARS} activeIndex={active} onActiveChange={setActive} />
           </div>
         </div>
       </div>

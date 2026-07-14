@@ -179,10 +179,13 @@ Flat by default, ink-navy depth conveyed through the card-vs-canvas lightness st
 
 - **Ghost Ring** (`box-shadow: 0 0 0 1px rgba(0,0,0,0.2)`): the `AnswerSheetWidget` card only — a hairline definition ring, not a drop shadow.
 - **Ambient Glow** (`bg-primary/25` at `blur-3xl` behind the widget, animated 0.35→0.6 opacity): the page's one bold live-signal. Never reused elsewhere; reserving it to a single component is what keeps it meaningful.
+- **Framed Panel** (`shadow-[0_8px_8px_-4px_rgba(15,23,42,0.4-0.45)]`, no border): the Planes pricing card and the `SimulacroShowcase` device frame — the page's two "floating premium object" moments. Shadow only, capped at 8px blur, never paired with a border on the same element (see the Border-or-Shadow Rule).
 
 ### Named Rules
 
 **The One Glow Rule.** The ambient amber glow appears exactly once, on the hero's answer-sheet widget. Every other card, table, and section stays flat with a border only — adding a second glow anywhere else would cancel the effect that makes the hero moment read as special. This is distinct from the `AmbientBackground` mesh (see Motion) — that's a fixed, page-wide backdrop of very-low-opacity drifting blobs, not a pulsing "this is live" signal, so it doesn't compete with or dilute the widget's one glow.
+
+**The Border-or-Shadow Rule.** Never pair a `border` with a soft/wide `box-shadow` (≥16px blur) on the same element as decoration — pick one: a solid whisper border (the page's default, no shadow needed), or a shadow capped at 8px blur with no border (the Framed Panel treatment, reserved for the two "elevated object" moments above). Mixing both is the generic "ghost card" look and reads as template, not designed.
 
 ## 5. Components
 

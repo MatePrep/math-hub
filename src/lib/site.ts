@@ -6,13 +6,13 @@
 // Set VITE_SITE_URL (in .env and in the deploy platform's env vars) to the
 // real production origin once one exists — everything else picks it up
 // automatically, no other code changes needed.
-const rawSiteUrl = import.meta.env.VITE_SITE_URL || "https://admi-tec.example.com";
+const rawSiteUrl = import.meta.env.VITE_SITE_URL || "https://admi-tec.com";
 export const SITE_URL = rawSiteUrl.replace(/\/$/, "");
 export const SITE_NAME = "Admi-Tec";
 // Correo de contacto mostrado donde aún no hay flujo automatizado (ej. el
 // botón "Suscribirme" antes de integrar la pasarela de pago). Configura
 // VITE_CONTACT_EMAIL en .env con el correo real cuando exista.
-export const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || "contacto@admi-tec.pe";
+export const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || "contact@admi-tec.com";
 // Redes sociales y WhatsApp de contacto. Igual que CONTACT_EMAIL: valores
 // placeholder hasta que existan las cuentas reales — configura las VITE_* en
 // .env y en el entorno de deploy y todo el sitio las toma automáticamente.

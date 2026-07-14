@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, Trophy } from "lucide-react";
@@ -15,6 +16,7 @@ import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useParallax } from "@/hooks/use-parallax";
 import { useScrollProgress } from "@/hooks/use-scroll-progress";
+import { useSectionPager } from "@/hooks/use-section-pager";
 import { fireConfetti } from "@/lib/confetti";
 import { pageMeta, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 import { PLAN_PRICES, TRIAL_DAYS } from "@/lib/plan";
@@ -99,6 +101,11 @@ function Index() {
   const retoImgRef = useParallax<HTMLImageElement>(0.05, 30);
   const rankingImgRef = useParallax<HTMLImageElement>(0.05, 30);
   const ctaImgRef = useParallax<HTMLImageElement>(0.04, 26);
+  const pageRef = useRef<HTMLDivElement>(null);
+  // Wheel/keyboard section paging (see the hook) — CSS scroll-snap in
+  // styles.css already handles touch; this is what makes a plain mouse
+  // wheel feel like the same one-flick-per-section "social app" jump.
+  useSectionPager(pageRef);
 
   return (
     // overflow-x-clip: the ambient glows intentionally bleed past the viewport
@@ -108,7 +115,7 @@ function Index() {
     // fixed + negative-z layer stays contained behind this page's content
     // instead of escaping to the document root (where it'd render behind
     // .at's own opaque background and disappear entirely).
-    <div className="at isolate overflow-x-clip">
+    <div ref={pageRef} className="at isolate snap-sections overflow-x-clip">
       <AmbientBackground />
 
       {/* Scroll progress rail — a position indicator, not decoration, so it
@@ -122,7 +129,10 @@ function Index() {
       </div>
 
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border">
+      <section
+        data-snap-section
+        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden border-b border-border"
+      >
         {/* Ambient depth: two large soft glows (amber = pencil light, teal =
             "correct") so the navy canvas reads as lit paper, never a flat fill.
             Each drifts at a slightly different parallax speed as you scroll
@@ -238,7 +248,9 @@ function Index() {
         </div>
       </section>
 
-      {/* University marquee + course ticker */}
+      {/* University marquee + course ticker — a thin interstitial ribbon
+          between the Hero and Pilares slides, not a slide of its own; the
+          section pager just scrolls straight through it on the way there. */}
       <section className="border-b border-border bg-card/50">
         <div className="mx-auto max-w-6xl px-4 py-5">
           <div className="flex items-center gap-6">
@@ -287,7 +299,10 @@ function Index() {
           cronómetro, sin ranking, sin urgencia todavía. Navy plano (sin
           imagen de fondo) para que se sienta como una pausa antes del
           "reto del día". */}
-      <section className="border-b border-border">
+      <section
+        data-snap-section
+        className="flex min-h-dvh snap-start flex-col justify-center border-b border-border"
+      >
         <div ref={startRef} className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
           <div className="mx-auto max-w-xl text-center">
             <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
@@ -299,7 +314,7 @@ function Index() {
             </p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          <div className="mt-10 grid gap-6 sm:grid-cols-3">
             {START_STEPS.map((s, i) => (
               <div
                 key={s.title}
@@ -333,7 +348,10 @@ function Index() {
       </section>
 
       {/* Reto del día */}
-      <section className="relative overflow-hidden border-b border-border">
+      <section
+        data-snap-section
+        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden border-b border-border"
+      >
         <SectionSweep visible={retoVisible} />
         {/* Momento real de estudio (postulante resolviendo en su cuaderno),
             hundido en el navy para que el widget conserve todo el contraste.
@@ -391,7 +409,10 @@ function Index() {
       </section>
 
       {/* Ranking / community */}
-      <section className="relative overflow-hidden">
+      <section
+        data-snap-section
+        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden"
+      >
         <SectionSweep visible={rankingIntroVisible} />
         {/* Los rivales existen: grupo de postulantes como fondo de toda la
             sección, oscurecido hacia la izquierda donde vive el texto. */}
@@ -500,7 +521,10 @@ function Index() {
 
       {/* Planes: banda ámbar de borde a borde — el único bloque drenched de la
           página, para que el precio no se pierda entre el navy. */}
-      <section className="relative overflow-hidden bg-primary text-primary-foreground">
+      <section
+        data-snap-section
+        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden bg-primary text-primary-foreground"
+      >
         <SectionSweep visible={planesVisible} className="via-primary-foreground/70" />
         <div
           ref={planesRef}
@@ -533,7 +557,7 @@ function Index() {
           <div
             className={cn(
               planesVisible && "animate-rise-in",
-              "relative rounded-lg border border-primary-foreground/15 bg-background p-6 text-foreground shadow-[0_32px_64px_-32px_rgba(15,23,42,0.55)] sm:p-8",
+              "relative rounded-lg bg-background p-6 text-foreground shadow-[0_8px_8px_-4px_rgba(15,23,42,0.45)] sm:p-8",
             )}
             style={planesVisible ? ({ "--i": 2 } as React.CSSProperties) : undefined}
           >
@@ -571,7 +595,10 @@ function Index() {
       </section>
 
       {/* Final CTA */}
-      <section className="relative overflow-hidden border-t border-border">
+      <section
+        data-snap-section
+        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden border-t border-border"
+      >
         <SectionSweep visible={ctaVisible} />
         {/* Real exam moment: a hand writing on answer sheets, desaturated and
             sunk into the navy so the type keeps full contrast. */}
