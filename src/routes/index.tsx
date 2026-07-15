@@ -1,7 +1,7 @@
-import { lazy, Suspense } from "react";
+import { Fragment, lazy, Suspense } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowRight, Banknote, Check, Compass, Loader2, Trophy } from "lucide-react";
+import { ArrowRight, Banknote, Check, Compass, Loader2, Lock, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listTopics, listUniversities } from "@/lib/exercises.functions";
 import { PillarsSection } from "@/components/landing/pillars";
@@ -153,20 +153,33 @@ function LandingPending() {
 
 // Puntajes de ejemplo según la grilla de puntuación del examen (no
 // porcentajes) — coherentes con el "812 pts / mínimo 800" del hero.
-// Los 3 pasos reales de la primera semana — sin cronómetro, sin ranking
-// todavía, sin urgencia: la reassurance section para quien recién llega.
+// Los 4 pasos reales que da un estudiante nuevo, en orden: el onboarding
+// (única pantalla obligatoria: universidad — carrera/tiempo/temas débiles
+// se pueden saltar), ejercicios sueltos sin cronómetro visible con
+// corrección y solución instantáneas, un simulacro cronometrado y
+// calificado, y por último su análisis de resultado — la misma secuencia
+// que ve dentro de la app, no una versión idealizada para el marketing. El
+// paso 4 es honesto sobre el límite real: nota y tiempo por pregunta son
+// gratis para todos (ver examen-sesion.$sessionId.resultado.tsx); percentil,
+// promedio general y la recomendación de curso más débil están detrás de
+// PremiumOverlay (mismo archivo + panel.tsx) — `premium: true` dispara el
+// aviso en vez de fingir que todo es gratis.
 const START_STEPS = [
   {
     title: "Elige tu universidad",
-    text: "Ajustamos temas, exámenes y ranking al examen específico de tu carrera y tu universidad.",
+    text: "Es lo único obligatorio para arrancar. Exámenes, simulacros y ranking quedan ajustados a tu examen desde ese momento.",
   },
   {
     title: "Practica sin presión",
-    text: "Empieza tema por tema, a tu ritmo. El cronómetro y el puntaje llegan solo cuando tú decides rendir un simulacro.",
+    text: "Resuelve ejercicio por ejercicio, sin cronómetro visible. Cada respuesta se corrige al instante, con la solución completa paso a paso.",
   },
   {
-    title: "Ríndelo como examen real",
-    text: "Cuando te sientas listo, un simulacro te dice con números si ya puedes — sin sorpresas el día del examen.",
+    title: "Simulacros como examen real",
+    text: "Cuando estés listo, rinde un simulacro cronometrado con preguntas reales. Se corrige al instante y te dice, en puntaje, si ya llegas al mínimo que pide tu carrera.",
+  },
+  {
+    title: "Descubre qué reforzar",
+    text: "Después de cada simulacro ves tu nota y el tiempo que usaste en cada pregunta. Con Premium, además comparas tu percentil frente a otros postulantes y ves qué tema exacto conviene reforzar.",
   },
 ];
 
@@ -423,31 +436,74 @@ function Index() {
               No necesitas ser el mejor para empezar hoy.
             </h2>
             <p className="mt-3 text-pretty text-muted-foreground">
-              Así se ven tus primeros días en Admi-Tec — a tu ritmo, sin cronómetro hasta que tú
+              Así se ven tus primeros días en Admi-Tec. A tu ritmo, sin cronómetro hasta que tú
               quieras.
             </p>
+            <TrustPill className="mt-4">
+            Registrate gratis, sin tarjeta, en menos de un minuto
+            </TrustPill>
           </div>
 
-          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+          {/* Flex row, not a grid: a real connecting line has to live between
+              two cards as its own sibling element, and a flex row is the
+              natural place to interleave "card, connector, card, connector,
+              card" — see the step-connector rule in styles.css for why the
+              line itself is a one-shot scroll-triggered draw, not another
+              always-on loop. Row layout only kicks in at lg, not sm: at 4
+              steps, cramming four cards into a ~640-1023px tablet width
+              read as squeezed, so tablets now get one more breakpoint of
+              stacked cards before the connected row appears. */}
+          <div className="mt-10 flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-0">
             {START_STEPS.map((s, i) => (
-              <div
-                key={s.title}
-                className={cn(
-                  startVisible && "animate-rise-in",
-                  "group rounded-lg border border-border bg-card p-6 transition-transform duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-2",
+              <Fragment key={s.title}>
+                <div
+                  className={cn(
+                    startVisible && "animate-rise-in",
+                    "group rounded-lg border border-border bg-card p-6 transition-transform duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-2 lg:flex-1",
+                  )}
+                  style={startVisible ? ({ "--i": i * 2 } as React.CSSProperties) : undefined}
+                >
+                  <span className="font-data grid h-9 w-9 place-items-center rounded-full bg-primary text-base font-bold text-primary-foreground transition-transform duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-12 group-hover:scale-110">
+                    {i + 1}
+                  </span>
+                  <h3 className="mt-4 text-balance text-lg font-bold leading-snug tracking-tight">
+                    {s.title}
+                  </h3>
+                  {/* Honest about the plan split (see the note above
+                      START_STEPS): this is the one step that isn't fully
+                      free, so it gets the same lock+label device the
+                      product itself uses for gated features, not a claim
+                      buried only in the paragraph below. */}
+                  {s.premium && (
+                    <span className="mt-2 inline-flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-primary">
+                      <Lock className="h-3 w-3" aria-hidden /> Premium
+                    </span>
+                  )}
+                  <p className="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">
+                    {s.text}
+                  </p>
+                </div>
+                {/* Connects step i to step i+1. Vertical offset (42px) lands
+                    the line on the badge's own center (24px card padding +
+                    half of the 36px badge). Hidden below lg: stacked
+                    tablet/mobile steps read fine from their numbers alone. */}
+                {i < START_STEPS.length - 1 && (
+                  <div
+                    aria-hidden
+                    className="hidden w-10 shrink-0 pointer-events-none pt-[42px] lg:block"
+                  >
+                    <span
+                      className={cn(
+                        "step-connector block h-px w-full bg-gradient-to-r from-primary/60 to-primary/10",
+                        startVisible && "animate-step-draw",
+                      )}
+                      style={
+                        startVisible ? ({ "--i": i * 2 + 1 } as React.CSSProperties) : undefined
+                      }
+                    />
+                  </div>
                 )}
-                style={startVisible ? ({ "--i": i * 2 } as React.CSSProperties) : undefined}
-              >
-                <span className="font-data grid h-9 w-9 place-items-center rounded-full bg-primary text-base font-bold text-primary-foreground transition-transform duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-12 group-hover:scale-110">
-                  {i + 1}
-                </span>
-                <h3 className="mt-4 text-balance text-lg font-bold leading-snug tracking-tight">
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">
-                  {s.text}
-                </p>
-              </div>
+              </Fragment>
             ))}
           </div>
 
@@ -505,11 +561,11 @@ function Index() {
             <p className="mt-3 max-w-md text-pretty text-muted-foreground">
               Cada día publicamos{" "}
               <strong className="font-semibold text-foreground">un ejercicio real del banco</strong>{" "}
-              — el mismo para todos. Resuélvelo contra el reloj y compara tus aciertos con los de
-              todos los que lo intentaron hoy.
+              — el mismo para todos. Resuélvelo contra el reloj y compara tus resultados con
+              todos los postulantes que lo intentaron hoy.
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Sin cuenta y sin presión: pruébalo cuando quieras,{" "}
+              Sin registrarte y sin presión: pruébalo cuando quieras,{" "}
               <strong className="font-semibold text-foreground">el cronómetro te espera</strong>.
             </p>
           </div>
@@ -568,11 +624,10 @@ function Index() {
             <p className="mt-3 max-w-md text-pretty text-muted-foreground">
               Compara tu desempeño con{" "}
               <strong className="font-semibold text-foreground">
-                otros postulantes a tu misma universidad
+                otros postulantes a tu misma universidad y carrera
               </strong>
               , con seudónimo y solo con los últimos 3 meses de actividad.{" "}
-              <strong className="font-semibold text-foreground">Nadie ve tu nombre real</strong> —
-              ni siquiera nosotros lo mostramos.
+              <strong className="font-semibold text-foreground">Nadie ve tu nombre real</strong>.
             </p>
             <Button asChild variant="outline" className="press cta-overshoot mt-6">
               <Link to="/ranking">
@@ -590,7 +645,7 @@ function Index() {
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <span className="font-data text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                UNI · Últimos 3 meses
+                PUCP · Últimos 3 meses
               </span>
               <span className="font-data text-[0.7rem] text-muted-foreground">Puntaje</span>
             </div>
@@ -706,7 +761,7 @@ function Index() {
               <span className="text-base font-normal text-muted-foreground">/ mes</span>
             </p>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              con el plan trimestral · {TRIAL_DAYS} días de prueba gratis
+              con el plan trimestral
             </p>
             <ul className="mt-5 space-y-2.5 border-t border-border pt-5 text-sm">
               {[

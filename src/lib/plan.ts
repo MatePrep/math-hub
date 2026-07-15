@@ -8,8 +8,8 @@ export const PLAN_PRICES = {
     label: "Trimestral",
     amount: "35.99",
     per: "/ trimestre",
-    monthlyEquivalent: "12.00",
-    fullPrice: "44.97", // 14.99 × 3 — lo que costaría pagar los 3 meses por separado
+    monthlyEquivalent: "11.99",
+    fullPrice: "44.99", // 14.99 × 3 — lo que costaría pagar los 3 meses por separado
     discountPct: 20,
   },
 } as const;

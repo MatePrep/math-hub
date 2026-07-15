@@ -59,7 +59,7 @@ function RankingPage() {
         </div>
         <h1 className="mt-3 font-display text-3xl font-bold">Ranking</h1>
         <p className="mt-2 text-muted-foreground">
-          Compara tu desempeño con otros estudiantes. Solo se muestran pseudónimos.
+          Compara tu desempeño con otros postulantes. Solo se muestran pseudónimos.
         </p>
       </header>
 
