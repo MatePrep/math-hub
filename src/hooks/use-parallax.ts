@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { subscribeScrollFrame } from "@/hooks/use-scroll-frame";
 
 // Ties an element's translateY to how far it sits from viewport center while
 // scrolling, exposed as the --parallax-y custom property (consumer decides
@@ -6,15 +7,12 @@ import { useEffect, useRef } from "react";
 // outright under prefers-reduced-motion, like the rest of the landing's motion.
 //
 // The homepage stacks up to a dozen of these (hero glows, section watermarks,
-// the ambient mesh, section photos). Each instance used to own its own
-// scroll listener + rAF + getBoundingClientRect(): with that many mounted at
-// once, a single scroll tick fired a dozen independent read/write cycles
-// that the browser could interleave (read, write, read, write, ...) —
-// classic layout thrashing, and the likely cause of scroll feeling like it
-// drops input under load. This module keeps one shared scroll/resize
-// listener and one shared rAF for the whole page: every mounted target's
-// geometry is read first, then every write happens, so the browser lays
-// out once per frame no matter how many parallax layers are on screen.
+// section photos). All targets share ONE registration with the app-wide
+// scroll-frame dispatcher (use-scroll-frame.ts) instead of each instance
+// owning a listener: every mounted target's geometry is read first, then
+// every write happens, so a single scroll tick does one batched read/write
+// pass no matter how many parallax layers are on screen — not an interleaved
+// read/write per layer (classic layout thrashing).
 type ParallaxTarget = {
   node: HTMLElement;
   speed: number;
@@ -22,11 +20,9 @@ type ParallaxTarget = {
 };
 
 const targets = new Set<ParallaxTarget>();
-let rafId = 0;
-let listenersAttached = false;
+let unsubscribe: (() => void) | null = null;
 
 function updateAll() {
-  rafId = 0;
   const viewportHeight = window.innerHeight;
   // Read phase — every target's geometry, before any style is touched.
   const offsets = new Map<ParallaxTarget, number>();
@@ -41,26 +37,17 @@ function updateAll() {
   });
 }
 
-function scheduleUpdate() {
-  if (rafId) return;
-  rafId = requestAnimationFrame(updateAll);
+function registerTarget(target: ParallaxTarget) {
+  targets.add(target);
+  if (!unsubscribe) unsubscribe = subscribeScrollFrame(updateAll);
+  updateAll();
 }
 
-function attachListeners() {
-  if (listenersAttached) return;
-  listenersAttached = true;
-  window.addEventListener("scroll", scheduleUpdate, { passive: true });
-  window.addEventListener("resize", scheduleUpdate);
-}
-
-function detachListenersIfIdle() {
-  if (targets.size > 0) return;
-  listenersAttached = false;
-  window.removeEventListener("scroll", scheduleUpdate);
-  window.removeEventListener("resize", scheduleUpdate);
-  if (rafId) {
-    cancelAnimationFrame(rafId);
-    rafId = 0;
+function unregisterTarget(target: ParallaxTarget) {
+  targets.delete(target);
+  if (targets.size === 0 && unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
   }
 }
 
@@ -73,14 +60,9 @@ export function useParallax<T extends HTMLElement>(speed = 0.06, maxPx = 40) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const target: ParallaxTarget = { node, speed, maxPx };
-    targets.add(target);
-    attachListeners();
-    scheduleUpdate();
+    registerTarget(target);
 
-    return () => {
-      targets.delete(target);
-      detachListenersIfIdle();
-    };
+    return () => unregisterTarget(target);
     // speed/maxPx are expected to stay constant across a given hook call, like a config value
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

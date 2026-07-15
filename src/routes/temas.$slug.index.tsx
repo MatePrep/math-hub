@@ -1,13 +1,20 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  infiniteQueryOptions,
+  useSuspenseQuery,
+  useSuspenseInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { getTopicBySlug, listExercises, getSubtopicFrequency } from "@/lib/exercises.functions";
+import { getTopicBySlug, listExercisesPage, getSubtopicFrequency } from "@/lib/exercises.functions";
 import { getFullProfile } from "@/lib/profile.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
+import { useInfiniteScrollTrigger } from "@/hooks/use-infinite-scroll-trigger";
 import { ExerciseCard } from "@/components/exercise-card";
 import { ExerciseCardSkeleton, LoadingNotice } from "@/components/skeletons";
 import { Badge } from "@/components/ui/badge";
@@ -38,13 +45,20 @@ const searchSchema = z.object({
 const topicQO = (slug: string) =>
   queryOptions({ queryKey: ["topic", slug], queryFn: () => getTopicBySlug({ data: { slug } }) });
 
+const EXERCISES_PAGE_SIZE = 20;
+
+// queryKey includes slug+difficulty, so changing either (e.g. clicking a
+// difficulty badge) is a brand-new infinite query as far as React Query is
+// concerned — pagination resets to page 0 for free, no manual reset needed.
 const exercisesQO = (slug: string, difficulty?: "facil" | "medio" | "dificil") =>
-  queryOptions({
+  infiniteQueryOptions({
     queryKey: ["exercises", "topic", slug, difficulty ?? "all"],
-    queryFn: () =>
-      listExercises({
-        data: { topicSlug: slug, difficulty, limit: 100 },
+    queryFn: ({ pageParam }) =>
+      listExercisesPage({
+        data: { topicSlug: slug, difficulty, page: pageParam, pageSize: EXERCISES_PAGE_SIZE },
       }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => (lastPage.hasMore ? allPages.length : undefined),
   });
 
 export const Route = createFileRoute("/temas/$slug/")({
@@ -56,7 +70,7 @@ export const Route = createFileRoute("/temas/$slug/")({
     const diff = deps.difficulty === "all" ? undefined : deps.difficulty;
     const [topic] = await Promise.all([
       context.queryClient.ensureQueryData(topicQO(params.slug)),
-      context.queryClient.ensureQueryData(exercisesQO(params.slug, diff)),
+      context.queryClient.ensureInfiniteQueryData(exercisesQO(params.slug, diff)),
     ]);
     if (!topic) throw notFound();
     return { topic };
@@ -128,8 +142,18 @@ function TopicPage() {
   const { slug } = Route.useParams();
   const search = Route.useSearch();
   const { data: topic } = useSuspenseQuery(topicQO(slug));
-  const { data: exercises } = useSuspenseQuery(
+  const {
+    data: exercisePages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useSuspenseInfiniteQuery(
     exercisesQO(slug, search.difficulty === "all" ? undefined : search.difficulty),
+  );
+  const exercises = exercisePages.pages.flatMap((p) => p.items);
+  const loadMoreRef = useInfiniteScrollTrigger<HTMLDivElement>(
+    fetchNextPage,
+    hasNextPage && !isFetchingNextPage,
   );
 
   const signedIn = useSignedIn();
@@ -244,8 +268,8 @@ function TopicPage() {
             </h2>
             {hasTargetUniversity && (
               <InfoTooltip>
-                Los temas están ordenados de mayor a menor frecuencia según los exámenes reales
-                (con año conocido) de los últimos 10 años en la universidad seleccionada. Los 3 más
+                Los temas están ordenados de mayor a menor frecuencia según los exámenes reales (con
+                año conocido) de los últimos 10 años en la universidad seleccionada. Los 3 más
                 frecuentes están marcados con 🔥, como sugerencia de en qué enfocar tu estudio.
               </InfoTooltip>
             )}
@@ -346,17 +370,36 @@ function TopicPage() {
               No hay ejercicios con esos filtros.
             </p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {exercises.map((ex: any, i: number) => (
-                <div
-                  key={ex.id}
-                  className="animate-fade-up"
-                  style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
-                >
-                  <ExerciseCard ex={ex} />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {exercises.map((ex: any, i: number) => (
+                  <div
+                    key={ex.id}
+                    className="animate-fade-up"
+                    style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
+                  >
+                    <ExerciseCard ex={ex} />
+                  </div>
+                ))}
+                {isFetchingNextPage && (
+                  <>
+                    <ExerciseCardSkeleton />
+                    <ExerciseCardSkeleton />
+                  </>
+                )}
+              </div>
+              {/* Sentinel: invisible, sits right after the grid. The
+                  IntersectionObserver fires fetchNextPage ~400px before this
+                  actually scrolls into view (see useInfiniteScrollTrigger),
+                  and only while there's more to fetch and nothing's already
+                  in flight — no separate isLoading state to hand-manage. */}
+              {hasNextPage && <div ref={loadMoreRef} aria-hidden="true" className="h-1" />}
+              {!hasNextPage && !isFetchingNextPage && (
+                <p className="mt-6 text-center text-xs text-muted-foreground">
+                  No hay más preguntas.
+                </p>
+              )}
+            </>
           )}
         </section>
       </div>

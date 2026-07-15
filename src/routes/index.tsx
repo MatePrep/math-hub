@@ -91,10 +91,15 @@ export const Route = createFileRoute("/")({
       links: [
         ...base.links,
         // Homepage-hero-only "at" register fonts — see __root.tsx for why these
-        // aren't in the global stylesheet link.
+        // aren't in the global stylesheet link. Weights trimmed to only what's
+        // actually rendered (grepped every font-display/font-data usage on
+        // this page): Bricolage is 700 everywhere except the marquee's 600,
+        // never 500 or 800; JetBrains Mono never appears at 500. Requesting
+        // unused weights was pure wasted font-file GETs on the page's own
+        // critical path.
         {
           rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+          href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap",
         },
         // The three section-background photos below the hero are all hosted
         // on Unsplash — warm the connection so the first one (lazy-loaded,
@@ -211,13 +216,14 @@ function Index() {
       <AmbientBackground />
 
       {/* Scroll progress rail — a position indicator, not decoration, so it
-          stays put under prefers-reduced-motion (only the width transition
-          below is cosmetic smoothing). */}
+          stays put under prefers-reduced-motion (only the transition below
+          is cosmetic smoothing). scaleX from a full-width bar, not a width
+          animation — transform-only, no layout reflow on every scroll frame. */}
       <div aria-hidden className="fixed inset-x-0 top-0 z-50 h-[3px] bg-border/30">
         <div
           ref={scrollProgressRef}
-          className="h-full bg-primary transition-[width] duration-150 ease-out motion-reduce:transition-none"
-          style={{ width: "0%" }}
+          className="h-full w-full origin-left bg-primary transition-transform duration-150 ease-out motion-reduce:transition-none"
+          style={{ transform: "scaleX(0)" }}
         />
       </div>
 
@@ -252,7 +258,7 @@ function Index() {
           <div
             ref={heroGlowAmberRef}
             className="h-[30rem] w-[30rem] rounded-full bg-primary/15 blur-[120px]"
-            style={{ transform: "translateY(var(--parallax-y, 0px))" }}
+            style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
           />
         </div>
         <div
@@ -270,7 +276,7 @@ function Index() {
           <div
             ref={heroGlowTealRef}
             className="h-[26rem] w-[26rem] rounded-full bg-success/[0.12] blur-[110px]"
-            style={{ transform: "translateY(var(--parallax-y, 0px))" }}
+            style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
           />
         </div>
         <div className="relative mx-auto grid max-w-6xl gap-8 px-4 pb-8 pt-12 sm:pb-10 sm:pt-16 lg:grid-cols-[1.2fr_1fr] lg:items-start lg:gap-12 lg:pb-12 lg:pt-20">
@@ -489,7 +495,7 @@ function Index() {
           loading="lazy"
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover object-[center_30%] opacity-25 saturate-[0.35]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))" }}
+          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         />
         <div
           aria-hidden
@@ -555,7 +561,7 @@ function Index() {
           loading="lazy"
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover opacity-[0.22] saturate-[0.35]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))" }}
+          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         />
         <div
           aria-hidden
@@ -760,7 +766,7 @@ function Index() {
           loading="lazy"
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover opacity-25 saturate-[0.25]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))" }}
+          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         />
         <div
           aria-hidden

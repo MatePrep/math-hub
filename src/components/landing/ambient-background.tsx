@@ -1,5 +1,3 @@
-import { useParallax } from "@/hooks/use-parallax";
-
 // Particle field kept as static data (not random per-render) so SSR and the
 // client agree on layout — a `Math.random()` here would cause a hydration
 // mismatch. Positions/timings are hand-picked to feel scattered, not gridded.
@@ -26,17 +24,18 @@ const PARTICLES = [
  * the content sitting on top of it.
  */
 export function AmbientBackground() {
-  const meshOneRef = useParallax<HTMLDivElement>(0.03, 40);
-  const meshTwoRef = useParallax<HTMLDivElement>(-0.025, 32);
-  const meshThreeRef = useParallax<HTMLDivElement>(0.02, 26);
-
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       {/* Aurora mesh: three large, heavily blurred blobs that drift and
           slowly change shape — never fast enough to read as "moving,"
-          just enough that the canvas doesn't feel static. */}
+          just enough that the canvas doesn't feel static. No parallax here
+          on purpose: this backdrop is `fixed` (stays glued to the viewport),
+          so a scroll-position-based transform would never have visibly
+          changed anything — a useParallax() call here was dead weight
+          (getBoundingClientRect() reads on every scroll frame for zero
+          visual effect), removed rather than wired up, to avoid changing
+          the look. */}
       <div
-        ref={meshOneRef}
         className="animate-float animate-blob-morph absolute -left-[10%] top-[5%] h-[34rem] w-[34rem] bg-primary/[0.07] blur-[100px]"
         style={
           {
@@ -48,7 +47,6 @@ export function AmbientBackground() {
         }
       />
       <div
-        ref={meshTwoRef}
         className="animate-float animate-blob-morph absolute right-[-8%] top-[35%] h-[30rem] w-[30rem] bg-success/[0.06] blur-[110px]"
         style={
           {
@@ -62,7 +60,6 @@ export function AmbientBackground() {
         }
       />
       <div
-        ref={meshThreeRef}
         className="animate-float animate-blob-morph absolute bottom-[8%] left-[22%] h-[26rem] w-[26rem] bg-primary/[0.05] blur-[100px]"
         style={
           {

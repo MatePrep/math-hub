@@ -1,6 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { getTopicBySlug, listExercises } from "@/lib/exercises.functions";
+import {
+  queryOptions,
+  infiniteQueryOptions,
+  useSuspenseQuery,
+  useSuspenseInfiniteQuery,
+} from "@tanstack/react-query";
+import { getTopicBySlug, listExercisesPage } from "@/lib/exercises.functions";
+import { useInfiniteScrollTrigger } from "@/hooks/use-infinite-scroll-trigger";
 import { ExerciseCard } from "@/components/exercise-card";
 import { ExerciseCardSkeleton, LoadingNotice } from "@/components/skeletons";
 import { pageMeta, absoluteUrl } from "@/lib/site";
@@ -9,10 +15,22 @@ import { JsonLd } from "@/components/json-ld";
 const topicQO = (slug: string) =>
   queryOptions({ queryKey: ["topic", slug], queryFn: () => getTopicBySlug({ data: { slug } }) });
 
+const EXERCISES_PAGE_SIZE = 20;
+
 const exercisesQO = (slug: string, sub: string) =>
-  queryOptions({
+  infiniteQueryOptions({
     queryKey: ["exercises", "topic", slug, "sub", sub],
-    queryFn: () => listExercises({ data: { topicSlug: slug, subtopicSlug: sub, limit: 100 } }),
+    queryFn: ({ pageParam }) =>
+      listExercisesPage({
+        data: {
+          topicSlug: slug,
+          subtopicSlug: sub,
+          page: pageParam,
+          pageSize: EXERCISES_PAGE_SIZE,
+        },
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => (lastPage.hasMore ? allPages.length : undefined),
   });
 
 export const Route = createFileRoute("/temas/$slug/$subtopic")({
@@ -21,7 +39,7 @@ export const Route = createFileRoute("/temas/$slug/$subtopic")({
     if (!topic) throw notFound();
     const subtopic = topic.subtopics.find((s) => s.slug === params.subtopic);
     if (!subtopic) throw notFound();
-    await context.queryClient.ensureQueryData(exercisesQO(params.slug, params.subtopic));
+    await context.queryClient.ensureInfiniteQueryData(exercisesQO(params.slug, params.subtopic));
     return { topic, subtopic };
   },
   head: ({ params, loaderData }) => {
@@ -73,7 +91,17 @@ function SubtopicPagePending() {
 function SubtopicPage() {
   const { slug, subtopic } = Route.useParams();
   const { data: topic } = useSuspenseQuery(topicQO(slug));
-  const { data: exercises } = useSuspenseQuery(exercisesQO(slug, subtopic));
+  const {
+    data: exercisePages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useSuspenseInfiniteQuery(exercisesQO(slug, subtopic));
+  const exercises = exercisePages.pages.flatMap((p) => p.items);
+  const loadMoreRef = useInfiniteScrollTrigger<HTMLDivElement>(
+    fetchNextPage,
+    hasNextPage && !isFetchingNextPage,
+  );
   if (!topic) return null;
   const sub = topic.subtopics.find((s) => s.slug === subtopic)!;
 
@@ -129,7 +157,17 @@ function SubtopicPage() {
             Aún no hay ejercicios en este tema.
           </p>
         )}
+        {isFetchingNextPage && (
+          <>
+            <ExerciseCardSkeleton />
+            <ExerciseCardSkeleton />
+          </>
+        )}
       </div>
+      {hasNextPage && <div ref={loadMoreRef} aria-hidden="true" className="h-1" />}
+      {!hasNextPage && !isFetchingNextPage && exercises.length > 0 && (
+        <p className="mt-6 text-center text-xs text-muted-foreground">No hay más preguntas.</p>
+      )}
     </div>
   );
 }

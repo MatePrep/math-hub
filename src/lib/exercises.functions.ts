@@ -141,6 +141,50 @@ export const listExercises = createServerFn({ method: "GET" })
     return result;
   });
 
+const exercisesPageInput = z.object({
+  topicSlug: z.string().optional(),
+  subtopicSlug: z.string().optional(),
+  difficulty: z.enum(["facil", "medio", "dificil"]).optional(),
+  year: z.number().int().optional(),
+  page: z.number().int().min(0).default(0),
+  pageSize: z.number().int().min(1).max(50).default(20),
+});
+
+/**
+ * Paginated sibling of listExercises, for infinite-scroll lists (temas/$slug,
+ * temas/$slug/$subtopic) — a separate function rather than adding pagination
+ * to listExercises itself, since that one's plain-array return is also relied
+ * on by practica.$topicSlug and ejercicio.$id, which want the whole set, not
+ * a page of it.
+ */
+export const listExercisesPage = createServerFn({ method: "GET" })
+  .inputValidator((d) => exercisesPageInput.parse(d))
+  .handler(async ({ data }) => {
+    const sb = publicClient();
+    const subtopicEmbed = data.subtopicSlug ? "subtopics!inner(slug,name)" : "subtopics(slug,name)";
+    const from = data.page * data.pageSize;
+    const to = from + data.pageSize - 1;
+    let q = sb
+      .from("exercises")
+      .select(
+        `id, statement_md, statement_image_path, difficulty, exam_year, tags, choices, correct_choice, topic:topics!inner(slug,name), subtopic:${subtopicEmbed}, university:universities(slug,short_name)`,
+      )
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (data.topicSlug) q = q.eq("topics.slug", data.topicSlug);
+    if (data.subtopicSlug) q = q.eq("subtopics.slug", data.subtopicSlug);
+    if (data.difficulty) q = q.eq("difficulty", data.difficulty);
+    if (data.year) q = q.eq("exam_year", data.year);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const items = rows ?? [];
+    // Cheap end-of-list heuristic (no separate COUNT query): a page shorter
+    // than pageSize can only happen at the end. A page that happens to land
+    // exactly on a multiple of pageSize costs one extra empty fetch — it
+    // self-corrects immediately, cheaper than a COUNT on every page.
+    return { items, hasMore: items.length === data.pageSize };
+  });
+
 export const getExercise = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
@@ -157,7 +201,7 @@ export const getExercise = createServerFn({ method: "GET" })
   });
 
 export const searchExercises = createServerFn({ method: "GET" })
-  .inputValidator((d) => z.object({ q: z.string().min(1).max(200) }).parse(d))
+  .inputValidator((d) => z.object({ q: z.string().min(1).max(20) }).parse(d))
   .handler(async ({ data }) => {
     const sb = publicClient();
     const term = `%${data.q.replace(/[%_]/g, "")}%`;
