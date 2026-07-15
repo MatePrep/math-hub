@@ -4,7 +4,6 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowRight, Banknote, Check, Compass, Loader2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listTopics, listUniversities } from "@/lib/exercises.functions";
-import { AmbientBackground } from "@/components/landing/ambient-background";
 import { PillarsSection } from "@/components/landing/pillars";
 import { SectionNav, type SectionNavItem } from "@/components/landing/section-nav";
 import { dailyExerciseQO } from "@/lib/daily-exercise.functions";
@@ -14,6 +13,7 @@ import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { cn } from "@/lib/utils";
 import { useActiveSection } from "@/hooks/use-active-section";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
+import { useInViewport } from "@/hooks/use-in-viewport";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useScrollProgress } from "@/hooks/use-scroll-progress";
 import { fireConfetti } from "@/lib/confetti";
@@ -202,16 +202,18 @@ function Index() {
     );
 
   return (
-    // overflow-x-clip: the ambient glows intentionally bleed past the viewport
-    // edges; without the clip they create horizontal scroll and a white body
-    // stripe shows beside the navy canvas.
-    // isolate: gives .at its own stacking context so AmbientBackground's
-    // fixed + negative-z layer stays contained behind this page's content
-    // instead of escaping to the document root (where it'd render behind
-    // .at's own opaque background and disappear entirely).
+    // overflow-x-clip: the hero's own glow blobs still bleed past the
+    // viewport edges; without the clip they create horizontal scroll and a
+    // white body stripe shows beside the navy canvas.
+    // isolate: keeps this page's own stacking context self-contained
+    // (SectionNav, the progress rail, WhatsAppFloat are all fixed-position).
+    // AmbientBackground removed (isolation test — three blurred,
+    // continuously-morphing blobs plus 10 twinkling particles, running
+    // regardless of scroll; a likely jank source on mid/low-end devices).
+    // To restore: re-add the import and `<AmbientBackground />` here — the
+    // component itself is untouched at
+    // src/components/landing/ambient-background.tsx.
     <div className="at isolate snap-sections overflow-x-clip">
-      <AmbientBackground />
-
       {/* Scroll progress rail — a position indicator, not decoration, so it
           stays put under prefers-reduced-motion (only the transition below
           is cosmetic smoothing). scaleX from a full-width bar, not a width
@@ -468,7 +470,7 @@ function Index() {
           fadeSection("reto"),
         )}
       >
-        <SectionSweep visible={retoVisible} />
+        <SectionSweep />
         {/* Momento real de estudio (postulante resolviendo en su cuaderno),
             hundido en el navy para que el widget conserve todo el contraste.
             Parallax removido (test de aislamiento), queda estática. */}
@@ -533,7 +535,7 @@ function Index() {
           fadeSection("ranking"),
         )}
       >
-        <SectionSweep visible={rankingIntroVisible} />
+        <SectionSweep />
         {/* Los rivales existen: grupo de postulantes como fondo de toda la
             sección, oscurecido hacia la izquierda donde vive el texto. */}
         <img
@@ -647,7 +649,7 @@ function Index() {
           fadeSection("planes"),
         )}
       >
-        <SectionSweep visible={planesVisible} className="via-primary-foreground/70" />
+        <SectionSweep className="via-primary-foreground/70" />
         {/* Marca de agua decorativa: en tinta navy sobre el ámbar (mismo dúo
             de color de la sección, ninguna tercera tonalidad) — nunca un
             glow nuevo, ver el One Glow Rule en DESIGN.md. Parallax removido
@@ -735,7 +737,7 @@ function Index() {
           fadeSection("cta"),
         )}
       >
-        <SectionSweep visible={ctaVisible} />
+        <SectionSweep />
         {/* Real exam moment: a hand writing on answer sheets, desaturated and
             sunk into the navy so the type keeps full contrast. */}
         <img
@@ -822,16 +824,23 @@ function StaggeredWords({ text, startIndex = 0 }: { text: string; startIndex?: n
 // moment it scrolls into view — the "something changed" cue between
 // sections. A line, not a blur, so it never competes with the hero widget's
 // one ambient glow (see the One Glow Rule in DESIGN.md).
-function SectionSweep({ visible, className }: { visible: boolean; className?: string }) {
+// Self-observes its own position (useInViewport, bidirectional) instead of
+// taking a `visible` prop from the parent's one-shot useInViewOnce flag —
+// that flag latches true forever on first sight, which meant this
+// `infinite` CSS animation kept looping for every section long after it
+// scrolled off-screen, accumulating as the page got scrolled further.
+function SectionSweep({ className }: { className?: string }) {
+  const { ref, inView } = useInViewport<HTMLDivElement>(0);
   return (
     <div
+      ref={ref}
       aria-hidden
       className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px overflow-hidden"
     >
       <span
         className={cn(
           "absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-primary/70 to-transparent",
-          visible && "animate-sweep-line",
+          inView && "animate-sweep-line",
           className,
         )}
       />

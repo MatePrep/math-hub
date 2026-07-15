@@ -76,7 +76,13 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
+    // Solid background, no backdrop-blur: this header is sticky and present
+    // on every route, so backdrop-filter was forcing a re-sample of
+    // everything scrolling underneath on every single scroll frame — one of
+    // the most expensive things a mobile GPU can be asked to do repeatedly,
+    // and it never showed up in the landing-only tests because it isn't
+    // landing-only.
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:gap-6">
         <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="Admi-Tec — inicio">
           <img src="/brand/icon.svg" alt="" aria-hidden className="h-9 w-9" />
