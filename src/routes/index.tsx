@@ -213,7 +213,7 @@ function Index() {
     // To restore: re-add the import and `<AmbientBackground />` here — the
     // component itself is untouched at
     // src/components/landing/ambient-background.tsx.
-    <div className="at isolate snap-sections overflow-x-clip">
+    <div className="at isolate overflow-x-clip">
       {/* Scroll progress rail — a position indicator, not decoration, so it
           stays put under prefers-reduced-motion (only the transition below
           is cosmetic smoothing). scaleX from a full-width bar, not a width

@@ -148,33 +148,10 @@
   letter-spacing: -0.03em;
 }
 
-/* Scroll-snap: touch devices only. The isolation-test round ruled out snap
-   itself as the cause of the mobile jank (the real culprits were the
-   SectionSweep animation-accumulation bug and the header's backdrop-blur,
-   both fixed elsewhere) — but snap-scrolling is a touch-native feel (think
-   Reels/TikTok) that doesn't add much on a desktop mouse+wheel, where free
-   scroll already feels right. `(pointer: coarse)` targets real touchscreens
-   specifically — a desktop browser resized to a narrow window still reports
-   `pointer: fine` and stays on free scroll, only actual phones/tablets
-   without a precision pointer get the snap. */
-@media (pointer: coarse) {
-  html:has(.snap-sections) {
-    scroll-snap-type: y proximity;
-    scroll-padding-top: var(--site-header-h);
-  }
-  .snap-section {
-    scroll-snap-align: start;
-  }
-}
-@media (pointer: coarse) and (prefers-reduced-motion: reduce) {
-  html:has(.snap-sections) {
-    scroll-snap-type: none;
-  }
-}
-
-/* Full-screen sizing for each homepage section — universal, not gated to
-   touch: it's a static height, not an animation, so it doesn't cost
-   anything extra on desktop even without snap. */
+/* Scroll-snap removed for good (tried desktop-off/mobile-on via
+   `pointer: coarse`, but the final call was to drop it everywhere — see git
+   history if it's ever worth revisiting). The class name stays for the
+   height rule below, which never had anything to do with snap itself. */
 .snap-section {
   /* vh first as a fallback, dvh second: if a browser doesn't recognize the
      `dvh` unit, the whole calc() it appears in fails to parse and the
