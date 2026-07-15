@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 import { useActiveSection } from "@/hooks/use-active-section";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { useCountUp } from "@/hooks/use-count-up";
-import { useParallax } from "@/hooks/use-parallax";
 import { useScrollProgress } from "@/hooks/use-scroll-progress";
 import { fireConfetti } from "@/lib/confetti";
 import { pageMeta, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
@@ -190,13 +189,11 @@ function Index() {
   const { ref: planesRef, visible: planesVisible } = useInViewOnce<HTMLDivElement>(0.3);
   const { ref: ctaRef, visible: ctaVisible } = useInViewOnce<HTMLDivElement>(0.3);
   const scrollProgressRef = useScrollProgress<HTMLDivElement>();
-  const heroGlowAmberRef = useParallax<HTMLDivElement>(0.05, 30);
-  const heroGlowTealRef = useParallax<HTMLDivElement>(-0.04, 24);
-  const retoImgRef = useParallax<HTMLImageElement>(0.05, 30);
-  const rankingImgRef = useParallax<HTMLImageElement>(0.05, 30);
-  const ctaImgRef = useParallax<HTMLImageElement>(0.04, 26);
-  const startWatermarkRef = useParallax<HTMLDivElement>(0.05, 36);
-  const planesWatermarkRef = useParallax<HTMLDivElement>(0.05, 36);
+  // Parallax removed (isolation test, see styles.css/use-parallax.ts for the
+  // revert path) — the seven `ref={xRef}` attachments below were also
+  // removed, along with each element's `transform: translateY(var(--parallax-y))`
+  // + `willChange` inline style, since with nothing registered there's no
+  // offset to apply.
   const activeId = useActiveSection(NAV_ITEMS.map((item) => item.id));
   const fadeSection = (id: string) =>
     cn(
@@ -240,10 +237,8 @@ function Index() {
       >
         {/* Ambient depth: two large soft glows (amber = pencil light, teal =
             "correct") so the navy canvas reads as lit paper, never a flat fill.
-            Each drifts at a slightly different parallax speed as you scroll
-            AND floats continuously at rest (on an outer wrapper, since
-            parallax already owns `transform` on the inner glow), so the
-            depth reads as physical and alive, not a static gradient. */}
+            Each floats continuously at rest via animate-float (scroll
+            parallax removed — isolation test). */}
         <div
           aria-hidden
           className="animate-float pointer-events-none absolute -top-40 right-[-10rem]"
@@ -255,11 +250,7 @@ function Index() {
             } as React.CSSProperties
           }
         >
-          <div
-            ref={heroGlowAmberRef}
-            className="h-[30rem] w-[30rem] rounded-full bg-primary/15 blur-[120px]"
-            style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
-          />
+          <div className="h-[30rem] w-[30rem] rounded-full bg-primary/15 blur-[120px]" />
         </div>
         <div
           aria-hidden
@@ -273,11 +264,7 @@ function Index() {
             } as React.CSSProperties
           }
         >
-          <div
-            ref={heroGlowTealRef}
-            className="h-[26rem] w-[26rem] rounded-full bg-success/[0.12] blur-[110px]"
-            style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
-          />
+          <div className="h-[26rem] w-[26rem] rounded-full bg-success/[0.12] blur-[110px]" />
         </div>
         <div className="relative mx-auto grid max-w-6xl gap-8 px-4 pb-8 pt-12 sm:pb-10 sm:pt-16 lg:grid-cols-[1.2fr_1fr] lg:items-start lg:gap-12 lg:pb-12 lg:pt-20">
           <div>
@@ -419,14 +406,12 @@ function Index() {
         )}
       >
         {/* Marca de agua decorativa: una brújula a gran escala y casi
-            invisible (orientación/primeros pasos), con el mismo parallax
-            que el resto de secciones — nunca un segundo glow (ver el One
-            Glow Rule en DESIGN.md). */}
+            invisible (orientación/primeros pasos) — nunca un segundo glow
+            (ver el One Glow Rule en DESIGN.md). Parallax removido (test de
+            aislamiento), queda estática. */}
         <div
-          ref={startWatermarkRef}
           aria-hidden
           className="pointer-events-none absolute -left-16 -top-16 text-foreground/[0.06]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         >
           <Compass className="h-[24rem] w-[24rem]" strokeWidth={1} />
         </div>
@@ -486,16 +471,14 @@ function Index() {
         <SectionSweep visible={retoVisible} />
         {/* Momento real de estudio (postulante resolviendo en su cuaderno),
             hundido en el navy para que el widget conserve todo el contraste.
-            Parallax sutil: la foto se mueve más despacio que el scroll. */}
+            Parallax removido (test de aislamiento), queda estática. */}
         <img
-          ref={retoImgRef}
           src="https://images.unsplash.com/photo-1650477250300-805cde98ec21?auto=format&fit=crop&w=1600&q=45"
           alt=""
           aria-hidden
           loading="lazy"
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover object-[center_30%] opacity-25 saturate-[0.35]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         />
         <div
           aria-hidden
@@ -554,14 +537,12 @@ function Index() {
         {/* Los rivales existen: grupo de postulantes como fondo de toda la
             sección, oscurecido hacia la izquierda donde vive el texto. */}
         <img
-          ref={rankingImgRef}
           src="https://images.unsplash.com/photo-1760574740270-067dc14bf164?auto=format&fit=crop&w=1600&q=45"
           alt=""
           aria-hidden
           loading="lazy"
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover opacity-[0.22] saturate-[0.35]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         />
         <div
           aria-hidden
@@ -669,12 +650,11 @@ function Index() {
         <SectionSweep visible={planesVisible} className="via-primary-foreground/70" />
         {/* Marca de agua decorativa: en tinta navy sobre el ámbar (mismo dúo
             de color de la sección, ninguna tercera tonalidad) — nunca un
-            glow nuevo, ver el One Glow Rule en DESIGN.md. */}
+            glow nuevo, ver el One Glow Rule en DESIGN.md. Parallax removido
+            (test de aislamiento), queda estática. */}
         <div
-          ref={planesWatermarkRef}
           aria-hidden
           className="pointer-events-none absolute -right-12 -bottom-16 text-primary-foreground/[0.08]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         >
           <Banknote className="h-[22rem] w-[22rem]" strokeWidth={1} />
         </div>
@@ -759,14 +739,12 @@ function Index() {
         {/* Real exam moment: a hand writing on answer sheets, desaturated and
             sunk into the navy so the type keeps full contrast. */}
         <img
-          ref={ctaImgRef}
           src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&q=45"
           alt=""
           aria-hidden
           loading="lazy"
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover opacity-25 saturate-[0.25]"
-          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
         />
         <div
           aria-hidden
