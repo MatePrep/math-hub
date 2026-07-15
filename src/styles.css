@@ -148,18 +148,33 @@
   letter-spacing: -0.03em;
 }
 
-/* Scroll-snap disabled (temporarily, for an isolation test — the user
-   suspects it's contributing to other animations feeling janky, since the
-   browser's snap-settle motion could be competing with the parallax rAF for
-   frame budget). Everything else (parallax, section reveals, the side nav,
-   the opacity fade) is untouched, so this is the only variable that changed.
-   If it turns out not to be the cause, restore `scroll-snap-type: y
-   proximity` + `scroll-padding-top: var(--site-header-h)` on
-   `html:has(.snap-sections)`, and `scroll-snap-align: start` on
-   .snap-section below — see git history for the exact prior rule.
+/* Scroll-snap: touch devices only. The isolation-test round ruled out snap
+   itself as the cause of the mobile jank (the real culprits were the
+   SectionSweep animation-accumulation bug and the header's backdrop-blur,
+   both fixed elsewhere) — but snap-scrolling is a touch-native feel (think
+   Reels/TikTok) that doesn't add much on a desktop mouse+wheel, where free
+   scroll already feels right. `(pointer: coarse)` targets real touchscreens
+   specifically — a desktop browser resized to a narrow window still reports
+   `pointer: fine` and stays on free scroll, only actual phones/tablets
+   without a precision pointer get the snap. */
+@media (pointer: coarse) {
+  html:has(.snap-sections) {
+    scroll-snap-type: y proximity;
+    scroll-padding-top: var(--site-header-h);
+  }
+  .snap-section {
+    scroll-snap-align: start;
+  }
+}
+@media (pointer: coarse) and (prefers-reduced-motion: reduce) {
+  html:has(.snap-sections) {
+    scroll-snap-type: none;
+  }
+}
 
-   Each section still keeps its full-screen sizing (not an animation, just a
-   static height) so the page doesn't otherwise change shape. */
+/* Full-screen sizing for each homepage section — universal, not gated to
+   touch: it's a static height, not an animation, so it doesn't cost
+   anything extra on desktop even without snap. */
 .snap-section {
   /* vh first as a fallback, dvh second: if a browser doesn't recognize the
      `dvh` unit, the whole calc() it appears in fails to parse and the
@@ -255,9 +270,11 @@
 }
 
 /* Second marquee row (course chips) drifts the opposite way so the two strips
-   read as independent live tickers, not one duplicated effect. */
+   read as independent live tickers, not one duplicated effect. Slower than
+   the university strip (55s vs 34s) — this one has more, shorter chips, so
+   at the same speed it read as scrolling too fast to actually read a name. */
 .at .animate-marquee-reverse {
-  animation: at-marquee 30s linear infinite reverse;
+  animation: at-marquee 55s linear infinite reverse;
 }
 .at .marquee-track:hover .animate-marquee-reverse,
 .at .marquee-track:focus-within .animate-marquee-reverse {
@@ -423,41 +440,13 @@
   transform: scale(0.95);
 }
 
-/* Showcase centerpiece (Pillars section, "¿Cómo se prepara alguien que sí va
-   a ingresar?"): cursor-follow 3D tilt (--tilt-x/--tilt-y, set imperatively
-   by usePointerTilt) on the one element the section wants you looking at.
-   Local `perspective()` keeps this self-contained. Scoped to devices that
-   can actually hover a mouse over it — --tilt-x/--tilt-y never change on
-   touch (usePointerTilt only listens for mousemove), so the transform was
-   dead weight there, and a `perspective()`'d descendant under this page's
-   `overflow-x-clip` root is exactly the combination that trips Safari's
-   clipping bugs on iPhone; scoping it out removes both the waste and the
-   risk in one move. */
-@media (hover: hover) and (pointer: fine) {
-  .at .showcase-tilt {
-    transform: perspective(1200px) translateY(0) rotateX(var(--tilt-y, 0deg))
-      rotateY(var(--tilt-x, 0deg));
-    transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .at .showcase-tilt:hover {
-    transform: perspective(1200px) translateY(-0.4rem) rotateX(var(--tilt-y, 0deg))
-      rotateY(var(--tilt-x, 0deg));
-  }
-}
-
 /* Pillar↔Simulacro link: dragging the feature carousel to a new card
    highlights the matching numbered block in SimulacroShowcase and opacs the
    other two down — makes visible a real relationship (this card → this part
    of your actual result), and pulls the eye to the one thing the student
-   picked. The badge uses the same back-ease "bounce" vocabulary as the CTA
-   Bounce Exception (a deliberate brand moment now, not a quiet state
-   change) since this link is the section's main point of interaction. The
-   highlight itself (not just its transition) still fires under
-   reduced-motion — only the smoothing/bounce is cut, since the state change
-   carries information. */
-.at .pillar-link-badge {
-  transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+   picked. Scale-based flourishes (badge grow, block "pop") removed — read as
+   a zoom effect — the color/ring highlight below still carries the same
+   information on its own. */
 .at .pillar-link-block {
   transition:
     background-color 300ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -466,31 +455,6 @@
 }
 .at .pillar-link-block-dim {
   opacity: 0.55;
-}
-@keyframes at-block-pop {
-  0% {
-    opacity: 0;
-    transform: translateX(-4px) scale(0.98);
-  }
-  60% {
-    opacity: 1;
-    transform: translateX(1px) scale(1.008);
-  }
-  100% {
-    transform: translateX(0) scale(1);
-  }
-}
-.at .animate-block-pop {
-  animation: at-block-pop 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .at .pillar-link-badge,
-  .at .pillar-link-block {
-    transition-duration: 0.01ms !important;
-  }
-  .at .animate-block-pop {
-    animation: none !important;
-  }
 }
 
 /* Feature carousel (Pillars section): each card's scale/opacity/blur is
@@ -509,11 +473,6 @@
   .at .cta-overshoot,
   .at .cta-overshoot:hover,
   .at .cta-overshoot:active {
-    transition: none !important;
-    transform: none !important;
-  }
-  .at .showcase-tilt,
-  .at .showcase-tilt:hover {
     transition: none !important;
     transform: none !important;
   }

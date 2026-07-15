@@ -24,14 +24,11 @@ const FREQUENT_TOPICS = [
   { name: "🔥 Teoría de conjuntos", pct: "44%" },
 ];
 
-function PillarBadge({ n, active }: { n: number; active?: boolean }) {
+function PillarBadge({ n }: { n: number }) {
   return (
     <span
       aria-label={`Pilar ${n}`}
-      className={cn(
-        "pillar-link-badge font-data grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-[0_0_0_3px_oklch(0.83_0.16_92_/_0.25)]",
-        active && "scale-135",
-      )}
+      className="font-data grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-[0_0_0_3px_oklch(0.83_0.16_92_/_0.25)]"
     >
       {n}
     </span>
@@ -109,16 +106,13 @@ export function SimulacroShowcase({
             {/* 1 · Puntaje real vs. mínimo de ingreso */}
             <div
               onClick={() => onSelectPillar?.(1)}
-              className={cn(
-                blockState(highlightPillar === 1, hasSelection),
-                highlightPillar === 1 && "animate-block-pop",
-              )}
+              className={blockState(highlightPillar === 1, hasSelection)}
             >
               <div className="flex items-center justify-between gap-3 py-1">
                 <p className="font-data text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
                   Tu puntaje
                 </p>
-                <PillarBadge n={1} active={highlightPillar === 1} />
+                <PillarBadge n={1} />
               </div>
               <p className="font-data mt-1 text-3xl font-bold tabular-nums sm:text-4xl">
                 {score} <span className="text-base text-muted-foreground sm:text-lg">pts</span>
@@ -150,14 +144,13 @@ export function SimulacroShowcase({
               className={cn(
                 "mt-3 border-t border-border pt-2.5 sm:mt-4 sm:pt-3",
                 blockState(highlightPillar === 2, hasSelection),
-                highlightPillar === 2 && "animate-block-pop",
               )}
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="font-data text-[0.65rem] uppercase tracking-[0.1em] text-muted-foreground sm:text-[0.7rem] sm:tracking-[0.12em]">
                   Los 3 temas más frecuentes del curso de Álgebra
                 </p>
-                <PillarBadge n={2} active={highlightPillar === 2} />
+                <PillarBadge n={2} />
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {FREQUENT_TOPICS.map((t) => (
@@ -178,14 +171,13 @@ export function SimulacroShowcase({
               className={cn(
                 "mt-3 border-t border-border pt-2.5 sm:mt-4 sm:pt-3",
                 blockState(highlightPillar === 3, hasSelection),
-                highlightPillar === 3 && "animate-block-pop",
               )}
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="font-data text-[0.65rem] uppercase tracking-[0.1em] text-muted-foreground sm:text-[0.7rem] sm:tracking-[0.12em]">
                   Tiempo que pasaste en la pregunta 23 del curso de Álgebra
                 </p>
-                <PillarBadge n={3} active={highlightPillar === 3} />
+                <PillarBadge n={3} />
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <p className="font-data text-sm font-bold tabular-nums">⌛ 1m 12 s</p>

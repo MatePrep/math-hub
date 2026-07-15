@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { Gauge, ListChecks, Target } from "lucide-react";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
-import { usePointerTilt } from "@/hooks/use-pointer-tilt";
 import { SimulacroShowcase } from "@/components/landing/simulacro-showcase";
 import { FeatureCarousel } from "@/components/landing/feature-carousel";
 import { cn } from "@/lib/utils";
@@ -67,7 +66,6 @@ export function PillarsSection({ sectionActive }: { sectionActive: boolean }) {
   // El sentido inverso también existe: hacer clic en un bloque del
   // simulacro mueve el carrusel hasta esa tarjeta (ver activeIndex más abajo).
   const [active, setActive] = useState(1);
-  const { ref: tiltRef, handleMove, handleLeave } = usePointerTilt<HTMLDivElement>(4);
   const carouselWrapRef = useRef<HTMLDivElement>(null);
 
   // En mobile el simulacro y el carrusel quedan apilados — un clic en el
@@ -121,18 +119,12 @@ export function PillarsSection({ sectionActive }: { sectionActive: boolean }) {
           ref={ref}
           className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start lg:gap-10"
         >
-          {/* Centro de atención: el simulacro real, con un tilt 3D sutil que
-              sigue el cursor — el mismo lenguaje de "objeto vivo" que antes
-              llevaban las tarjetas, ahora reservado para lo único que
-              importa mostrar de verdad. */}
+          {/* Centro de atención: el simulacro real — el mismo lenguaje de
+              "objeto vivo" que antes llevaban las tarjetas, ahora reservado
+              para lo único que importa mostrar de verdad. Tilt 3D al mouse
+              removido (se sentía como un efecto de zoom). */}
           <div
-            ref={tiltRef}
-            onMouseMove={handleMove}
-            onMouseLeave={handleLeave}
-            className={cn(
-              visible && "animate-rise-in",
-              "showcase-tilt min-w-0 lg:sticky lg:top-24",
-            )}
+            className={cn(visible && "animate-rise-in", "min-w-0 lg:sticky lg:top-24")}
             style={visible ? ({ "--i": 2 } as React.CSSProperties) : undefined}
           >
             <SimulacroShowcase highlightPillar={active} onSelectPillar={handleSelectPillar} />

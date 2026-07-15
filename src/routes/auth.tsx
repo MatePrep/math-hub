@@ -298,7 +298,7 @@ function AuthPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@correo.com"
+                  placeholder="tu@gmail.com"
                   required
                   autoComplete="email"
                 />
@@ -386,7 +386,7 @@ function AuthPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu@correo.com"
+                    placeholder="tu@gmail.com"
                     required
                     autoComplete="email"
                   />
