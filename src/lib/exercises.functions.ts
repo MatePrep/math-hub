@@ -18,9 +18,13 @@ export const listTopics = createServerFn({ method: "GET" }).handler(async () => 
     .eq("active", true)
     .order("order");
   if (error) throw new Error(error.message);
-  const { data: counts } = await sb.from("exercises").select("topic_id");
+  // GROUP BY in Postgres (see get_exercise_counts_by_topic) instead of
+  // pulling every exercise row's topic_id over the wire just to tally them
+  // in JS — this loader runs on the public homepage on every visit.
+  const { data: counts, error: countsError } = await sb.rpc("get_exercise_counts_by_topic");
+  if (countsError) throw new Error(countsError.message);
   const map = new Map<string, number>();
-  (counts ?? []).forEach((r) => map.set(r.topic_id, (map.get(r.topic_id) ?? 0) + 1));
+  (counts ?? []).forEach((r) => map.set(r.topic_id, r.exercise_count));
   return (data ?? []).map((t) => ({ ...t, exerciseCount: map.get(t.id) ?? 0 }));
 });
 
@@ -32,10 +36,13 @@ export const listUniversities = createServerFn({ method: "GET" }).handler(async 
     .eq("active", true)
     .order("short_name");
   if (error) throw new Error(error.message);
-  const { data: counts } = await sb.from("exercises").select("university_id");
+  // Same fix as listTopics above: GROUP BY in Postgres instead of a
+  // full-table row transfer for a per-university tally.
+  const { data: counts, error: countsError } = await sb.rpc("get_exercise_counts_by_university");
+  if (countsError) throw new Error(countsError.message);
   const map = new Map<string, number>();
   (counts ?? []).forEach((r) => {
-    if (r.university_id) map.set(r.university_id, (map.get(r.university_id) ?? 0) + 1);
+    if (r.university_id) map.set(r.university_id, r.exercise_count);
   });
 
   // getPublicUrl is a local string builder (no network call, no expiring

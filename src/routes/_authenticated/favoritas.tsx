@@ -18,7 +18,12 @@ function FavoritesPage() {
   const q = useQuery({ queryKey: ["my-favorites"], queryFn: () => fn() });
   const [topic, setTopic] = useState<string>("all");
 
-  const items = (q.data ?? []).map((f: any) => f.exercise).filter(Boolean);
+  // `items` was a fresh array every render, which meant the `topics` useMemo
+  // below (keyed on `items`) never actually skipped work — its dependency
+  // never stayed referentially equal across renders. Memoizing `items`
+  // itself off `q.data` (the actual stable source) fixes both this and
+  // `filtered`, which was also unmemoized.
+  const items = useMemo(() => (q.data ?? []).map((f: any) => f.exercise).filter(Boolean), [q.data]);
   const topics = useMemo(() => {
     const map = new Map<string, string>();
     items.forEach((ex: any) => {
@@ -27,7 +32,10 @@ function FavoritesPage() {
     return Array.from(map, ([slug, name]) => ({ slug, name }));
   }, [items]);
 
-  const filtered = topic === "all" ? items : items.filter((ex: any) => ex.topic?.slug === topic);
+  const filtered = useMemo(
+    () => (topic === "all" ? items : items.filter((ex: any) => ex.topic?.slug === topic)),
+    [items, topic],
+  );
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">

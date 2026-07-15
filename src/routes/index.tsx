@@ -1,25 +1,79 @@
-import { useRef } from "react";
+import { lazy, Suspense } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowRight, Check, Trophy } from "lucide-react";
+import { ArrowRight, Banknote, Check, Compass, Loader2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listTopics, listUniversities } from "@/lib/exercises.functions";
-import { AnswerSheetWidget } from "@/components/landing/answer-sheet-widget";
 import { AmbientBackground } from "@/components/landing/ambient-background";
 import { PillarsSection } from "@/components/landing/pillars";
+import { SectionNav, type SectionNavItem } from "@/components/landing/section-nav";
 import { dailyExerciseQO } from "@/lib/daily-exercise.functions";
 import { UniversityMarquee } from "@/components/landing/university-marquee";
 import { TrustPill } from "@/components/landing/trust-pill";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { cn } from "@/lib/utils";
+import { useActiveSection } from "@/hooks/use-active-section";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useParallax } from "@/hooks/use-parallax";
 import { useScrollProgress } from "@/hooks/use-scroll-progress";
-import { useSectionPager } from "@/hooks/use-section-pager";
 import { fireConfetti } from "@/lib/confetti";
 import { pageMeta, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 import { PLAN_PRICES, TRIAL_DAYS } from "@/lib/plan";
+
+// Lazy, not a static import: AnswerSheetWidget pulls in KaTeX (@/lib/math-render)
+// to render the daily exercise's math — ~130KB gzipped, the single heaviest
+// chunk on the site, for one below-the-fold widget. Statically importing it
+// forced every landing-page visitor (the entire public/marketing audience) to
+// pay for math rendering they might never scroll to see. Deferred to its own
+// chunk, fetched once the "Reto del día" section actually mounts.
+const AnswerSheetWidget = lazy(() =>
+  import("@/components/landing/answer-sheet-widget").then((m) => ({
+    default: m.AnswerSheetWidget,
+  })),
+);
+
+// Mirrors AnswerSheetWidget's own shape (header bar, blurred question card,
+// score footer) so the Suspense fallback doesn't cause a layout jump when
+// the real widget's chunk finishes loading.
+function AnswerSheetSkeleton() {
+  return (
+    <div
+      className="animate-pulse overflow-hidden rounded-lg border border-border bg-card motion-reduce:animate-none"
+      aria-hidden="true"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="h-3 w-28 rounded bg-muted" />
+        <div className="h-6 w-14 rounded-md bg-muted" />
+      </div>
+      <div className="space-y-2.5 px-5 py-5">
+        <div className="h-3 w-full rounded bg-muted" />
+        <div className="h-3 w-3/4 rounded bg-muted" />
+        <div className="mt-3 h-10 rounded-md border border-border bg-muted/60" />
+        <div className="h-10 rounded-md border border-border bg-muted/60" />
+        <div className="h-10 rounded-md border border-border bg-muted/60" />
+      </div>
+      <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/40 px-5 py-4">
+        <div className="h-6 w-16 rounded bg-muted" />
+        <div className="h-6 w-20 rounded-md bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+// Secciones "de pantalla completa" que participan del scroll-snap: nav
+// lateral de puntos + fade de opacidad de la no activa (ver SectionNav /
+// useActiveSection). El ticker de universidades no entra — es un listón
+// interstitial, no una sección propia.
+const NAV_ITEMS: SectionNavItem[] = [
+  { id: "hero", label: "Inicio" },
+  { id: "pilares", label: "Pilares" },
+  { id: "empezar", label: "Primeros pasos" },
+  { id: "reto", label: "Reto del día" },
+  { id: "ranking", label: "Ranking" },
+  { id: "planes", label: "Planes" },
+  { id: "cta", label: "Crear cuenta" },
+];
 
 const topicsQO = queryOptions({ queryKey: ["topics"], queryFn: () => listTopics() });
 const uniQO = queryOptions({ queryKey: ["universities"], queryFn: () => listUniversities() });
@@ -42,6 +96,11 @@ export const Route = createFileRoute("/")({
           rel: "stylesheet",
           href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
         },
+        // The three section-background photos below the hero are all hosted
+        // on Unsplash — warm the connection so the first one (lazy-loaded,
+        // but still on this page) doesn't pay DNS+TLS setup cost on top of
+        // the fetch itself.
+        { rel: "preconnect", href: "https://images.unsplash.com" },
       ],
     };
   },
@@ -51,12 +110,42 @@ export const Route = createFileRoute("/")({
     context.queryClient.ensureQueryData(dailyExerciseQO);
   },
   component: Index,
+  pendingComponent: LandingPending,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-destructive">
       {error.message}
     </div>
   ),
 });
+
+// Classic skeleton + spinner fallback while this route's loader is in
+// flight (router.tsx's defaultPendingComponent is generic and tuned for the
+// temas/exámenes listing pages — it doesn't carry the "at" dark register, so
+// it flashed as a mismatched light page before the hero mounted). Own dark
+// canvas here keeps that flash from happening.
+function LandingPending() {
+  return (
+    <div className="at flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-4">
+      <Loader2
+        className="h-8 w-8 animate-spin text-primary motion-reduce:animate-none"
+        aria-hidden="true"
+      />
+      <span role="status" className="sr-only">
+        Cargando
+      </span>
+      <div className="w-full max-w-xl animate-pulse motion-reduce:animate-none" aria-hidden="true">
+        <div className="mx-auto h-9 w-5/6 rounded bg-muted sm:h-11" />
+        <div className="mx-auto mt-3 h-9 w-2/3 rounded bg-muted sm:h-11" />
+        <div className="mx-auto mt-6 h-4 w-full max-w-md rounded bg-muted" />
+        <div className="mx-auto mt-2 h-4 w-3/4 max-w-md rounded bg-muted" />
+        <div className="mt-8 flex justify-center gap-3">
+          <div className="h-11 w-40 rounded-md bg-muted" />
+          <div className="h-11 w-40 rounded-md bg-muted" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Puntajes de ejemplo según la grilla de puntuación del examen (no
 // porcentajes) — coherentes con el "812 pts / mínimo 800" del hero.
@@ -95,17 +184,20 @@ function Index() {
   const { ref: retoRef, visible: retoVisible } = useInViewOnce<HTMLDivElement>();
   const { ref: planesRef, visible: planesVisible } = useInViewOnce<HTMLDivElement>(0.3);
   const { ref: ctaRef, visible: ctaVisible } = useInViewOnce<HTMLDivElement>(0.3);
-  const scrollProgress = useScrollProgress();
+  const scrollProgressRef = useScrollProgress<HTMLDivElement>();
   const heroGlowAmberRef = useParallax<HTMLDivElement>(0.05, 30);
   const heroGlowTealRef = useParallax<HTMLDivElement>(-0.04, 24);
   const retoImgRef = useParallax<HTMLImageElement>(0.05, 30);
   const rankingImgRef = useParallax<HTMLImageElement>(0.05, 30);
   const ctaImgRef = useParallax<HTMLImageElement>(0.04, 26);
-  const pageRef = useRef<HTMLDivElement>(null);
-  // Wheel/keyboard section paging (see the hook) — CSS scroll-snap in
-  // styles.css already handles touch; this is what makes a plain mouse
-  // wheel feel like the same one-flick-per-section "social app" jump.
-  useSectionPager(pageRef);
+  const startWatermarkRef = useParallax<HTMLDivElement>(0.05, 36);
+  const planesWatermarkRef = useParallax<HTMLDivElement>(0.05, 36);
+  const activeId = useActiveSection(NAV_ITEMS.map((item) => item.id));
+  const fadeSection = (id: string) =>
+    cn(
+      "transition-opacity duration-500 ease-out motion-reduce:transition-none",
+      activeId === id ? "opacity-100" : "opacity-80",
+    );
 
   return (
     // overflow-x-clip: the ambient glows intentionally bleed past the viewport
@@ -115,7 +207,7 @@ function Index() {
     // fixed + negative-z layer stays contained behind this page's content
     // instead of escaping to the document root (where it'd render behind
     // .at's own opaque background and disappear entirely).
-    <div ref={pageRef} className="at isolate snap-sections overflow-x-clip">
+    <div className="at isolate snap-sections overflow-x-clip">
       <AmbientBackground />
 
       {/* Scroll progress rail — a position indicator, not decoration, so it
@@ -123,15 +215,22 @@ function Index() {
           below is cosmetic smoothing). */}
       <div aria-hidden className="fixed inset-x-0 top-0 z-50 h-[3px] bg-border/30">
         <div
-          className="h-full bg-primary transition-[width] duration-150 ease-out"
-          style={{ width: `${scrollProgress * 100}%` }}
+          ref={scrollProgressRef}
+          className="h-full bg-primary transition-[width] duration-150 ease-out motion-reduce:transition-none"
+          style={{ width: "0%" }}
         />
       </div>
 
+      <SectionNav items={NAV_ITEMS} activeId={activeId} />
+
       {/* Hero */}
       <section
-        data-snap-section
-        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden border-b border-border"
+        id="hero"
+        className={cn(
+          "relative overflow-hidden border-b border-border",
+          "snap-section flex flex-col justify-center",
+          fadeSection("hero"),
+        )}
       >
         {/* Ambient depth: two large soft glows (amber = pencil light, teal =
             "correct") so the navy canvas reads as lit paper, never a flat fill.
@@ -235,22 +334,28 @@ function Index() {
               aria-hidden
               className="animate-glow absolute -inset-x-[16%] -inset-y-[6%] rounded-[50%] bg-primary/[0.18] blur-2xl"
             />
-            <img
-              src="/landing/estudiante-hero.png"
-              alt="Postulante preuniversitario sonriendo, listo para su examen de admisión"
-              width={900}
-              height={1468}
-              fetchPriority="high"
-              decoding="async"
-              className="relative w-full object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.45)]"
-            />
+            {/* AVIF/WebP first (62KB / 108KB vs. the original 442KB PNG —
+                a colormap PNG is the wrong codec for a photo); PNG stays as
+                the fallback for browsers that support neither. */}
+            <picture>
+              <source srcSet="/landing/estudiante-hero.avif" type="image/avif" />
+              <source srcSet="/landing/estudiante-hero.webp" type="image/webp" />
+              <img
+                src="/landing/estudiante-hero.png"
+                alt="Postulante preuniversitario sonriendo, listo para su examen de admisión"
+                width={900}
+                height={1468}
+                fetchPriority="high"
+                decoding="async"
+                className="relative w-full object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.45)]"
+              />
+            </picture>
           </div>
         </div>
       </section>
 
       {/* University marquee + course ticker — a thin interstitial ribbon
-          between the Hero and Pilares slides, not a slide of its own; the
-          section pager just scrolls straight through it on the way there. */}
+          between the Hero and Pilares sections. */}
       <section className="border-b border-border bg-card/50">
         <div className="mx-auto max-w-6xl px-4 py-5">
           <div className="flex items-center gap-6">
@@ -293,17 +398,33 @@ function Index() {
       </section>
 
       {/* Los 3 pilares */}
-      <PillarsSection />
+      <PillarsSection sectionActive={activeId === "pilares"} />
 
       {/* Cómo empezar: reassurance section para quien recién llega — sin
           cronómetro, sin ranking, sin urgencia todavía. Navy plano (sin
           imagen de fondo) para que se sienta como una pausa antes del
           "reto del día". */}
       <section
-        data-snap-section
-        className="flex min-h-dvh snap-start flex-col justify-center border-b border-border"
+        id="empezar"
+        className={cn(
+          "relative overflow-hidden border-b border-border",
+          "snap-section flex flex-col justify-center",
+          fadeSection("empezar"),
+        )}
       >
-        <div ref={startRef} className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
+        {/* Marca de agua decorativa: una brújula a gran escala y casi
+            invisible (orientación/primeros pasos), con el mismo parallax
+            que el resto de secciones — nunca un segundo glow (ver el One
+            Glow Rule en DESIGN.md). */}
+        <div
+          ref={startWatermarkRef}
+          aria-hidden
+          className="pointer-events-none absolute -left-16 -top-16 text-foreground/[0.06]"
+          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
+        >
+          <Compass className="h-[24rem] w-[24rem]" strokeWidth={1} />
+        </div>
+        <div ref={startRef} className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24">
           <div className="mx-auto max-w-xl text-center">
             <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
               No necesitas ser el mejor para empezar hoy.
@@ -349,8 +470,12 @@ function Index() {
 
       {/* Reto del día */}
       <section
-        data-snap-section
-        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden border-b border-border"
+        id="reto"
+        className={cn(
+          "relative overflow-hidden border-b border-border",
+          "snap-section flex flex-col justify-center",
+          fadeSection("reto"),
+        )}
       >
         <SectionSweep visible={retoVisible} />
         {/* Momento real de estudio (postulante resolviendo en su cuaderno),
@@ -358,7 +483,7 @@ function Index() {
             Parallax sutil: la foto se mueve más despacio que el scroll. */}
         <img
           ref={retoImgRef}
-          src="https://images.unsplash.com/photo-1650477250300-805cde98ec21?auto=format&fit=crop&w=1600&q=80"
+          src="https://images.unsplash.com/photo-1650477250300-805cde98ec21?auto=format&fit=crop&w=1600&q=45"
           alt=""
           aria-hidden
           loading="lazy"
@@ -403,22 +528,28 @@ function Index() {
               retoVisible && "animate-rise-in",
             )}
           >
-            <AnswerSheetWidget />
+            <Suspense fallback={<AnswerSheetSkeleton />}>
+              <AnswerSheetWidget />
+            </Suspense>
           </div>
         </div>
       </section>
 
       {/* Ranking / community */}
       <section
-        data-snap-section
-        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden"
+        id="ranking"
+        className={cn(
+          "relative overflow-hidden",
+          "snap-section flex flex-col justify-center",
+          fadeSection("ranking"),
+        )}
       >
         <SectionSweep visible={rankingIntroVisible} />
         {/* Los rivales existen: grupo de postulantes como fondo de toda la
             sección, oscurecido hacia la izquierda donde vive el texto. */}
         <img
           ref={rankingImgRef}
-          src="https://images.unsplash.com/photo-1760574740270-067dc14bf164?auto=format&fit=crop&w=1600&q=80"
+          src="https://images.unsplash.com/photo-1760574740270-067dc14bf164?auto=format&fit=crop&w=1600&q=45"
           alt=""
           aria-hidden
           loading="lazy"
@@ -522,10 +653,25 @@ function Index() {
       {/* Planes: banda ámbar de borde a borde — el único bloque drenched de la
           página, para que el precio no se pierda entre el navy. */}
       <section
-        data-snap-section
-        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden bg-primary text-primary-foreground"
+        id="planes"
+        className={cn(
+          "relative overflow-hidden bg-primary text-primary-foreground",
+          "snap-section flex flex-col justify-center",
+          fadeSection("planes"),
+        )}
       >
         <SectionSweep visible={planesVisible} className="via-primary-foreground/70" />
+        {/* Marca de agua decorativa: en tinta navy sobre el ámbar (mismo dúo
+            de color de la sección, ninguna tercera tonalidad) — nunca un
+            glow nuevo, ver el One Glow Rule en DESIGN.md. */}
+        <div
+          ref={planesWatermarkRef}
+          aria-hidden
+          className="pointer-events-none absolute -right-12 -bottom-16 text-primary-foreground/[0.08]"
+          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
+        >
+          <Banknote className="h-[22rem] w-[22rem]" strokeWidth={1} />
+        </div>
         <div
           ref={planesRef}
           className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:py-20 lg:grid-cols-[1.15fr_1fr]"
@@ -596,15 +742,19 @@ function Index() {
 
       {/* Final CTA */}
       <section
-        data-snap-section
-        className="relative flex min-h-dvh snap-start flex-col justify-center overflow-hidden border-t border-border"
+        id="cta"
+        className={cn(
+          "relative overflow-hidden border-t border-border",
+          "snap-section flex flex-col justify-center",
+          fadeSection("cta"),
+        )}
       >
         <SectionSweep visible={ctaVisible} />
         {/* Real exam moment: a hand writing on answer sheets, desaturated and
             sunk into the navy so the type keeps full contrast. */}
         <img
           ref={ctaImgRef}
-          src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&q=80"
+          src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&q=45"
           alt=""
           aria-hidden
           loading="lazy"

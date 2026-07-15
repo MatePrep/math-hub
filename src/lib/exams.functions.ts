@@ -631,13 +631,14 @@ export const getExamResult = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!session) throw new Error("Sesión no encontrada");
     const ids: string[] = (session.question_ids ?? []) as any;
-    const { data: exs } = await supabase
-      .from("exercises")
-      .select("id, statement_md, choices, correct_choice, solution_md, expected_time_ms")
-      .in("id", ids);
-    const byId = new Map((exs ?? []).map((e: any) => [e.id, e]));
-
-    const [{ data: sessionAttempts }, { data: avgRows }] = await Promise.all([
+    // exs/sessionAttempts/avgRows are three independent reads (none depends
+    // on another's result) — previously exs was awaited alone before the
+    // other two, an extra round-trip for nothing.
+    const [{ data: exs }, { data: sessionAttempts }, { data: avgRows }] = await Promise.all([
+      supabase
+        .from("exercises")
+        .select("id, statement_md, choices, correct_choice, solution_md, expected_time_ms")
+        .in("id", ids),
       supabase
         .from("attempts")
         .select("exercise_id, time_spent_ms")
@@ -646,6 +647,7 @@ export const getExamResult = createServerFn({ method: "GET" })
         ? supabase.rpc("get_exercise_avg_times", { _exercise_ids: ids })
         : Promise.resolve({ data: [] as any[] }),
     ]);
+    const byId = new Map((exs ?? []).map((e: any) => [e.id, e]));
     const timeByQuestion = new Map(
       (sessionAttempts ?? []).map((a: any) => [a.exercise_id, a.time_spent_ms]),
     );

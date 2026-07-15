@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,8 +59,12 @@ function AdminExamsList() {
     }
   }
 
-  const rows = (q.data ?? []).filter((e: any) =>
-    filter === "all" ? true : (e.exam_type ?? "standard") === filter,
+  const rows = useMemo(
+    () =>
+      (q.data ?? []).filter((e: any) =>
+        filter === "all" ? true : (e.exam_type ?? "standard") === filter,
+      ),
+    [q.data, filter],
   );
 
   return (

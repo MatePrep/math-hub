@@ -51,10 +51,14 @@ export const Route = createFileRoute("/temas/$slug/")({
   validateSearch: zodValidator(searchSchema),
   loaderDeps: ({ search }) => ({ difficulty: search.difficulty }),
   loader: async ({ context, params, deps }) => {
-    const topic = await context.queryClient.ensureQueryData(topicQO(params.slug));
-    if (!topic) throw notFound();
+    // exercisesQO only needs params.slug/difficulty, not the resolved topic
+    // row — no reason to wait for `topic` before firing it.
     const diff = deps.difficulty === "all" ? undefined : deps.difficulty;
-    await context.queryClient.ensureQueryData(exercisesQO(params.slug, diff));
+    const [topic] = await Promise.all([
+      context.queryClient.ensureQueryData(topicQO(params.slug)),
+      context.queryClient.ensureQueryData(exercisesQO(params.slug, diff)),
+    ]);
+    if (!topic) throw notFound();
     return { topic };
   },
   head: ({ params, loaderData }) => {

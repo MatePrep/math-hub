@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Gauge, ListChecks, Target } from "lucide-react";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { usePointerTilt } from "@/hooks/use-pointer-tilt";
+import { useParallax } from "@/hooks/use-parallax";
 import { SimulacroShowcase } from "@/components/landing/simulacro-showcase";
 import { FeatureCarousel } from "@/components/landing/feature-carousel";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,7 @@ const PILLARS: Array<{
   },
 ];
 
-export function PillarsSection() {
+export function PillarsSection({ sectionActive }: { sectionActive: boolean }) {
   const { ref, visible } = useInViewOnce<HTMLDivElement>();
   // El carrusel reporta qué pilar queda centrado al arrastrar — controla el
   // resaltado dentro del simulacro real de al lado, así que deslizar una
@@ -69,6 +70,7 @@ export function PillarsSection() {
   const [active, setActive] = useState(1);
   const { ref: tiltRef, handleMove, handleLeave } = usePointerTilt<HTMLDivElement>(4);
   const carouselWrapRef = useRef<HTMLDivElement>(null);
+  const watermarkRef = useParallax<HTMLDivElement>(0.05, 36);
 
   // En mobile el simulacro y el carrusel quedan apilados — un clic en el
   // simulacro puede dejar la explicación fuera de pantalla, así que además
@@ -85,10 +87,30 @@ export function PillarsSection() {
 
   return (
     <section
-      data-snap-section
-      className="flex min-h-dvh snap-start flex-col justify-center at-paper border-y border-border"
+      id="pilares"
+      className={cn(
+        "at-paper snap-section relative flex flex-col justify-center border-y border-border",
+        "transition-opacity duration-500 ease-out motion-reduce:transition-none",
+        sectionActive ? "opacity-100" : "opacity-80",
+      )}
     >
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
+      {/* Marca de agua decorativa: el ícono del primer pilar, a gran escala
+          y casi invisible, moviéndose más despacio que el contenido
+          (parallax) — profundidad sin competir con el texto ni sumar un
+          segundo glow (reservado al widget del hero, ver DESIGN.md). Clip
+          propio en un wrapper aparte (no en la <section>): SimulacroShowcase
+          usa `lg:sticky` más abajo, y un overflow-hidden en un ancestro
+          directo del elemento sticky le rompería el anclaje. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          ref={watermarkRef}
+          className="absolute -right-16 -top-20 text-foreground/[0.05]"
+          style={{ transform: "translateY(var(--parallax-y, 0px))", willChange: "transform" }}
+        >
+          <Target className="h-[26rem] w-[26rem]" strokeWidth={1} />
+        </div>
+      </div>
+      <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24">
         <div className="max-w-xl">
           <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
             ¿Cómo se prepara alguien que sí va a ingresar?

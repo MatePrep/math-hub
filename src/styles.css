@@ -41,6 +41,14 @@
 
 :root {
   --radius: 0.75rem;
+  /* SiteHeader's real rendered height (sticky, so it stays in document flow
+     and permanently overlays the top of the page — see .snap-section
+     further down for why this matters). Global, not .at-scoped: the same
+     header renders on every route, and the `html:has(.snap-sections)` rule
+     below needs to read this on <html> itself — a custom property set
+     inside .at (a descendant of <html>) wouldn't be visible there, custom
+     properties only cascade downward. */
+  --site-header-h: 4.5rem;
   /* Notebook palette */
   --background: oklch(0.985 0.008 85); /* paper #FBFAF6 */
   --foreground: oklch(0.21 0.04 260); /* deep ink */
@@ -140,35 +148,56 @@
   letter-spacing: -0.03em;
 }
 
-/* Full-screen "swipe between sections" scroll (TikTok/Reels-style snap) —
-   explicitly requested for the homepage, whose audience skews young and
-   already reads pages this way. `:has(.snap-sections)` scopes it to the
-   homepage's own root marker instead of a route-aware class on <html> in
-   the shared root layout, so every other route (temas, exámenes, panel,
-   auth...) keeps ordinary free scroll untouched. scroll-padding-top offsets
-   every snap point below the sticky SiteHeader (site-header.tsx, ~64px)
-   so a freshly-snapped section's own heading never lands under it. Each
-   section opts in with Tailwind's own `snap-start` + `min-h-dvh` in JSX —
-   no matching custom class needed on that side.
+/* Section-snap scroll for the homepage — native CSS scroll-snap on the
+   document scroller, deliberately `proximity` (not `mandatory`): mandatory
+   fights any scroll past the last snap point and is the more failure-prone
+   mode on mobile browsers, while proximity still catches the page at a
+   section boundary (wheel, trackpad, touch momentum) without trapping
+   scroll or requiring a JS wheel/keyboard interceptor. `:has(.snap-sections)`
+   scopes this to the homepage's own root marker so every other route (temas,
+   exámenes, panel, auth...) keeps ordinary free scroll untouched.
+   scroll-padding-top offsets every snap point below the sticky SiteHeader
+   (site-header.tsx) so a freshly-snapped section's own heading never lands
+   under it.
 
-   `proximity`, not `mandatory`: the actual "one flick = one section" feel
-   comes from useSectionPager's own animated scrollIntoView (see
-   use-section-pager.ts), not from this. `mandatory` was fighting scroll
-   PAST the last snap point — with nothing after the final CTA section to
-   snap to, the browser kept refusing to let the page scroll into the
-   footer at all. `proximity` still snaps while you're near a section
-   boundary (touch swipes, scrollbar drag) but doesn't trap you at the
-   edges of the sequence. */
+   No `scroll-behavior: smooth` here on purpose: layered on top of
+   scroll-snap it made rapid wheel ticks feel dropped (the browser was still
+   mid-animating the previous smooth-scroll to a snap point when the next
+   wheel delta arrived, so that input was ignored instead of queued). The
+   browser's own snap-settling motion is already animated without it. */
 html:has(.snap-sections) {
   scroll-snap-type: y proximity;
-  scroll-behavior: smooth;
-  scroll-padding-top: 4.5rem;
+  scroll-padding-top: var(--site-header-h);
 }
 @media (prefers-reduced-motion: reduce) {
   html:has(.snap-sections) {
     scroll-snap-type: none;
-    scroll-behavior: auto;
   }
+}
+
+/* Each full-screen homepage section (Hero, Pilares, Reto, Ranking, Planes,
+   CTA...). Height is 100dvh MINUS the sticky header's own height, not a
+   plain 100dvh/min-h-dvh: SiteHeader is `position: sticky`, so it stays in
+   normal document flow and permanently reserves (and visually overlays)
+   --site-header-h worth of the viewport. A section sized at a flat 100dvh
+   starting right below the header therefore always ran --site-header-h past
+   the actual bottom of the viewport — the tail end of every section's
+   content got pushed off-screen and was never reachable, since scroll-snap
+   immediately jumps to the next section's snap point instead of continuing
+   to scroll through the remainder. Subtracting the header's height here
+   makes header (in flow) + section (this height) add up to exactly one
+   viewport, so nothing is cut off. */
+.snap-section {
+  scroll-snap-align: start;
+  /* vh first as a fallback, dvh second: if a browser doesn't recognize the
+     `dvh` unit, the whole calc() it appears in fails to parse and the
+     declaration is dropped entirely — so this has to be two separate
+     declarations, not one expression mixing both units. Browsers that don't
+     know `dvh` silently keep the vh line above; browsers that do override it
+     with the dvh line, which is what actually accounts for a mobile
+     browser's collapsing address bar. */
+  min-height: calc(100vh - var(--site-header-h));
+  min-height: calc(100dvh - var(--site-header-h));
 }
 
 /* Landing "paper" sections — the answer-sheet flipped: cream paper with navy

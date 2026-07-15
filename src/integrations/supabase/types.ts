@@ -902,6 +902,20 @@ export type Database = {
           samples: number;
         }[];
       };
+      get_exercise_counts_by_topic: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          exercise_count: number;
+          topic_id: string;
+        }[];
+      };
+      get_exercise_counts_by_university: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          exercise_count: number;
+          university_id: string;
+        }[];
+      };
       get_exercise_review_queue: {
         Args: { _low_rating_threshold?: number };
         Returns: {

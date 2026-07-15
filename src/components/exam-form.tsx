@@ -126,19 +126,29 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
   const allUniversities: Array<{ id: string; short_name: string; name: string }> = (meta.data
     ?.universities ?? []) as any;
 
-  const selectedSet = new Set(v.exercise_ids);
-  const available = (bank.data ?? []).filter((e: any) => {
-    if (selectedSet.has(e.id)) return false;
-    if (topicFilter !== "all" && e.topic?.id !== topicFilter) return false;
-    if (universityFilter !== "all" && e.university?.id !== universityFilter) return false;
-    if (yearFilter !== "all" && String(e.exam_year) !== yearFilter) return false;
-    if (filter && !e.statement_md.toLowerCase().includes(filter.toLowerCase())) return false;
-    return true;
-  });
+  // Previously recomputed on every render (including keystrokes in unrelated
+  // fields like title/description) by re-filtering/re-scanning the entire
+  // exercise bank — memoized like the bankTopics/bankUniversities/bankYears
+  // derivations above so it only re-runs when its actual inputs change.
+  const available = useMemo(() => {
+    const selectedSet = new Set(v.exercise_ids);
+    return (bank.data ?? []).filter((e: any) => {
+      if (selectedSet.has(e.id)) return false;
+      if (topicFilter !== "all" && e.topic?.id !== topicFilter) return false;
+      if (universityFilter !== "all" && e.university?.id !== universityFilter) return false;
+      if (yearFilter !== "all" && String(e.exam_year) !== yearFilter) return false;
+      if (filter && !e.statement_md.toLowerCase().includes(filter.toLowerCase())) return false;
+      return true;
+    });
+  }, [bank.data, v.exercise_ids, topicFilter, universityFilter, yearFilter, filter]);
 
-  const selectedItems = v.exercise_ids
-    .map((id) => (bank.data ?? []).find((e: any) => e.id === id))
-    .filter(Boolean) as any[];
+  const selectedItems = useMemo(
+    () =>
+      v.exercise_ids
+        .map((id) => (bank.data ?? []).find((e: any) => e.id === id))
+        .filter(Boolean) as any[],
+    [bank.data, v.exercise_ids],
+  );
 
   function add(id: string) {
     setV((s) => ({ ...s, exercise_ids: [...s.exercise_ids, id] }));

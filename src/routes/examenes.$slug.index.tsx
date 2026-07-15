@@ -25,9 +25,13 @@ const examsQO = (slug: string) =>
 
 export const Route = createFileRoute("/examenes/$slug/")({
   loader: async ({ context, params }) => {
-    const u = await context.queryClient.ensureQueryData(uniQO(params.slug));
+    // examsQO only needs params.slug, not the resolved university row — no
+    // reason to wait for `u` before firing it.
+    const [u] = await Promise.all([
+      context.queryClient.ensureQueryData(uniQO(params.slug)),
+      context.queryClient.ensureQueryData(examsQO(params.slug)),
+    ]);
     if (!u) throw notFound();
-    await context.queryClient.ensureQueryData(examsQO(params.slug));
     return { university: u };
   },
   head: ({ params, loaderData }) => {
