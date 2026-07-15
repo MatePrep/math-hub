@@ -148,47 +148,19 @@
   letter-spacing: -0.03em;
 }
 
-/* Section-snap scroll for the homepage — native CSS scroll-snap on the
-   document scroller, deliberately `proximity` (not `mandatory`): mandatory
-   fights any scroll past the last snap point and is the more failure-prone
-   mode on mobile browsers, while proximity still catches the page at a
-   section boundary (wheel, trackpad, touch momentum) without trapping
-   scroll or requiring a JS wheel/keyboard interceptor. `:has(.snap-sections)`
-   scopes this to the homepage's own root marker so every other route (temas,
-   exámenes, panel, auth...) keeps ordinary free scroll untouched.
-   scroll-padding-top offsets every snap point below the sticky SiteHeader
-   (site-header.tsx) so a freshly-snapped section's own heading never lands
-   under it.
+/* Scroll-snap disabled (temporarily, for an isolation test — the user
+   suspects it's contributing to other animations feeling janky, since the
+   browser's snap-settle motion could be competing with the parallax rAF for
+   frame budget). Everything else (parallax, section reveals, the side nav,
+   the opacity fade) is untouched, so this is the only variable that changed.
+   If it turns out not to be the cause, restore `scroll-snap-type: y
+   proximity` + `scroll-padding-top: var(--site-header-h)` on
+   `html:has(.snap-sections)`, and `scroll-snap-align: start` on
+   .snap-section below — see git history for the exact prior rule.
 
-   No `scroll-behavior: smooth` here on purpose: layered on top of
-   scroll-snap it made rapid wheel ticks feel dropped (the browser was still
-   mid-animating the previous smooth-scroll to a snap point when the next
-   wheel delta arrived, so that input was ignored instead of queued). The
-   browser's own snap-settling motion is already animated without it. */
-html:has(.snap-sections) {
-  scroll-snap-type: y proximity;
-  scroll-padding-top: var(--site-header-h);
-}
-@media (prefers-reduced-motion: reduce) {
-  html:has(.snap-sections) {
-    scroll-snap-type: none;
-  }
-}
-
-/* Each full-screen homepage section (Hero, Pilares, Reto, Ranking, Planes,
-   CTA...). Height is 100dvh MINUS the sticky header's own height, not a
-   plain 100dvh/min-h-dvh: SiteHeader is `position: sticky`, so it stays in
-   normal document flow and permanently reserves (and visually overlays)
-   --site-header-h worth of the viewport. A section sized at a flat 100dvh
-   starting right below the header therefore always ran --site-header-h past
-   the actual bottom of the viewport — the tail end of every section's
-   content got pushed off-screen and was never reachable, since scroll-snap
-   immediately jumps to the next section's snap point instead of continuing
-   to scroll through the remainder. Subtracting the header's height here
-   makes header (in flow) + section (this height) add up to exactly one
-   viewport, so nothing is cut off. */
+   Each section still keeps its full-screen sizing (not an animation, just a
+   static height) so the page doesn't otherwise change shape. */
 .snap-section {
-  scroll-snap-align: start;
   /* vh first as a fallback, dvh second: if a browser doesn't recognize the
      `dvh` unit, the whole calc() it appears in fails to parse and the
      declaration is dropped entirely — so this has to be two separate
