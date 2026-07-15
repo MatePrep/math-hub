@@ -46,13 +46,95 @@ type Billing = "monthly" | "quarterly";
 
 function PlanesPage() {
   const { signedIn, isPremium, onTrial, trialUsed, trialDaysLeft } = usePlan();
-  const [billing, setBilling] = useState<Billing>("quarterly");
-  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  // Which plan's mailto the placeholder "muy pronto" dialog is showing —
+  // null means closed. Two premium columns now exist side by side (no more
+  // single toggled Premium card), so the dialog has to know which one the
+  // student actually clicked to avoid quoting the wrong price back at them.
+  const [subscribeBilling, setSubscribeBilling] = useState<Billing | null>(null);
   const activate = useActivateTrial();
   const { ref: tableRef, visible: tableVisible } = useInViewOnce<HTMLDivElement>();
 
-  const price = PLAN_PRICES[billing];
   const canTrial = signedIn === true && !isPremium && !trialUsed;
+
+  // Identical state machine for both premium columns (Mensual/Trimestral) —
+  // the free trial itself is plan-agnostic, so only which billing gets
+  // written into the subscribe-dialog mailto differs between the two calls.
+  function renderPremiumCta(billing: Billing) {
+    if (signedIn === false) {
+      return (
+        <>
+          <Button asChild size="lg" className="press">
+            <Link to="/auth">
+              Crear cuenta<ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          
+        </>
+      );
+    }
+    if (canTrial) {
+      return (
+        <>
+          <Button
+            size="lg"
+            className="press"
+            disabled={activate.isPending}
+            onClick={() => activate.mutate()}
+          >
+            {activate.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            Probar Premium gratis por {TRIAL_DAYS} días
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => setSubscribeBilling(billing)}
+          >
+            O suscribirme al {PLAN_PRICES[billing].label.toLowerCase()}
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Sin tarjeta. Al terminar vuelves al plan gratuito automáticamente.
+          </p>
+        </>
+      );
+    }
+    if (signedIn === true && !isPremium && trialUsed) {
+      return (
+        <>
+          <Button size="lg" className="press" onClick={() => setSubscribeBilling(billing)}>
+            Suscribirme <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Ya usaste tu prueba gratuita de {TRIAL_DAYS} días.
+          </p>
+        </>
+      );
+    }
+    if (onTrial) {
+      return (
+        <>
+          <Button size="lg" className="press" onClick={() => setSubscribeBilling(billing)}>
+            Suscribirme para continuar
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Asegura tu acceso antes de que termine la prueba.
+          </p>
+        </>
+      );
+    }
+    if (isPremium && !onTrial) {
+      return (
+        <div className="inline-flex items-center justify-center gap-2 rounded-lg border border-success/40 bg-success/10 px-4 py-2.5 text-sm font-semibold text-success">
+          <BadgeCheck className="h-4 w-4" /> Ya tienes Premium
+        </div>
+      );
+    }
+    return null;
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
@@ -67,7 +149,7 @@ function PlanesPage() {
         <p className="mt-4 text-pretty text-muted-foreground">
           El plan gratuito te acompaña todos los días. Premium desbloquea lo que decide una
           admisión: los exámenes reales, los simulacros de tu universidad y saber exactamente dónde
-          estás parado.
+          estás parado con respecto a tu competencia.
         </p>
       </header>
 
@@ -82,51 +164,25 @@ function PlanesPage() {
         </div>
       )}
 
-      {/* Toggle mensual / trimestral */}
-      <div className="mt-10 flex justify-center">
-        <div
-          role="radiogroup"
-          aria-label="Periodo de facturación"
-          className="relative inline-flex rounded-full border border-border bg-secondary/60 p-1"
-        >
-          {(["monthly", "quarterly"] as const).map((b) => (
-            <button
-              key={b}
-              type="button"
-              role="radio"
-              aria-checked={billing === b}
-              onClick={() => setBilling(b)}
-              className={cn(
-                "press relative rounded-full px-5 py-2 text-sm font-semibold transition-colors duration-200",
-                billing === b
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {PLAN_PRICES[b].label}
-              {b === "quarterly" && (
-                <span
-                  className={cn(
-                    "ml-2 rounded-full px-1.5 py-0.5 text-[0.65rem] font-bold",
-                    billing === b
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-accent/20 text-accent-foreground",
-                  )}
-                >
-                  −{PLAN_PRICES.quarterly.discountPct}%
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tarjetas de plan */}
-      <div className="mt-8 grid gap-5 md:grid-cols-2">
-        {/* Gratuito */}
+      {/* Tarjetas de plan: 3 columnas fijas, sin toggle — Gratis, Mensual
+          (recomendado) y Trimestral se comparan de un vistazo en vez de
+          ocultarse una a la otra detrás de un selector. Por debajo de lg,
+          en vez de apilarlas, el mismo contenedor se vuelve una fila con
+          scroll-snap horizontal — cada tarjeta ocupa ~85% del ancho (un
+          "peek" de la siguiente asoma como pista de que se puede deslizar),
+          y en lg vuelve a ser un grid normal sin scroll. */}
+      {/* mt-10 vive en este wrapper, no en el hint de abajo: el hint es
+          lg:hidden, así que su propio margen desaparecía por completo en
+          desktop y las columnas quedaban pegadas al header. */}
+      <div className="mt-10">
+        <p className="mb-3 text-center text-xs font-medium text-muted-foreground lg:hidden">
+          Desliza para ver los 3 planes →
+        </p>
+        <div className="-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-3 lg:snap-none lg:overflow-visible lg:px-0 lg:pb-0">
+          {/* Gratuito */}
         <section
           aria-label="Plan Gratuito"
-          className="animate-fade-up flex flex-col rounded-2xl border border-border bg-card p-6 sm:p-8"
+          className="animate-fade-up flex w-[85%] shrink-0 snap-center flex-col rounded-2xl border border-border bg-card p-6 sm:p-8 lg:w-auto lg:shrink lg:snap-align-none"
           style={{ "--i": 0 } as React.CSSProperties}
         >
           <h2 className="font-display text-xl font-bold">Gratuito</h2>
@@ -146,76 +202,16 @@ function PlanesPage() {
             ))}
           </ul>
           {signedIn === true ? (
-            <div className="mt-8 rounded-lg border border-dashed border-border px-4 py-2.5 text-center text-sm font-medium text-muted-foreground">
-              {isPremium ? "Incluido en tu plan Premium" : "Tu plan actual"}
-            </div>
-          ) : (
-            <Button asChild variant="outline" size="lg" className="press mt-8">
-              <Link to="/auth">Crear cuenta gratis</Link>
-            </Button>
-          )}
-        </section>
-
-        {/* Premium */}
-        <section
-          aria-label="Plan Premium"
-          className="animate-fade-up relative flex flex-col overflow-hidden rounded-2xl border-2 border-primary bg-card p-6 shadow-lg sm:p-8"
-          style={{ "--i": 1 } as React.CSSProperties}
-        >
-          <span className="absolute right-0 top-0 rounded-bl-xl bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
-            Recomendado
-          </span>
-          <h2 className="inline-flex items-center gap-2 font-display text-xl font-bold">
-            Premium <Sparkles className="h-4 w-4 text-accent-foreground" aria-hidden />
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Todo lo que decide tu ingreso, sin límites.
-          </p>
-          {/* key= reinicia la animación al cambiar el periodo: el precio "aterriza" */}
-          <div key={billing} className="animate-card-swap mt-5">
-            <p className="font-display text-4xl font-bold">
-              S/ {price.amount}
-              <span className="ml-1 text-base font-normal text-muted-foreground">{price.per}</span>
-            </p>
-            {billing === "quarterly" ? (
-              <p className="mt-1 text-sm text-muted-foreground">
-                ≈ S/ {PLAN_PRICES.quarterly.monthlyEquivalent} al mes ·{" "}
-                <span className="line-through">S/ {PLAN_PRICES.quarterly.fullPrice}</span>{" "}
-                <span className="font-semibold text-success">
-                  ahorras {PLAN_PRICES.quarterly.discountPct}%
-                </span>
-              </p>
-            ) : (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Con el trimestral pagas ≈ S/ {PLAN_PRICES.quarterly.monthlyEquivalent} al mes.
-              </p>
-            )}
-          </div>
-          <ul className="mt-6 flex-1 space-y-3 text-sm">
-            {PREMIUM_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2.5">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" strokeWidth={3} />
-                {f}
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-8 flex flex-col gap-2">
-            {signedIn === false && (
-              <>
-                <Button asChild size="lg" className="press">
-                  <Link to="/auth">
-                    Crear cuenta y probar gratis <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Al crear tu cuenta puedes activar {TRIAL_DAYS} días de Premium gratis.
-                </p>
-              </>
-            )}
-            {canTrial && (
-              <>
+            <div className="mt-8 flex flex-col gap-2">
+              <div className="rounded-lg border border-dashed border-border px-4 py-2.5 text-center text-sm font-medium text-muted-foreground">
+                {isPremium ? "Incluido en tu plan Premium" : "Tu plan actual"}
+              </div>
+              {/* Elegir Gratis no cierra la puerta a Premium: si todavía no
+                  gastó su prueba, se lo recordamos aquí mismo en vez de que
+                  tenga que descubrirlo mirando las otras dos columnas. */}
+              {canTrial && (
                 <Button
+                  variant="outline"
                   size="lg"
                   className="press"
                   disabled={activate.isPending}
@@ -226,53 +222,106 @@ function PlanesPage() {
                   ) : (
                     <Sparkles className="mr-2 h-4 w-4" />
                   )}
-                  Probar Premium gratis por {TRIAL_DAYS} días
+                  Activar mis {TRIAL_DAYS} días gratis
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={() => setSubscribeOpen(true)}
-                >
-                  O suscribirme directamente
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Sin tarjeta. Al terminar vuelves al plan gratuito automáticamente.
-                </p>
-              </>
-            )}
-            {signedIn === true && !isPremium && trialUsed && (
-              <>
-                <Button size="lg" className="press" onClick={() => setSubscribeOpen(true)}>
-                  Suscribirme <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Ya usaste tu prueba gratuita de {TRIAL_DAYS} días.
-                </p>
-              </>
-            )}
-            {onTrial && (
-              <>
-                <Button size="lg" className="press" onClick={() => setSubscribeOpen(true)}>
-                  Suscribirme para continuar
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Asegura tu acceso antes de que termine la prueba.
-                </p>
-              </>
-            )}
-            {isPremium && !onTrial && (
-              <div className="inline-flex items-center justify-center gap-2 rounded-lg border border-success/40 bg-success/10 px-4 py-2.5 text-sm font-semibold text-success">
-                <BadgeCheck className="h-4 w-4" /> Ya tienes Premium
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-8 flex flex-col gap-2">
+              <Button asChild variant="outline" size="lg" className="press">
+                <Link to="/auth">Crear cuenta gratis</Link>
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                Al crear tu cuenta puedes activar {TRIAL_DAYS} días de Premium gratis.
+              </p>
+            </div>
+          )}
         </section>
+
+        {/* Premium Mensual — el recomendado: la columna elevada de las tres,
+            para quien quiere probar Premium sin comprometerse a 3 meses. */}
+        <section
+          aria-label="Plan Premium Mensual"
+          className="animate-fade-up relative flex w-[85%] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border-2 border-primary bg-card p-6 shadow-lg sm:p-8 lg:w-auto lg:shrink lg:snap-align-none"
+          style={{ "--i": 1 } as React.CSSProperties}
+        >
+          <span className="absolute right-0 top-0 rounded-bl-xl bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
+            Recomendado
+          </span>
+          <h2 className="inline-flex items-center gap-2 font-display text-xl font-bold">
+            Premium Mensual <Sparkles className="h-4 w-4 text-accent-foreground" aria-hidden />
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Todo lo que decide tu ingreso, mes a mes.
+          </p>
+          <p className="mt-5 font-display text-4xl font-bold">
+            S/ {PLAN_PRICES.monthly.amount}
+            <span className="ml-1 text-base font-normal text-muted-foreground">
+              {PLAN_PRICES.monthly.per}
+            </span>
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Cancelas cuando quieras, sin plazos.</p>
+          <ul className="mt-6 flex-1 space-y-3 text-sm">
+            {PREMIUM_FEATURES.map((f) => (
+              <li key={f} className="flex items-start gap-2.5">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" strokeWidth={3} />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-col gap-2">{renderPremiumCta("monthly")}</div>
+        </section>
+
+        {/* Premium Trimestral — mismos beneficios, precio por 3 meses con
+            descuento. No es la recomendada, pero su ahorro debe seguir
+            siendo visible de un vistazo (chip verde junto al título). */}
+        <section
+          aria-label="Plan Premium Trimestral"
+          className="animate-fade-up flex w-[85%] shrink-0 snap-center flex-col rounded-2xl border border-border bg-card p-6 sm:p-8 lg:w-auto lg:shrink lg:snap-align-none"
+          style={{ "--i": 2 } as React.CSSProperties}
+        >
+          <h2 className="inline-flex flex-wrap items-center gap-2 font-display text-xl font-bold">
+            Premium Trimestral
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            El mismo Premium, pagado cada 3 meses.
+          </p>
+          <p className="mt-5 font-display text-4xl font-bold">
+            S/ {PLAN_PRICES.quarterly.amount}
+            <span className="ml-1 text-base font-normal text-muted-foreground">
+              {PLAN_PRICES.quarterly.per}
+            </span>
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <span className="line-through">S/ {PLAN_PRICES.quarterly.fullPrice}</span>{" "}
+            <span className="font-semibold text-success">
+              ahorras {PLAN_PRICES.quarterly.discountPct}%
+            </span>
+          </p>
+          <ul className="mt-6 flex-1 space-y-3 text-sm">
+            {PREMIUM_FEATURES.map((f) => (
+              <li key={f} className="flex items-start gap-2.5">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" strokeWidth={3} />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-col gap-2">{renderPremiumCta("quarterly")}</div>
+        </section>
+        </div>
       </div>
 
-      {/* Cómo funciona la prueba */}
-      <section aria-label="Cómo funciona la prueba gratuita" className="mt-14">
-        <div className="grid gap-4 rounded-2xl border border-border bg-secondary/30 p-6 sm:grid-cols-3 sm:p-8">
+      {/* Cómo funciona la prueba — antes solo tenía aria-label (accesible
+          para lectores de pantalla, pero invisible en pantalla: nada le
+          decía a un visitante vidente qué explicaba este bloque). */}
+      <section aria-labelledby="trial-how-heading" className="mt-14">
+        <h2
+          id="trial-how-heading"
+          className="text-center font-display text-2xl font-bold"
+        >
+          Así funciona tu prueba gratuita
+        </h2>
+        <div className="mt-6 grid gap-4 rounded-2xl border border-border bg-secondary/30 p-6 sm:grid-cols-3 sm:p-8">
           {[
             {
               title: "Actívala cuando quieras",
@@ -390,8 +439,15 @@ function PlanesPage() {
         </p>
       </section>
 
-      {/* Suscripción: placeholder hasta integrar la pasarela de pago */}
-      <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
+      {/* Suscripción: placeholder hasta integrar la pasarela de pago.
+          `subscribeBilling` (no un booleano) porque ahora hay dos columnas
+          premium a la vez — el diálogo tiene que confirmar el plan
+          específico que el estudiante tocó, no un genérico "Premium" que
+          podía referirse a cualquiera de los dos precios. */}
+      <Dialog
+        open={subscribeBilling !== null}
+        onOpenChange={(open) => !open && setSubscribeBilling(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
@@ -401,21 +457,29 @@ function PlanesPage() {
               Muy pronto podrás suscribirte aquí
             </DialogTitle>
             <DialogDescription className="text-center">
-              Estamos habilitando los pagos en línea. Mientras tanto, escríbenos y te activamos
-              Premium de forma manual — responde una persona real, rápido.
+              Estamos habilitando los pagos en línea para el plan{" "}
+              {subscribeBilling && PLAN_PRICES[subscribeBilling].label.toLowerCase()}. Mientras
+              tanto, escríbenos y te activamos Premium de forma manual — responde una persona real,
+              rápido.
             </DialogDescription>
           </DialogHeader>
           <Button asChild size="lg" className="press">
             <a
-              href={`mailto:${CONTACT_EMAIL}?subject=Quiero%20suscribirme%20a%20Admi-Tec%20Premium`}
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+                `Quiero suscribirme a Admi-Tec Premium (${
+                  subscribeBilling ? PLAN_PRICES[subscribeBilling].label : ""
+                })`,
+              )}`}
             >
               <Mail className="mr-2 h-4 w-4" /> Escribir a {CONTACT_EMAIL}
             </a>
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Premium: S/ {PLAN_PRICES.monthly.amount}/mes o S/ {PLAN_PRICES.quarterly.amount}
-            /trimestre.
-          </p>
+          {subscribeBilling && (
+            <p className="text-center text-xs text-muted-foreground">
+              Premium {PLAN_PRICES[subscribeBilling].label}: S/ {PLAN_PRICES[subscribeBilling].amount}{" "}
+              {PLAN_PRICES[subscribeBilling].per}.
+            </p>
+          )}
         </DialogContent>
       </Dialog>
     </div>
