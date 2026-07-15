@@ -307,6 +307,18 @@
   animation: at-rise-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * 60ms);
 }
+/* Touch devices: the scale-overshoot reads as an unwanted "pop" (direct
+   feedback), and since up to a dozen-plus elements can cross the viewport
+   threshold in the same scroll burst, it's real bounce/scale work stacked
+   up for a mobile GPU right when a section appears. Desktop keeps the full
+   effect — swap in the same plain fade-up already used elsewhere on the
+   site (no scale, shorter, cheaper) only where pointer: coarse. */
+@media (pointer: coarse) {
+  .at .animate-rise-in {
+    animation: fade-up 300ms cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation-delay: calc(var(--i, 0) * 40ms);
+  }
+}
 
 /* Section-boundary sweep: a thin amber gradient line crosses the section's
    top edge, then loops on a slow cycle for as long as the section has been
