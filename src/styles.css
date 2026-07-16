@@ -313,6 +313,19 @@
   }
 }
 
+/* Celular: el rise-in de Pilares se pide explícitamente apagado en pantallas
+   angostas — no solo atenuado como en el bloque pointer:coarse de arriba,
+   sino sin animación alguna. max-width en vez de pointer:coarse porque un
+   tablet táctil sigue queriendo el efecto reducido, no la ausencia total.
+   (Las tiras giratorias de universidades/cursos ya se ocultan por completo
+   en celular con `hidden sm:block` en el <section> que las envuelve, en vez
+   de solo congelar la animación — una tira estática se veía rota.) */
+@media (max-width: 640px) {
+  .at .animate-rise-in {
+    animation: none !important;
+  }
+}
+
 /* "Cómo empezar" step connector — a thin line draws in left-to-right between
    each numbered card once the section scrolls into view: a one-shot reveal
    (not a new continuous loop, so it costs nothing at rest) that makes the

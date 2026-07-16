@@ -363,8 +363,11 @@ function Index() {
       </section>
 
       {/* University marquee + course ticker — a thin interstitial ribbon
-          between the Hero and Pilares sections. */}
-      <section className="border-b border-border bg-card/50">
+          between the Hero and Pilares sections. Oculta en celular: las tiras
+          giratorias se congelan por CSS ahí (ver animate-marquee en
+          styles.css) y una tira estática de logos/chips se ve rota, no
+          decorativa — mejor no mostrar la sección que mostrarla fea. */}
+      <section className="hidden border-b border-border bg-card/50 sm:block">
         <div className="mx-auto max-w-6xl px-4 py-5">
           <div className="flex items-center gap-6">
             <span className="hidden shrink-0 text-sm font-medium text-muted-foreground sm:block">
@@ -440,7 +443,7 @@ function Index() {
               quieras.
             </p>
             <TrustPill className="mt-4">
-            Registrate gratis, sin tarjeta, en menos de un minuto
+              Registrate gratis, sin tarjeta, en menos de un minuto
             </TrustPill>
           </div>
 
@@ -517,31 +520,18 @@ function Index() {
         </div>
       </section>
 
-      {/* Reto del día */}
+      {/* Reto del día — cream paper (mismo .at-paper que Pilares) en vez de la
+          foto de fondo: una pausa clara entre los dos bloques navy
+          ("empezar" arriba, "ranking" abajo). */}
       <section
         id="reto"
         className={cn(
-          "relative overflow-hidden border-b border-border",
+          "at-paper relative overflow-hidden border-b border-border",
           "snap-section flex flex-col justify-center",
           fadeSection("reto"),
         )}
       >
         <SectionSweep />
-        {/* Momento real de estudio (postulante resolviendo en su cuaderno),
-            hundido en el navy para que el widget conserve todo el contraste.
-            Parallax removido (test de aislamiento), queda estática. */}
-        <img
-          src="https://images.unsplash.com/photo-1650477250300-805cde98ec21?auto=format&fit=crop&w=1600&q=45"
-          alt=""
-          aria-hidden
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover object-[center_30%] opacity-25 saturate-[0.35]"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/70 to-background/85"
-        />
         <div
           aria-hidden
           className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-primary/10 blur-[100px]"
@@ -551,9 +541,9 @@ function Index() {
           className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1fr_1.1fr] lg:items-center"
         >
           <div className={cn(retoVisible && "animate-rise-in")}>
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
-              <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden /> Reto del
-              día
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span className="inline-flex h-2 w-2 rounded-full bg-foreground/70" aria-hidden />{" "}
+              Reto del día
             </span>
             <h2 className="mt-3 text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
               Ponte a prueba ahora mismo.
@@ -561,8 +551,8 @@ function Index() {
             <p className="mt-3 max-w-md text-pretty text-muted-foreground">
               Cada día publicamos{" "}
               <strong className="font-semibold text-foreground">un ejercicio real del banco</strong>{" "}
-              — el mismo para todos. Resuélvelo contra el reloj y compara tus resultados con
-              todos los postulantes que lo intentaron hoy.
+              — el mismo para todos. Resuélvelo contra el reloj y compara tus resultados con todos
+              los postulantes que lo intentaron hoy.
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
               Sin registrarte y sin presión: pruébalo cuando quieras,{" "}
@@ -571,7 +561,14 @@ function Index() {
           </div>
           <div
             className={cn(
-              "mx-auto w-full max-w-sm lg:max-w-none",
+              // Re-anida "at" (mismo truco que SimulacroShowcase en Pilares):
+              // el widget se pierde en el beige de .at-paper si hereda sus
+              // tokens, así que vuelve a su navy/card original aquí adentro.
+              // rounded-lg empareja el radio con el propio rounded-lg del
+              // widget: mismo tamaño exacto (sin padding entre ambos), así
+              // que el widget lo tapa por completo y no asoma navy cuadrado
+              // detrás de sus esquinas redondeadas.
+              "at mx-auto w-full max-w-sm rounded-lg lg:max-w-none",
               retoVisible && "animate-rise-in",
             )}
           >
@@ -593,7 +590,8 @@ function Index() {
       >
         <SectionSweep />
         {/* Los rivales existen: grupo de postulantes como fondo de toda la
-            sección, oscurecido hacia la izquierda donde vive el texto. */}
+            sección, oscurecido hacia la derecha donde vive el texto (el
+            cuadro de puntaje ahora va a la izquierda, ver order-* abajo). */}
         <img
           src="https://images.unsplash.com/photo-1760574740270-067dc14bf164?auto=format&fit=crop&w=1600&q=45"
           alt=""
@@ -604,17 +602,17 @@ function Index() {
         />
         <div
           aria-hidden
-          className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/55"
+          className="absolute inset-0 bg-gradient-to-l from-background via-background/80 to-background/55"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-success/[0.12] blur-[100px]"
+          className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-success/[0.12] blur-[100px]"
         />
         <div
           ref={rankingIntroRef}
-          className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1fr_1.1fr] lg:items-center"
+          className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:items-center"
         >
-          <div className={cn(rankingIntroVisible && "animate-rise-in")}>
+          <div className={cn(rankingIntroVisible && "animate-rise-in", "lg:order-2")}>
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
               <Trophy className="h-4 w-4" /> Ranking anónimo
             </span>
@@ -640,7 +638,7 @@ function Index() {
             ref={rankingRef}
             className={cn(
               rankingVisible && "animate-rise-in",
-              "overflow-hidden rounded-lg border border-border bg-card",
+              "overflow-hidden rounded-lg border border-border bg-card lg:order-1",
             )}
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
@@ -760,9 +758,7 @@ function Index() {
               </span>{" "}
               <span className="text-base font-normal text-muted-foreground">/ mes</span>
             </p>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              con el plan trimestral
-            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">con el plan trimestral</p>
             <ul className="mt-5 space-y-2.5 border-t border-border pt-5 text-sm">
               {[
                 "Exámenes oficiales de admisión completos",
