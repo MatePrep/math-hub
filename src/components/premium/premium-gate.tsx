@@ -128,7 +128,7 @@ export function PremiumGateDialog({
               ) : (
                 <Sparkles className="mr-2 h-4 w-4" />
               )}
-              Activar mis {TRIAL_DAYS} días gratis
+              Activar premium {TRIAL_DAYS} días gratis
             </Button>
           )}
           <Button asChild variant="ghost" size="sm" className="text-muted-foreground">

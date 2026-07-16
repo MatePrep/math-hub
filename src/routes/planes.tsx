@@ -72,45 +72,21 @@ function PlanesPage() {
         </>
       );
     }
-    if (canTrial) {
-      return (
-        <>
-          <Button
-            size="lg"
-            className="press"
-            disabled={activate.isPending}
-            onClick={() => activate.mutate()}
-          >
-            {activate.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            Probar Premium gratis por {TRIAL_DAYS} días
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground"
-            onClick={() => setSubscribeBilling(billing)}
-          >
-            O suscribirme al {PLAN_PRICES[billing].label.toLowerCase()}
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Sin tarjeta. Al terminar vuelves al plan gratuito automáticamente.
-          </p>
-        </>
-      );
-    }
-    if (signedIn === true && !isPremium && trialUsed) {
+    // Sin CTA de prueba gratis acá: la prueba ya se ofrece en la columna
+    // Gratuito y en el CTA final, y para cuando alguien está mirando estas
+    // dos columnas de pago suele ya haberla usado — repetirla acá era ruido.
+    // Una sola acción: activar Premium (suscribirse).
+    if (signedIn === true && !isPremium && !onTrial) {
       return (
         <>
           <Button size="lg" className="press" onClick={() => setSubscribeBilling(billing)}>
-            Suscribirme <ArrowRight className="ml-2 h-4 w-4" />
+            Activar premium <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Ya usaste tu prueba gratuita de {TRIAL_DAYS} días.
-          </p>
+          {trialUsed && (
+            <p className="text-center text-xs text-muted-foreground">
+              Ya usaste tu prueba gratuita de {TRIAL_DAYS} días.
+            </p>
+          )}
         </>
       );
     }
@@ -157,7 +133,7 @@ function PlanesPage() {
       {onTrial && (
         <div className="animate-alert-in mx-auto mt-6 flex max-w-lg items-center justify-center gap-2 rounded-full border border-accent/50 bg-accent/15 px-4 py-2 text-sm font-medium">
           <Timer className="h-4 w-4 text-accent-foreground" aria-hidden />
-          Tu prueba Premium está activa —{" "}
+          Tu prueba Premium está activa{" "}
           <span className="font-data font-semibold tabular-nums">
             {trialDaysLeft} {trialDaysLeft === 1 ? "día restante" : "días restantes"}
           </span>
@@ -222,7 +198,7 @@ function PlanesPage() {
                     ) : (
                       <Sparkles className="mr-2 h-4 w-4" />
                     )}
-                    Activar mis {TRIAL_DAYS} días gratis
+                    Activar premium {TRIAL_DAYS} días gratis
                   </Button>
                 )}
               </div>
@@ -427,7 +403,7 @@ function PlanesPage() {
             disabled={activate.isPending}
             onClick={() => activate.mutate()}
           >
-            <Sparkles className="mr-2 h-4 w-4" /> Activar mis {TRIAL_DAYS} días gratis
+            <Sparkles className="mr-2 h-4 w-4" /> Activar premium {TRIAL_DAYS} días gratis
           </Button>
         ) : null}
         <p className="mt-3 text-xs text-muted-foreground">

@@ -929,9 +929,35 @@ export type Database = {
           topic_name: string;
         }[];
       };
+      get_low_quality_exercise_ids: {
+        Args: { _low_rating_threshold?: number };
+        Returns: {
+          exercise_id: string;
+        }[];
+      };
+      get_my_subtopic_stats: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          accuracy: number;
+          avg_time_ms: number;
+          correct: number;
+          last_attempt_at: string;
+          subtopic_id: string;
+          topic_id: string;
+          total: number;
+        }[];
+      };
       get_plan_status: {
         Args: Record<PropertyKey, never>;
         Returns: Json;
+      };
+      get_subtopic_avg_times: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          avg_time_ms: number;
+          samples: number;
+          subtopic_id: string;
+        }[];
       };
       has_role: {
         Args: {

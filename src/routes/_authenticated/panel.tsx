@@ -5,11 +5,14 @@ import { useMemo } from "react";
 import { getUserStats } from "@/lib/attempts.functions";
 import { getFullProfile } from "@/lib/profile.functions";
 import { getWeeklyProgress } from "@/lib/goals.functions";
+import { getDailyRecommendations } from "@/lib/recommendations.functions";
 import { MathText } from "@/lib/math-render";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { ExerciseCard } from "@/components/exercise-card";
 import { PremiumOverlay } from "@/components/premium/premium-gate";
+import { usePlan } from "@/hooks/use-plan";
 import {
   Flame,
   Target,
@@ -34,6 +37,7 @@ function PanelPage() {
   const fetchStats = useServerFn(getUserStats);
   const fetchProfile = useServerFn(getFullProfile);
   const fetchWeeklyProgress = useServerFn(getWeeklyProgress);
+  const fetchDailyRecommendations = useServerFn(getDailyRecommendations);
   const qo = useMemo(
     () => queryOptions({ queryKey: ["user-stats"], queryFn: () => fetchStats() }),
     [fetchStats],
@@ -41,6 +45,16 @@ function PanelPage() {
   const { data: stats } = useSuspenseQuery(qo);
   const profileQ = useQuery({ queryKey: ["full-profile-mini"], queryFn: () => fetchProfile() });
   const weeklyQ = useQuery({ queryKey: ["weekly-progress"], queryFn: () => fetchWeeklyProgress() });
+  const { isPremium } = usePlan();
+  // enabled: isPremium — el server function ahora exige Premium server-side
+  // (assertPremium), así que ni se llama para un usuario Gratuito: el
+  // PremiumOverlay ya se encarga del blur+CTA visual, esto evita el error
+  // "Requiere Premium" innecesario en la consola.
+  const recommendationsQ = useQuery({
+    queryKey: ["daily-recommendations"],
+    queryFn: () => fetchDailyRecommendations(),
+    enabled: isPremium,
+  });
 
   const weakest = [...stats.topicStats].sort((a, b) => a.accuracy - b.accuracy)[0];
 
@@ -114,66 +128,56 @@ function PanelPage() {
         <StatCard icon={<Flame className="h-5 w-5" />} label="Racha (días)" value={stats.streak} />
       </div>
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <section className="rounded-xl border border-border bg-card p-5">
-          <h2 className="font-display text-xl font-bold">Aciertos por curso</h2>
-          <div className="mt-4 h-64">
-            {stats.topicStats.length === 0 ? (
-              <p className="grid h-full place-items-center text-sm text-muted-foreground">
-                Aún no tienes intentos. Empieza practicando un{" "}
-                <Link to="/temas" className="ml-1 text-primary hover:underline">
-                  curso
-                </Link>
-                .
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.topicStats}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="accuracy" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </section>
+      <section className="mt-10 rounded-xl border border-border bg-card p-5">
+        <h2 className="font-display text-xl font-bold">Aciertos por curso</h2>
+        <div className="mt-4 h-64">
+          {stats.topicStats.length === 0 ? (
+            <p className="grid h-full place-items-center text-sm text-muted-foreground">
+              Aún no tienes intentos. Empieza practicando un{" "}
+              <Link to="/temas" className="ml-1 text-primary hover:underline">
+                curso
+              </Link>
+              .
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.topicStats}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="accuracy" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </section>
 
-        <PremiumOverlay
-          feature="las recomendaciones personalizadas"
-          title="Las recomendaciones personalizadas son Premium"
-        >
-          <aside className="h-full rounded-xl border border-border bg-card p-5">
-            <h2 className="font-display text-xl font-bold">Recomendación</h2>
-            {weakest ? (
-              <>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Tu curso más débil es <strong className="text-foreground">{weakest.name}</strong>{" "}
-                  con {weakest.accuracy}% de aciertos.
-                </p>
-                <Link
-                  to="/temas/$slug"
-                  params={{ slug: weakest.slug }}
-                  className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  Practicar {weakest.name}
-                </Link>
-              </>
-            ) : (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Resuelve algunos ejercicios para recibir recomendaciones.
-              </p>
-            )}
-            <Link
-              to="/perfil"
-              className="mt-6 block text-sm font-medium text-primary hover:underline"
-            >
-              Editar perfil →
-            </Link>
-          </aside>
-        </PremiumOverlay>
-      </div>
+      <PremiumOverlay
+        feature="las recomendaciones personalizadas"
+        title="Las recomendaciones personalizadas son Premium"
+        className="mt-10"
+      >
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h2 className="font-display text-xl font-bold">Recomendado para ti hoy</h2>
+          {recommendationsQ.data && recommendationsQ.data.length > 0 ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {recommendationsQ.data.map((r) => (
+                <div key={r.exercise.id}>
+                  <p className="mb-1.5 text-xs text-muted-foreground">{r.reason}</p>
+                  <ExerciseCard ex={r.exercise} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {weakest
+                ? "Resuelve algunos ejercicios más para recibir recomendaciones."
+                : "Resuelve algunos ejercicios para recibir recomendaciones."}
+            </p>
+          )}
+        </section>
+      </PremiumOverlay>
 
       <section className="mt-10 rounded-xl border border-border bg-card p-5">
         <h2 className="font-display text-xl font-bold">Intentos recientes</h2>

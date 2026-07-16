@@ -19,7 +19,12 @@ export const getFullProfile = createServerFn({ method: "GET" })
         .select(
           "id, university_id, exam_date, career_id, university:universities(id, slug, short_name, name, exam_date)",
         )
-        .eq("user_id", userId),
+        .eq("user_id", userId)
+        // Sin esto el orden de retorno no está garantizado (depende del orden
+        // físico de Postgres) — varios consumidores (panel, simulacros, y
+        // ahora el motor de recomendaciones) tratan universities[0] como "la"
+        // universidad objetivo del estudiante, así que necesita ser estable.
+        .order("created_at"),
     ]);
     if (pErr) throw new Error(pErr.message);
     if (uErr) throw new Error(uErr.message);

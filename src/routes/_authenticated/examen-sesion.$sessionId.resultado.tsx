@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, MinusCircle, Clock, Users } from "lucide-react";
 import { MathText, ChoiceText } from "@/lib/math-render";
 import { getExamResult } from "@/lib/exams.functions";
 import { getExamStats } from "@/lib/goals.functions";
+import { getPostExamRecommendations } from "@/lib/recommendations.functions";
 import { InfoTooltip } from "@/components/info-tooltip";
 import { ExerciseRating } from "@/components/exercise-rating";
 import { ReportProblemDialog } from "@/components/report-problem-dialog";
@@ -75,6 +76,17 @@ function ResultPage() {
   // La comparación con el promedio (de puntaje y de tiempo por pregunta) es
   // Premium; el resultado propio y la revisión completa siguen siendo libres.
   const { isPremium } = usePlan();
+  // A diferencia de "Comparación con otros" (getExamStats, sin gating
+  // server-side), getPostExamRecommendations exige Premium en el servidor
+  // (assertPremium) — así que a un usuario Gratuito ni se le llama, y la
+  // sección "Para reforzar" completa queda oculta en vez de mostrarse
+  // difuminada. Es la consecuencia directa de cerrar ese gap de seguridad.
+  const postExamRecsFn = useServerFn(getPostExamRecommendations);
+  const postExamRecsQ = useQuery({
+    queryKey: ["post-exam-recommendations", sessionId],
+    queryFn: () => postExamRecsFn({ data: { sessionId } }),
+    enabled: isPremium,
+  });
 
   if (q.isLoading) {
     return (
@@ -193,47 +205,49 @@ function ResultPage() {
           title="Compararte con el resto es parte de Premium"
           className="mt-4"
         >
-        <div className="animate-alert-in rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wider">
-              Comparación con otros estudiantes
-            </span>
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-            <div>
-              <p className="text-muted-foreground">Tu puntaje</p>
-              <p className="font-display text-xl font-bold">{score} pts</p>
+          <div className="animate-alert-in rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span className="text-xs font-medium uppercase tracking-wider">
+                Comparación con otros estudiantes
+              </span>
             </div>
-            <div>
-              <p className="flex items-center gap-1 text-muted-foreground">
-                Promedio general
-                <InfoTooltip>
-                  Es el puntaje promedio entre todos los estudiantes que ya rindieron este mismo
-                  examen. Te sirve para ver si tu resultado quedó por encima o por debajo del resto.
-                </InfoTooltip>
-              </p>
-              <p className="font-display text-xl font-bold">{statsQ.data.avg_score} pts</p>
-            </div>
-            {statsQ.data.my_percentile !== null && (
+            <div className="mt-2 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+              <div>
+                <p className="text-muted-foreground">Tu puntaje</p>
+                <p className="font-display text-xl font-bold">{score} pts</p>
+              </div>
               <div>
                 <p className="flex items-center gap-1 text-muted-foreground">
-                  Tu percentil
+                  Promedio general
                   <InfoTooltip>
-                    Indica qué porcentaje de estudiantes obtuvo un puntaje igual o menor al tuyo.
-                    Por ejemplo, un percentil de 80 significa que superaste al 80% de quienes
-                    rindieron este examen.
+                    Es el puntaje promedio entre todos los estudiantes que ya rindieron este mismo
+                    examen. Te sirve para ver si tu resultado quedó por encima o por debajo del
+                    resto.
                   </InfoTooltip>
                 </p>
-                <p className="font-display text-xl font-bold">{statsQ.data.my_percentile}</p>
+                <p className="font-display text-xl font-bold">{statsQ.data.avg_score} pts</p>
               </div>
-            )}
+              {statsQ.data.my_percentile !== null && (
+                <div>
+                  <p className="flex items-center gap-1 text-muted-foreground">
+                    Tu percentil
+                    <InfoTooltip>
+                      Indica qué porcentaje de estudiantes obtuvo un puntaje igual o menor al tuyo.
+                      Por ejemplo, un percentil de 80 significa que superaste al 80% de quienes
+                      rindieron este examen.
+                    </InfoTooltip>
+                  </p>
+                  <p className="font-display text-xl font-bold">{statsQ.data.my_percentile}</p>
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Basado en {statsQ.data.sessions_count} intento
+              {statsQ.data.sessions_count !== 1 ? "s" : ""} de este examen. La comparación es
+              anónima.
+            </p>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Basado en {statsQ.data.sessions_count} intento
-            {statsQ.data.sessions_count !== 1 ? "s" : ""} de este examen. La comparación es anónima.
-          </p>
-        </div>
         </PremiumOverlay>
       )}
 
@@ -402,6 +416,36 @@ function ResultPage() {
           </div>
         </section>
       </div>
+
+      {postExamRecsQ.data && postExamRecsQ.data.length > 0 && (
+        <PremiumOverlay
+          feature="las recomendaciones de refuerzo"
+          title="Las sugerencias de refuerzo son Premium"
+          className="mt-8"
+        >
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="font-display text-lg font-bold">Para reforzar</h2>
+            <ul className="mt-3 divide-y divide-border">
+              {postExamRecsQ.data.map((r) => (
+                <li
+                  key={r.subtopicId}
+                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <p className="text-sm text-muted-foreground">{r.reason}</p>
+                  <Button asChild size="sm" variant="outline" className="press shrink-0">
+                    <Link
+                      to="/temas/$slug/$subtopic"
+                      params={{ slug: r.topicSlug, subtopic: r.subtopicSlug }}
+                    >
+                      Practicar
+                    </Link>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </PremiumOverlay>
+      )}
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-2">

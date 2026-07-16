@@ -13,7 +13,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getTopicBySlug, listExercisesPage, getSubtopicFrequency } from "@/lib/exercises.functions";
 import { getFullProfile } from "@/lib/profile.functions";
+import { getSubtopicPriorities } from "@/lib/recommendations.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
+import { usePlan } from "@/hooks/use-plan";
 import { useInfiniteScrollTrigger } from "@/hooks/use-infinite-scroll-trigger";
 import { ExerciseCard } from "@/components/exercise-card";
 import { ExerciseCardSkeleton, LoadingNotice } from "@/components/skeletons";
@@ -183,6 +185,21 @@ function TopicPage() {
     }
   }, [freqQ.isError]);
 
+  // "Prioridad alta" (frecuente en tu examen Y bajo rendimiento) es premium —
+  // esta página en sí sigue siendo pública, solo esta etiqueta se gatea.
+  const { isPremium } = usePlan();
+  const priorityFn = useServerFn(getSubtopicPriorities);
+  const priorityQ = useQuery({
+    queryKey: ["subtopic-priorities", slug],
+    queryFn: () => priorityFn({ data: { topicSlug: slug } }),
+    enabled: isPremium,
+  });
+  const priorityIds = new Set(
+    Object.entries(priorityQ.data ?? {})
+      .filter(([, v]) => v.isHighPriority)
+      .map(([id]) => id),
+  );
+
   if (!topic) return null;
 
   const freqMap = freqQ.data ?? {};
@@ -253,6 +270,14 @@ function TopicPage() {
                 >
                   {topFrequentIds.has(s.id) && <span aria-hidden="true">🔥 </span>}
                   {s.name}
+                  {priorityIds.has(s.id) && (
+                    <Badge
+                      variant="outline"
+                      className="ml-1.5 border-destructive/40 bg-destructive/10 px-1.5 py-0 text-[0.6rem] text-destructive"
+                    >
+                      Prioridad alta
+                    </Badge>
+                  )}
                 </Link>
               </DropdownMenuItem>
             ))}
@@ -301,6 +326,7 @@ function TopicPage() {
             subtopics={subtopicsRanked}
             topicSlug={topic.slug}
             topFrequentIds={topFrequentIds}
+            priorityIds={priorityIds}
           />
 
           <ul className="mt-3 hidden space-y-1 lg:block">
@@ -323,6 +349,14 @@ function TopicPage() {
                       {isTopFrequent && <span aria-hidden="true">🔥 </span>}
                       {s.name}
                     </Link>
+                    {priorityIds.has(s.id) && (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-destructive/40 bg-destructive/10 px-1.5 py-0 text-[0.6rem] text-destructive"
+                      >
+                        Prioridad alta
+                      </Badge>
+                    )}
                   </div>
                 </li>
               );
@@ -420,10 +454,12 @@ function SubtopicChipScroller({
   subtopics,
   topicSlug,
   topFrequentIds,
+  priorityIds,
 }: {
   subtopics: ScrollableSubtopic[];
   topicSlug: string;
   topFrequentIds: Set<string>;
+  priorityIds: Set<string>;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ left: false, right: false });
@@ -467,6 +503,14 @@ function SubtopicChipScroller({
             >
               {isTopFrequent && <span aria-hidden="true">🔥 </span>}
               {s.name}
+              {priorityIds.has(s.id) && (
+                <Badge
+                  variant="outline"
+                  className="ml-1.5 border-destructive/40 bg-destructive/10 px-1.5 py-0 text-[0.6rem] text-destructive"
+                >
+                  Prioridad alta
+                </Badge>
+              )}
             </Link>
           );
         })}
