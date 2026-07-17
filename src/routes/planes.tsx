@@ -45,7 +45,7 @@ export const Route = createFileRoute("/planes")({
 type Billing = "monthly" | "quarterly";
 
 function PlanesPage() {
-  const { signedIn, isPremium, onTrial, trialUsed, trialDaysLeft } = usePlan();
+  const { signedIn, isPremium, onTrial, trialUsed, trialDaysLeft, betaActive } = usePlan();
   // Which plan's mailto the placeholder "muy pronto" dialog is showing —
   // null means closed. Two premium columns now exist side by side (no more
   // single toggled Premium card), so the dialog has to know which one the
@@ -72,6 +72,10 @@ function PlanesPage() {
         </>
       );
     }
+    // Durante la beta nadie tiene nada que activar o pagar todavía — el
+    // bloque de precio de arriba ya lo comunica ("Premium incluido durante
+    // la beta"), así que acá no hace falta ningún botón.
+    if (betaActive) return null;
     // Sin CTA de prueba gratis acá: la prueba ya se ofrece en la columna
     // Gratuito y en el CTA final, y para cuando alguien está mirando estas
     // dos columnas de pago suele ya haberla usado — repetirla acá era ruido.
@@ -129,15 +133,24 @@ function PlanesPage() {
         </p>
       </header>
 
-      {/* Estado actual (prueba activa) */}
-      {onTrial && (
-        <div className="animate-alert-in mx-auto mt-6 flex max-w-lg items-center justify-center gap-2 rounded-full border border-accent/50 bg-accent/15 px-4 py-2 text-sm font-medium">
-          <Timer className="h-4 w-4 text-accent-foreground" aria-hidden />
-          Tu prueba Premium está activa{" "}
-          <span className="font-data font-semibold tabular-nums">
-            {trialDaysLeft} {trialDaysLeft === 1 ? "día restante" : "días restantes"}
-          </span>
+      {/* Estado actual: beta gana sobre prueba individual — durante la beta
+          nadie necesita saber de su trial personal, el mensaje relevante es
+          que todos están cubiertos por la beta. */}
+      {betaActive ? (
+        <div className="animate-alert-in mx-auto mt-6 max-w-lg rounded-xl border border-accent/50 bg-accent/15 px-4 py-3 text-center text-sm">
+          Durante la beta, <strong className="font-semibold">todos tienen Premium gratis</strong>.
+          Los precios se activarán al finalizar el período beta.
         </div>
+      ) : (
+        onTrial && (
+          <div className="animate-alert-in mx-auto mt-6 flex max-w-lg items-center justify-center gap-2 rounded-full border border-accent/50 bg-accent/15 px-4 py-2 text-sm font-medium">
+            <Timer className="h-4 w-4 text-accent-foreground" aria-hidden />
+            Tu prueba Premium está activa{" "}
+            <span className="font-data font-semibold tabular-nums">
+              {trialDaysLeft} {trialDaysLeft === 1 ? "día restante" : "días restantes"}
+            </span>
+          </div>
+        )
       )}
 
       {/* Tarjetas de plan: 3 columnas fijas, sin toggle — Gratis, Mensual
@@ -180,7 +193,11 @@ function PlanesPage() {
             {signedIn === true ? (
               <div className="mt-8 flex flex-col gap-2">
                 <div className="rounded-lg border border-dashed border-border px-4 py-2.5 text-center text-sm font-medium text-muted-foreground">
-                  {isPremium ? "Incluido en tu plan Premium" : "Tu plan actual"}
+                  {betaActive
+                    ? "Incluido gratis durante la beta"
+                    : isPremium
+                      ? "Incluido en tu plan Premium"
+                      : "Tu plan actual"}
                 </div>
                 {/* Elegir Gratis no cierra la puerta a Premium: si todavía no
                   gastó su prueba, se lo recordamos aquí mismo en vez de que
@@ -230,15 +247,28 @@ function PlanesPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Todo lo que decide tu ingreso, mes a mes.
             </p>
-            <p className="mt-5 font-display text-4xl font-bold">
-              S/ {PLAN_PRICES.monthly.amount}
-              <span className="ml-1 text-base font-normal text-muted-foreground">
-                {PLAN_PRICES.monthly.per}
-              </span>
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cancelas cuando quieras, sin plazos.
-            </p>
+            {betaActive ? (
+              <>
+                <div className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm font-semibold text-success">
+                  <BadgeCheck className="h-4 w-4" /> Premium incluido durante la beta
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  El precio se activa cuando termine el período beta.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-5 font-display text-4xl font-bold">
+                  S/ {PLAN_PRICES.monthly.amount}
+                  <span className="ml-1 text-base font-normal text-muted-foreground">
+                    {PLAN_PRICES.monthly.per}
+                  </span>
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Cancelas cuando quieras, sin plazos.
+                </p>
+              </>
+            )}
             <ul className="mt-6 flex-1 space-y-3 text-sm">
               {PREMIUM_FEATURES.map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
@@ -264,18 +294,31 @@ function PlanesPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               El mismo Premium, pagado cada 3 meses.
             </p>
-            <p className="mt-5 font-display text-4xl font-bold">
-              S/ {PLAN_PRICES.quarterly.amount}
-              <span className="ml-1 text-base font-normal text-muted-foreground">
-                {PLAN_PRICES.quarterly.per}
-              </span>
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <span className="line-through">S/ {PLAN_PRICES.quarterly.fullPrice}</span>{" "}
-              <span className="font-semibold text-success">
-                ahorras {PLAN_PRICES.quarterly.discountPct}%
-              </span>
-            </p>
+            {betaActive ? (
+              <>
+                <div className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm font-semibold text-success">
+                  <BadgeCheck className="h-4 w-4" /> Premium incluido durante la beta
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  El precio se activa cuando termine el período beta.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-5 font-display text-4xl font-bold">
+                  S/ {PLAN_PRICES.quarterly.amount}
+                  <span className="ml-1 text-base font-normal text-muted-foreground">
+                    {PLAN_PRICES.quarterly.per}
+                  </span>
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  <span className="line-through">S/ {PLAN_PRICES.quarterly.fullPrice}</span>{" "}
+                  <span className="font-semibold text-success">
+                    ahorras {PLAN_PRICES.quarterly.discountPct}%
+                  </span>
+                </p>
+              </>
+            )}
             <ul className="mt-6 flex-1 space-y-3 text-sm">
               {PREMIUM_FEATURES.map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
@@ -291,38 +334,42 @@ function PlanesPage() {
 
       {/* Cómo funciona la prueba — antes solo tenía aria-label (accesible
           para lectores de pantalla, pero invisible en pantalla: nada le
-          decía a un visitante vidente qué explicaba este bloque). */}
-      <section aria-labelledby="trial-how-heading" className="mt-14">
-        <h2 id="trial-how-heading" className="text-center font-display text-2xl font-bold">
-          Así funciona tu prueba gratuita
-        </h2>
-        <div className="mt-6 grid gap-4 rounded-2xl border border-border bg-secondary/30 p-6 sm:grid-cols-3 sm:p-8">
-          {[
-            {
-              title: "Actívala cuando quieras",
-              text: "Un click y tienes Premium completo. Sin tarjeta, sin formularios.",
-            },
-            {
-              title: `${TRIAL_DAYS} días completos`,
-              text: "Exámenes oficiales, simulacros de tu universidad, ranking y análisis de tiempo.",
-            },
-            {
-              title: "Vuelves a gratis solo",
-              text: "Si no te suscribes, tu cuenta regresa al plan gratuito automáticamente. Nada se cobra.",
-            },
-          ].map((s, i) => (
-            <div key={s.title} className="flex gap-3">
-              <span className="font-data grid h-8 w-8 shrink-0 place-items-center rounded-full border border-primary/40 text-sm font-bold text-primary">
-                {i + 1}
-              </span>
-              <div>
-                <h3 className="text-sm font-bold">{s.title}</h3>
-                <p className="mt-1 text-pretty text-sm text-muted-foreground">{s.text}</p>
+          decía a un visitante vidente qué explicaba este bloque). Oculta
+          durante la beta: explicar el trial de 7 días mientras arriba dice
+          "todos tienen Premium gratis" lee como contradictorio. */}
+      {!betaActive && (
+        <section aria-labelledby="trial-how-heading" className="mt-14">
+          <h2 id="trial-how-heading" className="text-center font-display text-2xl font-bold">
+            Así funciona tu prueba gratuita
+          </h2>
+          <div className="mt-6 grid gap-4 rounded-2xl border border-border bg-secondary/30 p-6 sm:grid-cols-3 sm:p-8">
+            {[
+              {
+                title: "Actívala cuando quieras",
+                text: "Un click y tienes Premium completo. Sin tarjeta, sin formularios.",
+              },
+              {
+                title: `${TRIAL_DAYS} días completos`,
+                text: "Exámenes oficiales, simulacros de tu universidad, ranking y análisis de tiempo.",
+              },
+              {
+                title: "Vuelves a gratis solo",
+                text: "Si no te suscribes, tu cuenta regresa al plan gratuito automáticamente. Nada se cobra.",
+              },
+            ].map((s, i) => (
+              <div key={s.title} className="flex gap-3">
+                <span className="font-data grid h-8 w-8 shrink-0 place-items-center rounded-full border border-primary/40 text-sm font-bold text-primary">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold">{s.title}</h3>
+                  <p className="mt-1 text-pretty text-sm text-muted-foreground">{s.text}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Tabla comparativa */}
       <section aria-label="Comparación de planes" className="mt-14">

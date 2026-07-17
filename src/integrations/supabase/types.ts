@@ -8,6 +8,27 @@ export type Database = {
   };
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          beta_ends_at: string | null;
+          beta_mode: boolean;
+          id: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          beta_ends_at?: string | null;
+          beta_mode?: boolean;
+          id?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          beta_ends_at?: string | null;
+          beta_mode?: boolean;
+          id?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       attempts: {
         Row: {
           created_at: string;
@@ -854,6 +875,10 @@ export type Database = {
     };
     Functions: {
       activate_premium_trial: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      get_beta_status: {
         Args: Record<PropertyKey, never>;
         Returns: Json;
       };

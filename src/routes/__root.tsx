@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import appCss from "../styles.css?url";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { BetaBanner } from "@/components/beta-banner";
 import { Toaster } from "@/components/ui/sonner";
 import { JsonLd } from "@/components/json-ld";
 import { supabase } from "@/integrations/supabase/client";
@@ -265,6 +266,7 @@ function RootComponent() {
         }}
       />
       <div className="flex min-h-dvh flex-col bg-background text-foreground">
+        <BetaBanner />
         <SiteHeader />
         <main className="flex-1">
           <Outlet />

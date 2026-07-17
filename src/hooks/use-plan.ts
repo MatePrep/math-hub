@@ -32,5 +32,8 @@ export function usePlan() {
     onTrial: status?.onTrial === true,
     trialUsed: status?.trialUsed === true,
     trialDaysLeft: status?.trialDaysLeft ?? null,
+    betaActive: status?.betaActive === true,
+    betaEndsAt: status?.betaEndsAt ?? null,
+    betaDaysLeft: status?.betaDaysLeft ?? null,
   };
 }

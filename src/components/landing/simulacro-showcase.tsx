@@ -119,8 +119,12 @@ export function SimulacroShowcase({
               </p>
 
               <div className="relative mt-3 h-2.5 rounded-full bg-muted sm:mt-5 sm:h-3">
+                {/* max-sm:transition-none: en celular el ancho salta directo
+                    a su valor final sin animar (mismo criterio que el resto
+                    de animaciones de landing apagadas bajo 640px) — la barra
+                    sigue llegando a 55%, solo que sin el barrido de 1s. */}
                 <div
-                  className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-out"
+                  className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-out max-sm:transition-none"
                   style={{ width: visible ? "55%" : "0%" }}
                 />
                 {/* Línea del mínimo al 52% */}

@@ -93,9 +93,10 @@ export function NotificationsBell() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{n.title}</p>
                 {n.body && <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>}
-                {/* El aviso de prueba por vencer lleva directo a Planes (es su
-                    única acción útil); el resto de avisos son informativos. */}
-                {n.kind === "trial_expiring" && (
+                {/* El aviso de prueba por vencer (y el de beta por terminar)
+                    lleva directo a Planes (es su única acción útil); el resto
+                    de avisos son informativos. */}
+                {(n.kind === "trial_expiring" || n.kind === "beta_ending") && (
                   <Link
                     to="/planes"
                     className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
