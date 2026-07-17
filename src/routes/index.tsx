@@ -1,8 +1,23 @@
 import { Fragment, lazy, Suspense } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowRight, Banknote, Check, Compass, Loader2, Lock, Trophy } from "lucide-react";
+import {
+  ArrowRight,
+  Banknote,
+  Check,
+  Compass,
+  HelpCircle,
+  Loader2,
+  Lock,
+  Trophy,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { listTopics, listUniversities } from "@/lib/exercises.functions";
 import { PillarsSection } from "@/components/landing/pillars";
 import { SectionNav, type SectionNavItem } from "@/components/landing/section-nav";
@@ -16,6 +31,8 @@ import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { useInViewport } from "@/hooks/use-in-viewport";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useScrollProgress } from "@/hooks/use-scroll-progress";
+import { useBetaStatus } from "@/hooks/use-beta-status";
+import { useCornerRibbon } from "@/hooks/use-corner-ribbon";
 import { fireConfetti } from "@/lib/confetti";
 import { pageMeta, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 import { PLAN_PRICES, TRIAL_DAYS } from "@/lib/plan";
@@ -71,6 +88,7 @@ const NAV_ITEMS: SectionNavItem[] = [
   { id: "reto", label: "Reto del día" },
   { id: "ranking", label: "Ranking" },
   { id: "planes", label: "Planes" },
+  { id: "faq", label: "Preguntas" },
   { id: "cta", label: "Crear cuenta" },
 ];
 
@@ -164,22 +182,57 @@ function LandingPending() {
 // promedio general y la recomendación de curso más débil están detrás de
 // PremiumOverlay (mismo archivo + panel.tsx) — `premium: true` dispara el
 // aviso en vez de fingir que todo es gratis.
+// Palabras en negrita: el gancho concreto de cada paso (lo que
+// realistamente atrae a un postulante), no cualquier frase — mismo patrón
+// <strong className="font-semibold text-foreground"> que ya usa el párrafo
+// del hero, para que ambos bloques lean como una sola voz.
 const START_STEPS = [
   {
     title: "Elige tu universidad",
-    text: "Es lo único obligatorio para arrancar. Exámenes, simulacros y ranking quedan ajustados a tu examen desde ese momento.",
+    text: (
+      <>
+        Es lo único obligatorio para empezar.{" "}
+        <strong className="font-semibold text-foreground">Exámenes, simulacros y ranking</strong>{" "}
+        quedan <strong className="font-semibold text-foreground">ajustados a tu examen</strong>{" "}
+        desde ese momento.
+      </>
+    ),
   },
   {
     title: "Practica sin presión",
-    text: "Resuelve ejercicio por ejercicio, sin cronómetro visible. Cada respuesta se corrige al instante, con la solución completa paso a paso.",
+    text: (
+      <>
+        Resuelve ejercicio por ejercicio, sin cronómetro visible. Cada respuesta{" "}
+        <strong className="font-semibold text-foreground">se corrige al instante</strong>, con la{" "}
+        <strong className="font-semibold text-foreground">solución completa paso a paso</strong>.
+      </>
+    ),
   },
   {
     title: "Simulacros como examen real",
-    text: "Cuando estés listo, rinde un simulacro cronometrado con preguntas reales. Se corrige al instante y te dice, en puntaje, si ya llegas al mínimo que pide tu carrera.",
+    text: (
+      <>
+        Cuando estés listo, rinde un simulacro cronometrado con{" "}
+        <strong className="font-semibold text-foreground">preguntas reales</strong>. Se corrige al
+        instante y te dice, en puntaje,{" "}
+        <strong className="font-semibold text-foreground">
+          si ya alcanzaste el mínimo que pide tu carrera
+        </strong>
+        .
+      </>
+    ),
   },
   {
     title: "Descubre qué reforzar",
-    text: "Después de cada simulacro ves tu nota y el tiempo que usaste en cada pregunta. Con Premium, además comparas tu percentil frente a otros postulantes y ves qué tema exacto conviene reforzar.",
+    text: (
+      <>
+        Después de cada simulacro ves{" "}
+        <strong className="font-semibold text-foreground">tu nota y el tiempo que usaste</strong> en
+        cada pregunta. Con Premium, además comparas tu percentil frente a otros postulantes y ves{" "}
+        <strong className="font-semibold text-foreground">qué tema exacto conviene reforzar</strong>
+        .
+      </>
+    ),
   },
 ];
 
@@ -200,6 +253,16 @@ function Index() {
   const { ref: startRef, visible: startVisible } = useInViewOnce<HTMLDivElement>();
   const { ref: retoRef, visible: retoVisible } = useInViewOnce<HTMLDivElement>();
   const { ref: planesRef, visible: planesVisible } = useInViewOnce<HTMLDivElement>(0.3);
+  // useBetaStatus (público, sin auth) en vez de usePlan: la mayoría de
+  // visitantes del landing no tienen sesión, y usePlan solo consulta cuando
+  // signedIn === true — acá necesitamos que también funcione para un
+  // visitante anónimo.
+  const { betaActive } = useBetaStatus();
+  // La cinta "Gratis por tiempo limitado" va de esquina a esquina de la
+  // tarjeta de precio real (lengthScale=1 por defecto) — ver useCornerRibbon
+  // para por qué el ángulo no puede ser un rotate-X fijo.
+  const { ref: priceCardRef, ribbon } = useCornerRibbon<HTMLDivElement>();
+  const { ref: faqRef, visible: faqVisible } = useInViewOnce<HTMLDivElement>();
   const { ref: ctaRef, visible: ctaVisible } = useInViewOnce<HTMLDivElement>(0.3);
   const scrollProgressRef = useScrollProgress<HTMLDivElement>();
   // Parallax removed (isolation test, see styles.css/use-parallax.ts for the
@@ -213,6 +276,38 @@ function Index() {
       "transition-opacity duration-500 ease-out motion-reduce:transition-none",
       activeId === id ? "opacity-100" : "opacity-80",
     );
+
+  // Las 5 preguntas que más frenan a un postulante antes de registrarse
+  // (crédibilidad de los exámenes, cobertura, privacidad del ranking, costo)
+  // — la de plan gratuito/Premium se ajusta sola durante la beta en vez de
+  // decir "Premium cuesta X" cuando en realidad hoy es gratis para todos.
+  const uniNames = unis.map((u) => u.short_name).join(", ");
+  const FAQ_ITEMS = [
+    {
+      q: "¿Es realmente gratis crear una cuenta?",
+      a: "Sí. Registrarte y usar el plan gratuito no cuesta nada, para siempre — sin tarjeta, sin trucos. Premium es opcional, para cuando quieras exámenes oficiales completos, simulacros por universidad y el ranking completo.",
+    },
+    {
+      q: "¿Los ejercicios y exámenes son reales, o inventados como en otras apps?",
+      a: "Todos los exámenes oficiales son de años anteriores, tal cual se tomaron — no ejercicios genéricos. Los simulacros se corrigen con el mismo sistema de puntos (positivo y negativo) del examen real.",
+    },
+    {
+      q: "¿Para qué universidades sirve Admi-Tec?",
+      a: uniNames
+        ? `Cubrimos los exámenes de admisión de ${unis.length} universidades: ${uniNames}.`
+        : "Cubrimos los exámenes de admisión de las principales universidades del Perú.",
+    },
+    {
+      q: "¿Otros van a ver mi nombre real en el ranking?",
+      a: "No. El ranking es pseudónimo — eliges un apodo, y nadie ve tu nombre real, ni siquiera en tu propia posición dentro del ranking.",
+    },
+    {
+      q: "¿Qué diferencia hay entre el plan gratuito y Premium?",
+      a: betaActive
+        ? "Ahora mismo estamos en beta: todos tienen acceso Premium completo gratis, por tiempo limitado. El plan gratuito incluye práctica por curso, simulacros con plantillas generales y tu reto del día, para siempre. Premium (hoy gratis para todos) suma los exámenes oficiales completos, los simulacros específicos de tu universidad, el ranking completo y el puntaje exacto que te falta para tu carrera."
+        : "El plan gratuito incluye práctica por curso, simulacros con plantillas generales y tu reto del día, para siempre y sin costo. Premium desbloquea los exámenes oficiales completos, los simulacros específicos de tu universidad, el ranking completo y el puntaje exacto que te falta para tu carrera.",
+    },
+  ];
 
   return (
     // overflow-x-clip: the hero's own glow blobs still bleed past the
@@ -299,7 +394,7 @@ function Index() {
               <strong className="font-semibold text-foreground">
                 el puntaje exacto que te falta
               </strong>{" "}
-              para tu carrera — así sabes dónde estás parado, sin adivinar.
+              para tu carrera, así sabes dónde estás parado, sin adivinar ✅.
             </p>
             <div
               className="animate-fade-up mt-8 flex flex-wrap gap-3"
@@ -315,7 +410,7 @@ function Index() {
               </Button>
             </div>
             <div className="animate-fade-up" style={{ "--i": 14 } as React.CSSProperties}>
-              <TrustPill className="mt-4">Regístrate totalmente gratis, sin tarjeta</TrustPill>
+              <TrustPill className="mt-4">Regístrate totalmente gratis.</TrustPill>
             </div>
             <div
               className="animate-fade-up mt-10 flex flex-wrap items-baseline gap-x-8 gap-y-4 sm:max-w-md"
@@ -363,11 +458,10 @@ function Index() {
       </section>
 
       {/* University marquee + course ticker — a thin interstitial ribbon
-          between the Hero and Pilares sections. Oculta en celular: las tiras
-          giratorias se congelan por CSS ahí (ver animate-marquee en
-          styles.css) y una tira estática de logos/chips se ve rota, no
-          decorativa — mejor no mostrar la sección que mostrarla fea. */}
-      <section className="hidden border-b border-border bg-card/50 sm:block">
+          between the Hero and Pilares sections. Visible en todos los
+          anchos — la animación en sí sigue corriendo en celular (no está
+          apagada por CSS), así que no hay tira congelada que se vea rota. */}
+      <section className="border-b border-border bg-card/50">
         <div className="mx-auto max-w-6xl px-4 py-5">
           <div className="flex items-center gap-6">
             <span className="hidden shrink-0 text-sm font-medium text-muted-foreground sm:block">
@@ -442,9 +536,7 @@ function Index() {
               Así se ven tus primeros días en Admi-Tec. A tu ritmo, sin cronómetro hasta que tú
               quieras.
             </p>
-            <TrustPill className="mt-4">
-              Registrate gratis, sin tarjeta, en menos de un minuto
-            </TrustPill>
+            <TrustPill className="mt-4">Registrate gratis, en menos de un minuto</TrustPill>
           </div>
 
           {/* Flex row, not a grid: a real connecting line has to live between
@@ -550,9 +642,11 @@ function Index() {
             </h2>
             <p className="mt-3 max-w-md text-pretty text-muted-foreground">
               Cada día publicamos{" "}
-              <strong className="font-semibold text-foreground">un ejercicio real del banco</strong>{" "}
-              — el mismo para todos. Resuélvelo contra el reloj y compara tus resultados con todos
-              los postulantes que lo intentaron hoy.
+              <strong className="font-semibold text-foreground">
+                un ejercicio real de nuestra base
+              </strong>{" "}
+              (el mismo para todos los estudiantes). Resuélvelo contra el reloj y compara tus resultados con todos
+              los que lo intentaron hoy.
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
               Sin registrarte y sin presión: pruébalo cuando quieras,{" "}
@@ -722,11 +816,11 @@ function Index() {
               Planes y precios
             </span>
             <h2 className="mt-3 max-w-xl text-balance text-[clamp(1.5rem,1.3rem+1.2vw,2.25rem)] font-bold tracking-[-0.03em]">
-              Empieza gratis. Desbloquea todo cuando lo necesites.
+              Empieza gratis. Premium te dice si hoy ingresarías.
             </h2>
             <p className="mt-3 max-w-lg text-pretty font-medium text-primary-foreground/85">
-              El plan gratuito es tuyo para siempre. Premium abre todo lo demás cuando decidas ir en
-              serio — y puedes probarlo {TRIAL_DAYS} días sin pagar.
+              El plan gratuito es tuyo para siempre. Premium te da lo que de verdad decide una
+              admisión.
             </p>
             <Button
               asChild
@@ -740,14 +834,38 @@ function Index() {
           </div>
 
           {/* Tarjeta de precio en navy sobre el ámbar: el contraste invertido
-              hace que el número se lea como dato de instrumento, no como oferta. */}
+              hace que el número se lea como dato de instrumento, no como oferta.
+              overflow-hidden acá es lo que recorta la cinta diagonal de abajo
+              a las esquinas redondeadas de la tarjeta. */}
           <div
+            ref={priceCardRef}
             className={cn(
               planesVisible && "animate-rise-in",
-              "relative rounded-lg bg-background p-6 text-foreground shadow-[0_8px_8px_-4px_rgba(15,23,42,0.45)] sm:p-8",
+              "relative overflow-hidden rounded-lg bg-background p-6 text-foreground shadow-[0_8px_8px_-4px_rgba(15,23,42,0.45)] sm:p-8",
             )}
             style={planesVisible ? ({ "--i": 2 } as React.CSSProperties) : undefined}
           >
+            {/* Cinta diagonal (solo durante la beta): el precio se sigue
+                mostrando tal cual — para que el estudiante vea que Premium
+                existe y cuánto vale — pero la cinta deja claro de un vistazo
+                que hoy no se cobra nada. Centrada en la tarjeta con un ancho
+                exactamente igual a su diagonal (Math.hypot) y rotada el
+                ángulo real entre esa diagonal y la horizontal (Math.atan2,
+                medido en vivo con ResizeObserver más arriba), así sus dos
+                puntas caen justo en las esquinas opuestas sin importar el
+                tamaño de pantalla — no un ángulo fijo aproximado. */}
+            {betaActive && ribbon && (
+              <div
+                aria-hidden
+                className="absolute left-1/2 top-1/2 bg-destructive py-2 text-center text-xl font-bold uppercase tracking-wider text-destructive-foreground shadow-md"
+                style={{
+                  width: `${ribbon.width}px`,
+                  transform: `translate(-50%, -50%) rotate(-${ribbon.angle}deg)`,
+                }}
+              >
+                Gratis por tiempo limitado
+              </div>
+            )}
             <p className="font-data text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Premium desde
             </p>
@@ -776,6 +894,58 @@ function Index() {
               ))}
             </ul>
           </div>
+        </div>
+      </section>
+
+      {/* Preguntas frecuentes: resuelve las objeciones más comunes justo
+          antes del CTA final — quien llega hasta acá con dudas sin resolver
+          rara vez se registra. at-paper (cream) para alternar con el navy
+          de Planes/CTA a los lados, mismo patrón que Pilares/Reto. */}
+      <section
+        id="faq"
+        className={cn(
+          "at-paper snap-section relative flex flex-col justify-center border-b border-border",
+          fadeSection("faq"),
+        )}
+      >
+        {/* Marca de agua decorativa, mismo criterio que Pilares/Empezar: un
+            ícono a gran escala y casi invisible, nunca un segundo glow. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -bottom-20 -left-16 text-foreground/[0.05]">
+            <HelpCircle className="h-[24rem] w-[24rem]" strokeWidth={1} />
+          </div>
+        </div>
+        <div ref={faqRef} className="relative mx-auto max-w-3xl px-4 py-16 sm:py-24">
+          <div className="max-w-xl">
+            <h2 className="text-balance text-[clamp(1.75rem,1.5rem+1.2vw,2.5rem)] font-bold tracking-[-0.03em]">
+              Antes de registrarte
+            </h2>
+            <p className="mt-3 text-pretty text-muted-foreground">
+              Las preguntas que más nos hacen los postulantes antes de crear su cuenta.
+            </p>
+          </div>
+          <Accordion
+            type="single"
+            collapsible
+            className={cn("mt-10", faqVisible && "animate-rise-in")}
+          >
+            {FAQ_ITEMS.map((item, i) => (
+              <AccordionItem key={item.q} value={`item-${i}`}>
+                <AccordionTrigger className="font-display text-base font-bold">
+                  {item.q}
+                </AccordionTrigger>
+                {/* text-base acá, no solo text-pretty/text-muted-foreground:
+                    AccordionContent trae text-sm de fábrica en el wrapper
+                    animado, y como el trigger de arriba es text-base, la
+                    respuesta se sentía "crecer" a un tamaño distinto al
+                    abrirse — mismo tamaño en los dos, la animación de alto
+                    deja de sentirse como un cambio de tamaño en vano. */}
+                <AccordionContent className="text-pretty text-base text-muted-foreground">
+                  {item.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </section>
 

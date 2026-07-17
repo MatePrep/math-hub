@@ -20,6 +20,7 @@ import {
 import { getExamPreview, getMyExamAttempts, startExamSession } from "@/lib/exams.functions";
 import { ExamAttemptRow } from "@/components/exam-attempt-row";
 import { PremiumLockChip, usePremiumGate } from "@/components/premium/premium-gate";
+import { ComingSoonChip } from "@/components/coming-soon-chip";
 
 export const Route = createFileRoute("/_authenticated/examen/$id")({
   component: ExamPreview,
@@ -111,6 +112,7 @@ function ExamPreview() {
   const reachedMax = e.max_attempts
     ? done.length >= e.max_attempts
     : !e.allow_multiple_attempts && done.length > 0;
+  const comingSoon = e.questionCount === 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -137,6 +139,7 @@ function ExamPreview() {
         <Badge variant="outline" className="capitalize">
           Orden: {e.question_order === "random" ? "aleatorio" : "fijo"}
         </Badge>
+        {comingSoon && <ComingSoonChip />}
         {showLock && <PremiumLockChip />}
       </div>
 
@@ -214,7 +217,7 @@ function ExamPreview() {
               size="lg"
               className="press"
               onClick={() => premium.gate(onStart)}
-              disabled={starting || reachedMax}
+              disabled={starting || reachedMax || comingSoon}
             >
               {starting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -223,7 +226,13 @@ function ExamPreview() {
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
-              {starting ? "Iniciando…" : reachedMax ? "Sin intentos disponibles" : "Iniciar examen"}
+              {starting
+                ? "Iniciando…"
+                : comingSoon
+                  ? "Próximamente"
+                  : reachedMax
+                    ? "Sin intentos disponibles"
+                    : "Iniciar examen"}
             </Button>
           )}
         </div>

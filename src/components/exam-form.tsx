@@ -222,16 +222,10 @@ export function ExamForm({ initial }: { initial?: ExamFormValues }) {
       flashSaveFeedback("refused");
       return;
     }
-    if (v.exam_type === "standard" && v.exercise_ids.length === 0) {
-      toast.error("Añade al menos una pregunta");
-      flashSaveFeedback("refused");
-      return;
-    }
-    if (v.exam_type === "template" && v.template_rules.length === 0) {
-      toast.error("Añade al menos una regla");
-      flashSaveFeedback("refused");
-      return;
-    }
+    // Guardar con 0 preguntas/reglas está permitido a propósito: el admin
+    // puede dejar el examen listo y publicarlo como "Próximamente" (el
+    // estudiante lo ve bloqueado hasta que se le agreguen preguntas — ver
+    // ComingSoonChip en las páginas de examen/simulacro).
     if (
       v.exam_type === "template" &&
       v.template_rules.some((r) => !r.topic_id || Number(r.question_count) < 1)

@@ -1,4 +1,3 @@
-import { Timer } from "lucide-react";
 import { useBetaStatus } from "@/hooks/use-beta-status";
 
 /**
@@ -8,10 +7,12 @@ import { useBetaStatus } from "@/hooks/use-beta-status";
  * navy/amber de la landing. Desaparece sola cuando betaActive es false, sin
  * botón de cerrar ni estado propio — el plan de producto pide que el cierre
  * de la beta sea 100% manual desde Supabase, nunca algo que el visitante
- * pueda ocultar por su cuenta.
+ * pueda ocultar por su cuenta. Sin cuenta regresiva a propósito: mostrar
+ * "termina en N días" invitaba a preguntar qué pasa después, más ruido que
+ * valor para el anuncio en sí.
  */
 export function BetaBanner() {
-  const { betaActive, betaDaysLeft } = useBetaStatus();
+  const { betaActive } = useBetaStatus();
   if (!betaActive) return null;
 
   return (
@@ -20,14 +21,6 @@ export function BetaBanner() {
         <strong className="font-semibold">Admi-Tec está en beta</strong> — acceso Premium gratis
         para todos por tiempo limitado.
       </span>
-      {betaDaysLeft !== null && (
-        <span className="inline-flex items-center gap-1 font-data tabular-nums text-accent-foreground/80">
-          <Timer className="h-3.5 w-3.5" aria-hidden />
-          {betaDaysLeft === 0
-            ? "termina hoy"
-            : `termina en ${betaDaysLeft} ${betaDaysLeft === 1 ? "día" : "días"}`}
-        </span>
-      )}
     </div>
   );
 }

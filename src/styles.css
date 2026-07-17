@@ -164,6 +164,21 @@
   min-height: calc(100dvh - var(--site-header-h));
 }
 
+/* Por debajo de lg (celular y tablet, hasta 1023px): CADA sección forzada a
+   100dvh dejaba espacio navy vacío de sobra ahí — no solo el hero (donde la
+   foto del postulante solo aparece en lg+, sin ancho cómodo para las dos
+   columnas antes de eso), sino en general, porque el contenido de una
+   sección pensada para llenar una pantalla de escritorio casi nunca llena
+   una de celular/tablet igual de bien. Todas las secciones se acortan a su
+   contenido en ese rango; a partir de lg vuelven a 100dvh (el layout de
+   escritorio de cada una ya está balanceado para ocupar la pantalla
+   completa). */
+@media (max-width: 1023.98px) {
+  .snap-section {
+    min-height: auto;
+  }
+}
+
 /* Landing "paper" sections — the answer-sheet flipped: cream paper with navy
    ink, so alternating sections read as sheet vs. ink and the page stops being
    a single navy wall. Same token names as .at, so shared components (cards,
@@ -317,9 +332,8 @@
    angostas — no solo atenuado como en el bloque pointer:coarse de arriba,
    sino sin animación alguna. max-width en vez de pointer:coarse porque un
    tablet táctil sigue queriendo el efecto reducido, no la ausencia total.
-   (Las tiras giratorias de universidades/cursos ya se ocultan por completo
-   en celular con `hidden sm:block` en el <section> que las envuelve, en vez
-   de solo congelar la animación — una tira estática se veía rota.) */
+   (Las tiras giratorias de universidades/cursos son visibles y siguen
+   animando en celular — animate-marquee/-reverse no se tocan acá.) */
 @media (max-width: 640px) {
   .at .animate-rise-in {
     animation: none !important;
@@ -538,17 +552,17 @@
   opacity: 0.55;
 }
 
-/* Feature carousel (Pillars section): each card's scale/opacity/blur is
-   driven by a single custom property (--tween, written every scroll frame
-   by FeatureCarousel's embla "tween scale" handler — see
-   feature-carousel.tsx) instead of a CSS transition, so the depth-of-field
-   tracks the drag in real time rather than easing in after the fact. No
-   transition here on purpose: embla's own scroll physics already supplies
-   the easing, on both drag-release and programmatic (dot/arrow) scrolls. */
+/* Feature carousel (Pillars section): each card's scale/opacity is driven by
+   a single custom property (--tween, written every scroll frame by
+   FeatureCarousel's embla "tween scale" handler — see feature-carousel.tsx)
+   instead of a CSS transition, so the depth-of-field tracks the drag in real
+   time rather than easing in after the fact. No transition here on purpose:
+   embla's own scroll physics already supplies the easing, on both
+   drag-release and programmatic (dot/arrow) scrolls. Blur removed on
+   request — the off-center cards stay sharp, just smaller/dimmer. */
 .at .feature-slide {
   transform: scale(calc(0.88 + var(--tween, 1) * 0.12));
   opacity: calc(0.45 + var(--tween, 1) * 0.55);
-  filter: blur(calc((1 - var(--tween, 1)) * 2px));
 }
 @media (prefers-reduced-motion: reduce) {
   .at .cta-overshoot,

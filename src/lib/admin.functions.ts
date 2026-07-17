@@ -1039,48 +1039,42 @@ const scoringFields = {
   points_empty: z.number().min(-1000).max(1000),
 };
 
-const examSchema = z
-  .object({
-    title: z.string().trim().min(3).max(120),
-    description: z.string().trim().max(1000).nullable().optional(),
-    university_id: z.string().uuid(),
-    time_limit_min: z.number().int().min(1).max(600),
-    passing_score: z.number().int().min(0).max(100000),
-    max_attempts: z.number().int().min(1).max(50).nullable().optional(),
-    status: z.enum(["draft", "published", "archived"]),
-    question_order: z.enum(["fixed", "random"]),
-    exam_type: z.enum(["standard", "template"]).default("standard"),
-    allow_multiple_attempts: z.boolean().default(false),
-    exercise_ids: z.array(z.string().uuid()).max(200).default([]),
-    template_rules: z.array(templateRuleSchema).max(50).default([]),
-    ...scoringFields,
-  })
-  .refine(
-    (d) => (d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1),
-    { message: "Un examen estándar requiere preguntas; uno de plantilla requiere reglas." },
-  );
+// Sin exigir >=1 pregunta/regla a propósito: un examen se puede crear/guardar
+// vacío y publicarse como "Próximamente" — el estudiante lo ve bloqueado
+// (ComingSoonChip) hasta que se le agreguen preguntas. startExamSession sigue
+// rechazando iniciar una sesión sobre un examen vacío como backstop.
+const examSchema = z.object({
+  title: z.string().trim().min(3).max(120),
+  description: z.string().trim().max(1000).nullable().optional(),
+  university_id: z.string().uuid(),
+  time_limit_min: z.number().int().min(1).max(600),
+  passing_score: z.number().int().min(0).max(100000),
+  max_attempts: z.number().int().min(1).max(50).nullable().optional(),
+  status: z.enum(["draft", "published", "archived"]),
+  question_order: z.enum(["fixed", "random"]),
+  exam_type: z.enum(["standard", "template"]).default("standard"),
+  allow_multiple_attempts: z.boolean().default(false),
+  exercise_ids: z.array(z.string().uuid()).max(200).default([]),
+  template_rules: z.array(templateRuleSchema).max(50).default([]),
+  ...scoringFields,
+});
 
-const examUpdateSchema = z
-  .object({
-    id: z.string().uuid(),
-    title: z.string().trim().min(3).max(120),
-    description: z.string().trim().max(1000).nullable().optional(),
-    university_id: z.string().uuid(),
-    time_limit_min: z.number().int().min(1).max(600),
-    passing_score: z.number().int().min(0).max(100000),
-    max_attempts: z.number().int().min(1).max(50).nullable().optional(),
-    status: z.enum(["draft", "published", "archived"]),
-    question_order: z.enum(["fixed", "random"]),
-    exam_type: z.enum(["standard", "template"]).default("standard"),
-    allow_multiple_attempts: z.boolean().default(false),
-    exercise_ids: z.array(z.string().uuid()).max(200).default([]),
-    template_rules: z.array(templateRuleSchema).max(50).default([]),
-    ...scoringFields,
-  })
-  .refine(
-    (d) => (d.exam_type === "standard" ? d.exercise_ids.length >= 1 : d.template_rules.length >= 1),
-    { message: "Un examen estándar requiere preguntas; uno de plantilla requiere reglas." },
-  );
+const examUpdateSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().trim().min(3).max(120),
+  description: z.string().trim().max(1000).nullable().optional(),
+  university_id: z.string().uuid(),
+  time_limit_min: z.number().int().min(1).max(600),
+  passing_score: z.number().int().min(0).max(100000),
+  max_attempts: z.number().int().min(1).max(50).nullable().optional(),
+  status: z.enum(["draft", "published", "archived"]),
+  question_order: z.enum(["fixed", "random"]),
+  exam_type: z.enum(["standard", "template"]).default("standard"),
+  allow_multiple_attempts: z.boolean().default(false),
+  exercise_ids: z.array(z.string().uuid()).max(200).default([]),
+  template_rules: z.array(templateRuleSchema).max(50).default([]),
+  ...scoringFields,
+});
 
 async function validateTemplateRules(
   supabase: any,

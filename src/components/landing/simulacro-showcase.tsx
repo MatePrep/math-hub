@@ -45,7 +45,7 @@ function PillarBadge({ n }: { n: number }) {
 const blockState = (active: boolean, hasSelection: boolean) =>
   cn(
     "pillar-link-block -mx-3 cursor-pointer rounded-md px-3",
-    active && "bg-primary/[0.08] ring-1 ring-primary/25",
+    active && "bg-primary/[0.16] ring-2 ring-primary/60",
     !active && hasSelection && "pillar-link-block-dim",
     !active && "hover:bg-primary/[0.04]",
   );

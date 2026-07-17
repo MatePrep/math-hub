@@ -195,7 +195,7 @@ export function AnswerSheetWidget() {
               <Timer className="h-5 w-5" aria-hidden />
             </span>
             <p className="max-w-xs text-balance text-sm font-semibold text-foreground">
-              Un ejercicio real de examen, el mismo para todos los postulantes de hoy.
+              Un ejercicio real de examen de admision.
             </p>
             <Button type="button" onClick={handleStart} className="press min-h-10">
               Comenzar el reto del día

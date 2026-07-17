@@ -27,9 +27,9 @@ const PILLARS: Array<{
     title: "Tu puntaje real, tu meta real",
     text: (
       <>
-        Cada simulacro se corrige con el sistema de puntos del examen real — las buenas suman, las
-        malas restan — y se compara con el puntaje mínimo de ingreso de tu carrera. No sabes si «vas
-        bien»: <strong className={em}>sabes si hoy ingresarías</strong>.
+        Cada simulacro se corrige con el sistema de puntos del examen real (las respuestas correctas suman, las
+        incorrectas restan), y se compara con el puntaje mínimo de ingreso de tu carrera. No sabes si "vas
+        bien", <strong className={em}>sabes si hoy ingresarías</strong>.
       </>
     ),
     Icon: Target,
@@ -50,7 +50,7 @@ const PILLARS: Array<{
     text: (
       <>
         Medimos <strong className={em}>cuánto te toma cada pregunta</strong> y lo comparamos con el
-        promedio de todos los que la resolvieron. La velocidad se entrena, pero primero hay que
+        tiempo promedio de todos los postulantes que la resolvieron. La velocidad se entrena, pero primero hay que
         poder verla.
       </>
     ),

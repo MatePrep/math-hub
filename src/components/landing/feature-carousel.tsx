@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
  * Carrusel de "feature cards" arrastrable — el estudiante desliza con el dedo
  * o el mouse entre los 3 pilares en vez de solo hacer clic (cursor-grab en
  * la zona de arrastre marca la afordancia). La tarjeta centrada queda nítida
- * y a tamaño completo; las vecinas se ven más pequeñas, opacas y con un leve
- * desenfoque — profundidad de campo real, cuadro a cuadro con el propio
- * scroll de embla, no un simple fade al soltar. `activeIndex` es
+ * y a tamaño completo; las vecinas se ven más pequeñas y opacas (sin
+ * desenfoque, por pedido explícito) — profundidad de campo cuadro a cuadro
+ * con el propio scroll de embla, no un simple fade al soltar. `activeIndex` es
  * bidireccional: el carrusel sube el índice seleccionado a PillarsSection
  * (resalta el bloque que le corresponde en SimulacroShowcase) y también lo
  * escucha, así que hacer clic en un bloque del simulacro desplaza el
@@ -46,9 +46,9 @@ export function FeatureCarousel({
 
   // Adaptado del ejemplo oficial "Tween scale" de embla: en vez de escribir
   // transform/opacity directamente, escribe una sola custom property
-  // (--tween, 0 = borde · 1 = centrado) y deja que el CSS derive escala,
-  // opacidad y blur — así puede combinarse con las clases de Tailwind del
-  // borde activo sin que JS y CSS se peleen por la misma propiedad.
+  // (--tween, 0 = borde · 1 = centrado) y deja que el CSS derive escala y
+  // opacidad — así puede combinarse con las clases de Tailwind del borde
+  // activo sin que JS y CSS se peleen por la misma propiedad.
   const tweenScale = useCallback((api: EmblaApi, eventName?: string) => {
     const engine = api.internalEngine();
     const scrollProgress = api.scrollProgress();
@@ -117,6 +117,35 @@ export function FeatureCarousel({
     if (emblaApi.selectedScrollSnap() === target) return;
     emblaApi.scrollTo(target);
   }, [emblaApi, activeIndex]);
+
+  // Auto-avance cada 5s, en desktop y celular por igual (loop:true ya hace
+  // que scrollNext() vuelva a la primera tarjeta al llegar al final). Se
+  // pausa mientras el estudiante arrastra (pointerDown→pointerUp) para no
+  // pelear con un drag en curso, y retoma el conteo desde cero al soltar.
+  useEffect(() => {
+    if (!emblaApi) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    };
+    const start = () => {
+      stop();
+      timer = setInterval(() => emblaApi.scrollNext(), 5000);
+    };
+
+    start();
+    emblaApi.on("pointerDown", stop);
+    emblaApi.on("pointerUp", start);
+
+    return () => {
+      stop();
+      emblaApi.off("pointerDown", stop);
+      emblaApi.off("pointerUp", start);
+    };
+  }, [emblaApi]);
 
   return (
     <div className="flex flex-col">

@@ -21,6 +21,7 @@ import {
 import { getTemplatePreview, getMyExamAttempts, startExamSession } from "@/lib/exams.functions";
 import { ExamAttemptRow } from "@/components/exam-attempt-row";
 import { PremiumLockChip, usePremiumGate } from "@/components/premium/premium-gate";
+import { ComingSoonChip } from "@/components/coming-soon-chip";
 
 export const Route = createFileRoute("/_authenticated/simulacro/$id")({
   component: SimulacroPreview,
@@ -105,6 +106,7 @@ function SimulacroPreview() {
   const t = preview.data;
   const isUniTemplate = !!t.university;
   const showLock = isUniTemplate && premium.locked && !premium.loading;
+  const comingSoon = t.totalQuestions === 0;
   const done = (attempts.data ?? []).filter(
     (a: any) => a.status === "graded" || a.status === "submitted",
   );
@@ -133,6 +135,7 @@ function SimulacroPreview() {
           <Badge variant="outline">Aprobación: {t.passing_score} pts</Badge>
         )}
         <Badge variant="outline">Máx: {t.maxScore} pts</Badge>
+        {comingSoon && <ComingSoonChip />}
       </div>
 
       <div className="animate-card-swap mt-6 rounded-xl border border-border bg-card p-5">
@@ -209,7 +212,7 @@ function SimulacroPreview() {
               size="lg"
               className="press"
               onClick={() => (isUniTemplate ? premium.gate(onStart) : onStart())}
-              disabled={starting}
+              disabled={starting || comingSoon}
             >
               {starting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -218,7 +221,7 @@ function SimulacroPreview() {
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
-              {starting ? "Generando…" : "Comenzar simulacro"}
+              {starting ? "Generando…" : comingSoon ? "Próximamente" : "Comenzar simulacro"}
             </Button>
           )}
         </div>

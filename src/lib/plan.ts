@@ -30,7 +30,7 @@ export const PREMIUM_FEATURES = [
   "Historial completo con análisis de tiempo por pregunta",
   "Comparación con el promedio de otros postulantes",
   "Ranking completo: tu puesto y el top 100",
-  "Recomendaciones personalizadas y puntaje mínimo por carrera",
+  "Recomendaciones personalizadas y el puntaje exacto que te falta para tu carrera",
 ] as const;
 
 // Tabla comparativa de /planes: cada fila dice si la funcionalidad está en

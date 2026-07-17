@@ -30,6 +30,8 @@ import {
 } from "@/lib/plan";
 import { CONTACT_EMAIL, pageMeta } from "@/lib/site";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
+import { useBetaStatus } from "@/hooks/use-beta-status";
+import { useCornerRibbon } from "@/hooks/use-corner-ribbon";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/planes")({
@@ -45,7 +47,13 @@ export const Route = createFileRoute("/planes")({
 type Billing = "monthly" | "quarterly";
 
 function PlanesPage() {
-  const { signedIn, isPremium, onTrial, trialUsed, trialDaysLeft, betaActive } = usePlan();
+  const { signedIn, isPremium, onTrial, trialUsed, trialDaysLeft } = usePlan();
+  // useBetaStatus (público, sin auth) en vez del betaActive de usePlan: esta
+  // página es visible sin sesión (el CTA de las columnas premium ya maneja
+  // signedIn === false), y usePlan solo consulta cuando signedIn === true —
+  // un visitante anónimo nunca vería el mensaje/cinta de beta si dependiera
+  // de ese hook.
+  const { betaActive } = useBetaStatus();
   // Which plan's mailto the placeholder "muy pronto" dialog is showing —
   // null means closed. Two premium columns now exist side by side (no more
   // single toggled Premium card), so the dialog has to know which one the
@@ -53,6 +61,14 @@ function PlanesPage() {
   const [subscribeBilling, setSubscribeBilling] = useState<Billing | null>(null);
   const activate = useActivateTrial();
   const { ref: tableRef, visible: tableVisible } = useInViewOnce<HTMLDivElement>();
+  // Cintas diagonales (una por tarjeta premium, cada una mide su propia
+  // tarjeta): a diferencia del landing (esquina a esquina exacta),
+  // edgeInset=0.25 las hace entrar/salir 1/4 del alto más adentro de cada
+  // esquina — menos empinada y más centrada, pero sigue tocando ambos
+  // bordes, así que sus puntas quedan escondidas por overflow-hidden en vez
+  // de verse como un rectángulo cuadrado a mitad de tarjeta.
+  const monthlyRibbon = useCornerRibbon<HTMLDivElement>(0.25);
+  const quarterlyRibbon = useCornerRibbon<HTMLDivElement>(0.25);
 
   const canTrial = signedIn === true && !isPremium && !trialUsed;
 
@@ -86,11 +102,11 @@ function PlanesPage() {
           <Button size="lg" className="press" onClick={() => setSubscribeBilling(billing)}>
             Activar premium <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          {trialUsed && (
-            <p className="text-center text-xs text-muted-foreground">
-              Ya usaste tu prueba gratuita de {TRIAL_DAYS} días.
-            </p>
-          )}
+          <p className="text-center text-xs text-muted-foreground">
+            {trialUsed
+              ? `Ya usaste tu prueba gratuita de ${TRIAL_DAYS} días.`
+              : "Cancela cuando quieras, sin compromiso."}
+          </p>
         </>
       );
     }
@@ -127,9 +143,9 @@ function PlanesPage() {
           Empieza gratis. <span className="text-primary">Ingresa con Premium.</span>
         </h1>
         <p className="mt-4 text-pretty text-muted-foreground">
-          El plan gratuito te acompaña todos los días. Premium desbloquea lo que decide una
-          admisión: los exámenes reales, los simulacros de tu universidad y saber exactamente dónde
-          estás parado con respecto a tu competencia.
+          El plan gratuito te acompaña todos los días. Premium te da lo que de verdad decide una
+          admisión: exámenes oficiales reales, simulacros de tu universidad y el puntaje exacto que
+          te falta para tu carrera, para que sepas si hoy ingresarías, no para que lo adivines.
         </p>
       </header>
 
@@ -138,8 +154,7 @@ function PlanesPage() {
           que todos están cubiertos por la beta. */}
       {betaActive ? (
         <div className="animate-alert-in mx-auto mt-6 max-w-lg rounded-xl border border-accent/50 bg-accent/15 px-4 py-3 text-center text-sm">
-          Durante la beta, <strong className="font-semibold">todos tienen Premium gratis</strong>.
-          Los precios se activarán al finalizar el período beta.
+          Durante la version beta, <strong className="font-semibold">todos tienen Premium gratis</strong>.
         </div>
       ) : (
         onTrial && (
@@ -234,10 +249,31 @@ function PlanesPage() {
           {/* Premium Mensual — el recomendado: la columna elevada de las tres,
             para quien quiere probar Premium sin comprometerse a 3 meses. */}
           <section
+            ref={monthlyRibbon.ref}
             aria-label="Plan Premium Mensual"
             className="animate-fade-up relative flex w-[85%] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border-2 border-primary bg-card p-6 shadow-lg sm:p-8 lg:w-auto lg:shrink lg:snap-align-none"
             style={{ "--i": 1 } as React.CSSProperties}
           >
+            {/* Cinta diagonal (solo durante la beta): el precio se sigue
+                mostrando tal cual — para que el estudiante vea que Premium
+                existe y cuánto vale — la cinta solo aclara que hoy no se
+                cobra nada. edgeInset=0.25 (ver useCornerRibbon) la deja
+                menos empinada que la del landing, pero sigue tocando ambos
+                bordes de la tarjeta. Va antes que el resto del contenido en
+                el DOM para que el texto (sin z-index explícito) pinte
+                encima suyo. */}
+            {betaActive && monthlyRibbon.ribbon && (
+              <div
+                aria-hidden
+                className="absolute left-1/2 top-1/2 bg-destructive py-1.5 text-center text-xl font-bold uppercase tracking-wider text-destructive-foreground shadow-md"
+                style={{
+                  width: `${monthlyRibbon.ribbon.width}px`,
+                  transform: `translate(-50%, -50%) rotate(-${monthlyRibbon.ribbon.angle}deg)`,
+                }}
+              >
+                Gratis por tiempo limitado
+              </div>
+            )}
             <span className="absolute right-0 top-0 rounded-bl-xl bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
               Recomendado
             </span>
@@ -247,28 +283,23 @@ function PlanesPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Todo lo que decide tu ingreso, mes a mes.
             </p>
-            {betaActive ? (
-              <>
-                <div className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm font-semibold text-success">
-                  <BadgeCheck className="h-4 w-4" /> Premium incluido durante la beta
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  El precio se activa cuando termine el período beta.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-5 font-display text-4xl font-bold">
-                  S/ {PLAN_PRICES.monthly.amount}
-                  <span className="ml-1 text-base font-normal text-muted-foreground">
-                    {PLAN_PRICES.monthly.per}
-                  </span>
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Cancelas cuando quieras, sin plazos.
-                </p>
-              </>
-            )}
+            <p className="mt-5 font-display text-4xl font-bold">
+              S/ {PLAN_PRICES.monthly.amount}
+              <span className="ml-1 text-base font-normal text-muted-foreground">
+                {PLAN_PRICES.monthly.per}
+              </span>
+            </p>
+            {/* Precio por día: el mismo monto reformulado en la unidad más
+                chica posible (mental accounting) — S/14.99/mes cuesta
+                "pensar" más que S/0.50/día, aunque sea el mismo número. */}
+            <p className="mt-1 text-sm font-medium text-foreground">
+              S/ {(Number(PLAN_PRICES.monthly.amount) / 30).toFixed(2)} al día
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {betaActive
+                ? "El precio se activa cuando termine el período beta."
+                : "Cancelas cuando quieras, sin plazos."}
+            </p>
             <ul className="mt-6 flex-1 space-y-3 text-sm">
               {PREMIUM_FEATURES.map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
@@ -284,40 +315,48 @@ function PlanesPage() {
             descuento. No es la recomendada, pero su ahorro debe seguir
             siendo visible de un vistazo (chip verde junto al título). */}
           <section
+            ref={quarterlyRibbon.ref}
             aria-label="Plan Premium Trimestral"
-            className="animate-fade-up flex w-[85%] shrink-0 snap-center flex-col rounded-2xl border border-border bg-card p-6 sm:p-8 lg:w-auto lg:shrink lg:snap-align-none"
+            className="animate-fade-up relative flex w-[85%] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-8 lg:w-auto lg:shrink lg:snap-align-none"
             style={{ "--i": 2 } as React.CSSProperties}
           >
+            {betaActive && quarterlyRibbon.ribbon && (
+              <div
+                aria-hidden
+                className="absolute left-1/2 top-1/2 bg-destructive py-1.5 text-center text-xl font-bold uppercase tracking-wider text-destructive-foreground shadow-md"
+                style={{
+                  width: `${quarterlyRibbon.ribbon.width}px`,
+                  transform: `translate(-50%, -50%) rotate(-${quarterlyRibbon.ribbon.angle}deg)`,
+                }}
+              >
+                Gratis por tiempo limitado
+              </div>
+            )}
             <h2 className="inline-flex flex-wrap items-center gap-2 font-display text-xl font-bold">
               Premium Trimestral
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               El mismo Premium, pagado cada 3 meses.
             </p>
-            {betaActive ? (
-              <>
-                <div className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm font-semibold text-success">
-                  <BadgeCheck className="h-4 w-4" /> Premium incluido durante la beta
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  El precio se activa cuando termine el período beta.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-5 font-display text-4xl font-bold">
-                  S/ {PLAN_PRICES.quarterly.amount}
-                  <span className="ml-1 text-base font-normal text-muted-foreground">
-                    {PLAN_PRICES.quarterly.per}
-                  </span>
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  <span className="line-through">S/ {PLAN_PRICES.quarterly.fullPrice}</span>{" "}
-                  <span className="font-semibold text-success">
-                    ahorras {PLAN_PRICES.quarterly.discountPct}%
-                  </span>
-                </p>
-              </>
+            <p className="mt-5 font-display text-4xl font-bold">
+              S/ {PLAN_PRICES.quarterly.amount}
+              <span className="ml-1 text-base font-normal text-muted-foreground">
+                {PLAN_PRICES.quarterly.per}
+              </span>
+            </p>
+            <p className="mt-1 text-sm font-medium text-foreground">
+              S/ {(Number(PLAN_PRICES.quarterly.amount) / 90).toFixed(2)} al día
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="line-through">S/ {PLAN_PRICES.quarterly.fullPrice}</span>{" "}
+              <span className="font-semibold text-success">
+                ahorras {PLAN_PRICES.quarterly.discountPct}%
+              </span>
+            </p>
+            {betaActive && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                El precio se activa cuando termine el período beta.
+              </p>
             )}
             <ul className="mt-6 flex-1 space-y-3 text-sm">
               {PREMIUM_FEATURES.map((f) => (

@@ -18,6 +18,7 @@ import { getFullProfile, listAllUniversities } from "@/lib/profile.functions";
 import { useSignedIn } from "@/hooks/use-signed-in";
 import { ExamAttemptRow } from "@/components/exam-attempt-row";
 import { PremiumLockChip, usePremiumGate } from "@/components/premium/premium-gate";
+import { ComingSoonChip } from "@/components/coming-soon-chip";
 import { pageMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/simulacros/")({
@@ -171,6 +172,7 @@ function SimulacrosPage() {
           const isExpanded = expandedHistory.has(t.id);
           const isUniTemplate = !!t.university;
           const locked = isUniTemplate && premium.locked && !premium.loading;
+          const comingSoon = t.totalQuestions === 0;
           return (
             <article
               key={t.id}
@@ -190,9 +192,14 @@ function SimulacrosPage() {
                   </Badge>
                   <Badge variant="outline">{t.totalQuestions} preguntas</Badge>
                   <Badge variant="outline">{t.ruleCount} curso(s)</Badge>
+                  {comingSoon && <ComingSoonChip />}
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  {signedIn === true ? (
+                  {comingSoon ? (
+                    <Button className="press" disabled>
+                      Próximamente
+                    </Button>
+                  ) : signedIn === true ? (
                     isUniTemplate ? (
                       <Button
                         className="press"

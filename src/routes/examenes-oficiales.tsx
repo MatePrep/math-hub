@@ -6,6 +6,7 @@ import { Timer, ListChecks, ArrowRight } from "lucide-react";
 import { listPublishedExams } from "@/lib/exams.functions";
 import { pageMeta } from "@/lib/site";
 import { PremiumLockChip } from "@/components/premium/premium-gate";
+import { ComingSoonChip } from "@/components/coming-soon-chip";
 import { usePlan } from "@/hooks/use-plan";
 
 const examsQO = queryOptions({
@@ -73,33 +74,43 @@ function ExamsList() {
         </div>
       )}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {exams.map((e: any, i: number) => (
-          <div
-            key={e.id}
-            className="animate-fade-up flex flex-col rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
-            style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
-          >
-            <h2 className="font-display text-lg font-bold">{e.title}</h2>
-            {e.description && (
-              <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{e.description}</p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <Badge variant="outline">
-                <Timer className="mr-1 h-3 w-3" /> {e.time_limit_min} min
-              </Badge>
-              <Badge variant="outline">
-                <ListChecks className="mr-1 h-3 w-3" /> {e.questionCount} preguntas
-              </Badge>
-              <Badge variant="outline">Aprobación: {e.passing_score}%</Badge>
-              {showLock && <PremiumLockChip />}
+        {exams.map((e: any, i: number) => {
+          const comingSoon = e.questionCount === 0;
+          return (
+            <div
+              key={e.id}
+              className="animate-fade-up flex flex-col rounded-xl border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-md"
+              style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
+            >
+              <h2 className="font-display text-lg font-bold">{e.title}</h2>
+              {e.description && (
+                <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{e.description}</p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                <Badge variant="outline">
+                  <Timer className="mr-1 h-3 w-3" /> {e.time_limit_min} min
+                </Badge>
+                <Badge variant="outline">
+                  <ListChecks className="mr-1 h-3 w-3" /> {e.questionCount} preguntas
+                </Badge>
+                <Badge variant="outline">Aprobación: {e.passing_score}%</Badge>
+                {comingSoon && <ComingSoonChip />}
+                {showLock && <PremiumLockChip />}
+              </div>
+              {comingSoon ? (
+                <Button className="press mt-4 self-start" disabled>
+                  Próximamente
+                </Button>
+              ) : (
+                <Button asChild className="press mt-4 self-start">
+                  <Link to="/examen/$id" params={{ id: e.id }}>
+                    Comenzar examen <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              )}
             </div>
-            <Button asChild className="press mt-4 self-start">
-              <Link to="/examen/$id" params={{ id: e.id }}>
-                Comenzar examen <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
