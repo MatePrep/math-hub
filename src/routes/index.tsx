@@ -924,22 +924,23 @@ function Index() {
               Las preguntas que más nos hacen los postulantes antes de crear su cuenta.
             </p>
           </div>
+          {/* faq-accordion (ver styles.css): Radix anima el alto del
+              contenido al abrir/cerrar (height 0 → alto real) — sin eso el
+              bloque completo (pregunta + respuesta, un solo recuadro con
+              borde) se sentía "agrandar" de golpe. Acá se apaga esa
+              animación por completo: abre/cierra instantáneo, texto mismo
+              tamaño en pregunta y respuesta (ver AccordionContent) así no
+              queda ningún salto de tamaño que disimular con una animación. */}
           <Accordion
             type="single"
             collapsible
-            className={cn("mt-10", faqVisible && "animate-rise-in")}
+            className={cn("faq-accordion mt-10", faqVisible && "animate-rise-in")}
           >
             {FAQ_ITEMS.map((item, i) => (
               <AccordionItem key={item.q} value={`item-${i}`}>
                 <AccordionTrigger className="font-display text-base font-bold">
                   {item.q}
                 </AccordionTrigger>
-                {/* text-base acá, no solo text-pretty/text-muted-foreground:
-                    AccordionContent trae text-sm de fábrica en el wrapper
-                    animado, y como el trigger de arriba es text-base, la
-                    respuesta se sentía "crecer" a un tamaño distinto al
-                    abrirse — mismo tamaño en los dos, la animación de alto
-                    deja de sentirse como un cambio de tamaño en vano. */}
                 <AccordionContent className="text-pretty text-base text-muted-foreground">
                   {item.a}
                 </AccordionContent>

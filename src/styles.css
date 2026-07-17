@@ -710,6 +710,19 @@
   transform: scale(0.97);
 }
 
+/* FAQ del landing (index.tsx): Radix/tw-animate-css traen de fábrica una
+   animación de alto en AccordionContent (height 0 → alto real) al abrir o
+   cerrar. Con pregunta+respuesta compartiendo un solo recuadro con borde,
+   ese deslizamiento se leía como si todo el bloque "se agrandara" de golpe
+   en vez de solo revelar texto. Apagada solo acá (scoped a .faq-accordion,
+   no toca el Accordion que ya usa ejercicio.$id.tsx): abre/cierra
+   instantáneo. El propio mount/unmount de Radix (no la animación) es lo que
+   controla que el contenido exista o no, así que sigue funcionando igual
+   sin ella — solo sin el paso intermedio animado. */
+.faq-accordion [data-state] {
+  animation: none !important;
+}
+
 /* List rhythm: staggered entrance for cards/rows appearing once their data loads.
    Drive stagger with `style={{ "--i": index }}` on each item (capped by the caller). */
 @keyframes fade-up {
